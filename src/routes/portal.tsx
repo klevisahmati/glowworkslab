@@ -32,10 +32,10 @@ function PortalLandingPage() {
       <div className="shell portal-landing">
         <section className="portal-body-card portal-landing-card">
           <div className="portal-landing-copy">
-            <p className="eyebrow"><span /> Glowworks customer portal</p>
-            <h1>Welcome back to your ownership experience.</h1>
+            <p className="eyebrow"><span /> Πόρταλ πελάτη Glowworks</p>
+            <h1>Καλώς ήρθες ξανά στην εμπειρία ιδιοκτησίας σου.</h1>
             <p>
-              Access vehicle records, warranty coverage, service history and admin controls in one premium place.
+              Πρόσβαση σε αρχεία οχημάτων, κάλυψη εγγύησης, ιστορικό υπηρεσιών και εργαλεία διαχείρισης από ένα premium σημείο.
             </p>
             <label className="form-grid" style={{ marginTop: '18px' }}>
               <label className="full">
@@ -45,28 +45,28 @@ function PortalLandingPage() {
             </label>
             <div className="portal-actions">
               <button className="button button-primary" type="button" onClick={() => continueAs('customer')}>
-                Continue as customer <ArrowRight size={18} />
+                Συνέχεια ως πελάτης <ArrowRight size={18} />
               </button>
               <button className="button button-secondary" type="button" onClick={() => continueAs('admin')}>
-                Continue as admin <ShieldCheck size={18} />
+                Συνέχεια ως διαχειριστής <ShieldCheck size={18} />
               </button>
             </div>
             <div className="portal-landing-info">
               <div>
                 <Sparkles size={18} />
-                <span>Live warranty snapshots</span>
+                <span>Live στιγμιότυπα εγγύησης</span>
               </div>
               <div>
                 <Sparkles size={18} />
-                <span>NFC-assisted service lookup</span>
+                <span>Αναζήτηση υπηρεσίας με NFC</span>
               </div>
             </div>
           </div>
           <div className="portal-card portal-highlight-card">
-            <h2>Current access</h2>
-            <p>{role ? `Signed in as ${role} for ${email}.` : 'Choose a role to continue.'}</p>
-            <p className="portal-muted">Your session is saved locally so returning visits keep your portal state intact.</p>
-            <Link className="portal-nav-link" to="/portal/dashboard">Open dashboard</Link>
+            <h2>Τρέχουσα πρόσβαση</h2>
+            <p>{role ? `Συνδεδεμένος ως ${role} για ${email}.` : 'Επίλεξε ρόλο για να συνεχίσεις.'}</p>
+            <p className="portal-muted">Η συνεδρία σου αποθηκεύεται τοπικά, ώστε οι επαναλαμβανόμενες επισκέψεις να διατηρούν την κατάσταση του portal.</p>
+            <Link className="portal-nav-link" to="/portal/dashboard">Άνοιγμα πίνακα</Link>
           </div>
         </section>
       </div>

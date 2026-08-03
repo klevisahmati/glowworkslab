@@ -12,13 +12,13 @@ type PortalShellProps = {
 }
 
 const navItems = [
-  { key: 'dashboard', label: 'Dashboard', href: '/portal/dashboard' },
-  { key: 'vehicles', label: 'Vehicles', href: '/portal/vehicles' },
-  { key: 'warranties', label: 'Warranties', href: '/portal/warranties' },
-  { key: 'claims', label: 'Claims', href: '/portal/claims' },
+  { key: 'dashboard', label: 'Πίνακας', href: '/portal/dashboard' },
+  { key: 'vehicles', label: 'Οχήματα', href: '/portal/vehicles' },
+  { key: 'warranties', label: 'Εγγυήσεις', href: '/portal/warranties' },
+  { key: 'claims', label: 'Αιτήσεις', href: '/portal/claims' },
   { key: 'nfc', label: 'NFC', href: '/portal/nfc' },
-  { key: 'admin', label: 'Admin', href: '/portal/admin' },
-  { key: 'profile', label: 'Profile', href: '/portal/profile' },
+  { key: 'admin', label: 'Διαχείριση', href: '/portal/admin' },
+  { key: 'profile', label: 'Προφίλ', href: '/portal/profile' },
 ]
 
 export function PortalShell({ children, active, title, subtitle }: PortalShellProps) {
@@ -50,20 +50,20 @@ export function PortalShell({ children, active, title, subtitle }: PortalShellPr
             })}
           </div>
           <button className="portal-ghost-button" type="button" onClick={handleExit}>
-            <ArrowLeft size={15} /> Exit
+            <ArrowLeft size={15} /> Έξοδος
           </button>
         </nav>
 
         <section className="portal-body-card">
           <header className="portal-header">
             <div>
-              <p className="eyebrow"><span /> Customer portal</p>
+              <p className="eyebrow"><span /> Πόρταλ πελάτη</p>
               <h1>{title}</h1>
               {subtitle ? <p className="portal-subtitle">{subtitle}</p> : null}
             </div>
             <div className="portal-profile-pill">
               <UserCircle2 size={18} />
-              <span>{role === 'admin' ? 'Admin Access' : 'Customer Access'}</span>
+              <span>{role === 'admin' ? 'Πρόσβαση διαχειριστή' : 'Πρόσβαση πελάτη'}</span>
             </div>
           </header>
           {children}

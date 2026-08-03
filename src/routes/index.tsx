@@ -114,11 +114,11 @@ function GlowworksPage() {
 
           <div className={menuOpen ? 'nav-links is-open' : 'nav-links'}>
             <a href={getAssetPath('/portal')} onClick={closeMenu}>Portal</a>
-            <a href={getAssetPath('/projects')} onClick={closeMenu}>Projects</a>
+            <a href={getAssetPath('/projects')} onClick={closeMenu}>Έργα</a>
             <a href="#services" onClick={closeMenu}>Υπηρεσίες</a>
             <a href="#process" onClick={closeMenu}>Διαδικασία</a>
             <a className="nav-book" href="#booking" onClick={closeMenu}>
-              Κλείσε ραντεβού <ArrowUpRight size={15} />
+              Κλείστε ραντεβού <ArrowUpRight size={15} />
             </a>
           </div>
 
@@ -139,13 +139,13 @@ function GlowworksPage() {
         <div className="hero-grid" aria-hidden="true" />
         <div className="shell hero-content">
           <div className="hero-copy reveal">
-            <p className="eyebrow"><span /> automotive lighting & customizations</p>
+            <p className="eyebrow"><span /> φωτισμός & custom αναβαθμίσεις αυτοκινήτων</p>
             <h1>
               Άλλαξε την
               <span>ατμόσφαιρα.</span>
             </h1>
             <p className="hero-lead">
-              Custom φωτισμός, τιμόνια, starlight οροφές και media upgrades που κάνουν το εσωτερικό πραγματικά δικό σου.
+              Custom φωτισμός, τιμόνια, starlight οροφές και media upgrades που κάνουν το εσωτερικό σου πραγματικά δικό σου.
             </p>
             <div className="hero-actions">
               <a className="button button-primary" href="#booking">
@@ -158,10 +158,10 @@ function GlowworksPage() {
           <div className="hero-card reveal reveal-delay">
             <span className="hero-card-label">Glowworks.lab</span>
             <div className="hero-card-mark"><Sparkles size={29} /></div>
-            <p>Built around your drive.</p>
+            <p>Σχεδιασμένο γύρω από το δικό σου ταξίδι.</p>
             <div className="hero-card-meta">
-              <span>Custom interiors</span>
-              <span>Est. Rhodes</span>
+              <span>Custom εσωτερικά</span>
+              <span>Βάση τη Ρόδο</span>
             </div>
           </div>
 
@@ -172,10 +172,10 @@ function GlowworksPage() {
       </header>
 
       <section className="intro shell" id="work">
-        <div className="section-index">01 / Selected work</div>
+        <div className="section-index">01 / Επιλεγμένα έργα</div>
         <div className="intro-copy">
           <p className="eyebrow"><span /> Η δουλειά μας</p>
-          <h2>Η λεπτομέρεια δεν είναι extra. Είναι η βάση.</h2>
+          <h2>Η λεπτομέρεια δεν είναι επιπλέον. Είναι η βάση.</h2>
         </div>
         <p className="intro-note">
           Κάθε εγκατάσταση σχεδιάζεται για το συγκεκριμένο όχημα, με καθαρό φινίρισμα και αισθητική που δείχνει εργοστασιακή.
@@ -198,13 +198,13 @@ function GlowworksPage() {
 
       <section className="services-section" id="services">
         <div className="shell">
-          <div className="section-index light">02 / What we do</div>
+          <div className="section-index light">02 / Τι κάνουμε</div>
           <div className="services-heading">
             <div>
               <p className="eyebrow"><span /> Υπηρεσίες</p>
               <h2>Σχεδιασμένο για τη δική σου διαδρομή.</h2>
             </div>
-            <p>Τέσσερις τρόποι να μεταμορφώσεις το σημείο όπου περνάς κάθε χιλιόμετρο.</p>
+            <p>Πέντε τρόποι να μεταμορφώσεις το σημείο όπου περνάς κάθε χιλιόμετρο.</p>
           </div>
 
           <div className="service-list">
@@ -231,7 +231,7 @@ function GlowworksPage() {
       </section>
 
       <section className="process-section shell" id="process">
-        <div className="section-index">03 / Process</div>
+        <div className="section-index">03 / Διαδικασία</div>
         <div className="process-layout">
           <div className="process-title">
             <p className="eyebrow"><span /> Η διαδικασία</p>
@@ -253,10 +253,10 @@ function GlowworksPage() {
         <div className="booking-bloom" aria-hidden="true" />
         <div className="shell booking-layout">
           <div className="booking-copy">
-            <div className="section-index light">04 / Appointment</div>
+            <div className="section-index light">04 / Ραντεβού</div>
             <p className="eyebrow"><span /> Κράτηση</p>
             <h2>Πες μας τι θέλεις να αλλάξεις.</h2>
-            <p>Συμπλήρωσε τα στοιχεία σου και επικοινωνούμε μαζί σου για επιλογές, διαθεσιμότητα και προσφορά.</p>
+            <p>Συμπλήρωσε τα στοιχεία σου και θα επικοινωνήσουμε μαζί σου για επιλογές, διαθεσιμότητα και προσφορά.</p>
             <div className="contact-list">
               <a href="tel:+306937153914"><Phone size={19} /> <span><small>Κλήση / SMS</small>693 715 3914</span></a>
               <a href="https://www.instagram.com/glowworks.lab/" target="_blank" rel="noreferrer"><Instagram size={19} /> <span><small>Instagram</small>@glowworks.lab</span></a>
