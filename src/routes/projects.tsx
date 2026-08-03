@@ -30,6 +30,11 @@ type ProjectGalleryItem = {
   title: string
 }
 
+function getAssetPath(path: string) {
+  const normalizedBase = import.meta.env.BASE_URL.replace(/\/$/, '')
+  return path.startsWith('/') ? `${normalizedBase}${path}` : `${normalizedBase}/${path}`
+}
+
 function normalizeValue(value: string) {
   return value.trim().toLowerCase()
 }
@@ -228,12 +233,12 @@ function ProjectsPage() {
     <main className="projects-page" id="top">
       <nav className="site-nav project-nav is-scrolled">
         <div className="nav-shell">
-          <a className="brand" href="/" aria-label="Glowworks.lab αρχική">
-            <img src="/images/glowworks-logo.webp" alt="Glowworks.lab" />
+          <a className="brand" href={getAssetPath('/')} aria-label="Glowworks.lab αρχική">
+            <img src={getAssetPath('/images/glowworks-logo.webp')} alt="Glowworks.lab" />
           </a>
           <div className="project-nav-links">
-            <a href="/"><ArrowLeft size={16} /> Αρχική</a>
-            <a className="nav-book" href="/#booking">Κλείσε ραντεβού <ArrowUpRight size={15} /></a>
+            <a href={getAssetPath('/')}><ArrowLeft size={16} /> Αρχική</a>
+            <a className="nav-book" href={getAssetPath('/#booking')}>Κλείσε ραντεβού <ArrowUpRight size={15} /></a>
           </div>
         </div>
       </nav>
@@ -384,7 +389,7 @@ function ProjectsPage() {
               <div className="projects-grid">
                 {visibleProjects.map((project, index) => (
                   <article className={`project-card project-card-${(index % 5) + 1}`} key={`${project.brand}-${project.model}-${index}`}>
-                    <img src={project.image} alt={project.title} />
+                    <img src={getAssetPath(project.image)} alt={project.title} />
                     <div className="project-card-shade" />
                     <div className="project-card-topline">
                       <span>{String(index + 1).padStart(2, '0')}</span>
@@ -409,13 +414,13 @@ function ProjectsPage() {
             <p className="eyebrow"><span /> Your car, next</p>
             <h2>Το επόμενο project μπορεί να είναι το δικό σου.</h2>
           </div>
-          <a className="button button-primary" href="/#booking">Στείλε το όχημά σου <ArrowUpRight size={19} /></a>
+          <a className="button button-primary" href={getAssetPath('/#booking')}>Στείλε το όχημά σου <ArrowUpRight size={19} /></a>
         </div>
       </section>
 
       <footer className="site-footer project-footer">
         <div className="shell footer-main">
-          <img src="/images/glowworks-logo.webp" alt="Glowworks.lab" />
+          <img src={getAssetPath('/images/glowworks-logo.webp')} alt="Glowworks.lab" />
           <p>Custom interior upgrades<br />στη Ρόδο.</p>
           <a href="#top">Back to top <ArrowUpRight size={16} /></a>
         </div>

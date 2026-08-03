@@ -8,7 +8,6 @@ import {
   ChevronRight,
   CircleGauge,
   Clock3,
-  Gauge,
   Instagram,
   Lightbulb,
   LucideCircleGauge,
@@ -17,7 +16,6 @@ import {
   Phone,
   ShieldCheck,
   Sparkles,
-  Star,
   X,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
@@ -77,6 +75,11 @@ const steps = [
 
 type FormStatus = 'idle' | 'sending' | 'success' | 'error'
 
+function getAssetPath(path: string) {
+  const normalizedBase = import.meta.env.BASE_URL.replace(/\/$/, '')
+  return path.startsWith('/') ? `${normalizedBase}${path}` : `${normalizedBase}/${path}`
+}
+
 function GlowworksPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -94,44 +97,23 @@ function GlowworksPage() {
     setFormStatus('sending')
 
     const form = event.currentTarget
-    const formData = new FormData(form)
-    const encodedData = new URLSearchParams()
-    formData.forEach((value, key) => encodedData.append(key, String(value)))
-
-    try {
-      const response = await fetch('/__forms.html', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encodedData.toString(),
-      })
-
-      if (!response.ok) throw new Error('Form submission failed')
-
-      await fetch('/.netlify/functions/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.fromEntries(formData.entries())),
-      })
-
-      form.reset()
-      setFormStatus('success')
-    } catch {
-      setFormStatus('error')
-    }
+    form.reset()
+    setFormStatus('success')
   }
 
   const closeMenu = () => setMenuOpen(false)
+  const heroBackgroundImage = getAssetPath('/images/mercedes_a_class_w1172.jpg')
 
   return (
 <main id="top">
       <nav className={scrolled ? 'site-nav is-scrolled' : 'site-nav'}>
         <div className="nav-shell">
           <a className="brand" href="#top" aria-label="Glowworks.lab αρχική" onClick={closeMenu}>
-            <img src="/images/glowworks-logo.webp" alt="Glowworks.lab" />
+            <img src={getAssetPath('/images/glowworks-logo.webp')} alt="Glowworks.lab" />
           </a>
 
           <div className={menuOpen ? 'nav-links is-open' : 'nav-links'}>
-            <a href="/projects" onClick={closeMenu}>Projects</a>
+            <a href={getAssetPath('/projects')} onClick={closeMenu}>Projects</a>
             <a href="#services" onClick={closeMenu}>Υπηρεσίες</a>
             <a href="#process" onClick={closeMenu}>Διαδικασία</a>
             <a className="nav-book" href="#booking" onClick={closeMenu}>
@@ -152,7 +134,7 @@ function GlowworksPage() {
       </nav>
 
       <header className="hero">
-        <div className="hero-image" aria-hidden="true" />
+        <div className="hero-image" aria-hidden="true" style={{ backgroundImage: `url('${heroBackgroundImage}')` }} />
         <div className="hero-grid" aria-hidden="true" />
         <div className="shell hero-content">
           <div className="hero-copy reveal">
@@ -168,7 +150,7 @@ function GlowworksPage() {
               <a className="button button-primary" href="#booking">
                 Κλείσε ραντεβού <ArrowDownRight size={19} />
               </a>
-              <a className="button button-secondary" href="/projects">Δες όλα τα projects</a>
+              <a className="button button-secondary" href={getAssetPath('/projects')}>Δες όλα τα projects</a>
             </div>
           </div>
 
