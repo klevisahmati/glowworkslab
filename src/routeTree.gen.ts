@@ -10,11 +10,25 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as PortalRouteImport } from './routes/portal'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PortalWarrantiesRouteImport } from './routes/portal/warranties'
+import { Route as PortalVehiclesRouteImport } from './routes/portal/vehicles'
+import { Route as PortalProfileRouteImport } from './routes/portal/profile'
+import { Route as PortalNfcRouteImport } from './routes/portal/nfc'
+import { Route as PortalDashboardRouteImport } from './routes/portal/dashboard'
+import { Route as PortalClaimsRouteImport } from './routes/portal/claims'
+import { Route as PortalAdminRouteImport } from './routes/portal/admin'
+import { Route as CustomerCustomerCodeRouteImport } from './routes/customer/$customerCode'
 
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalRoute = PortalRouteImport.update({
+  id: '/portal',
+  path: '/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -22,31 +36,134 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalWarrantiesRoute = PortalWarrantiesRouteImport.update({
+  id: '/warranties',
+  path: '/warranties',
+  getParentRoute: () => PortalRoute,
+} as any)
+const PortalVehiclesRoute = PortalVehiclesRouteImport.update({
+  id: '/vehicles',
+  path: '/vehicles',
+  getParentRoute: () => PortalRoute,
+} as any)
+const PortalProfileRoute = PortalProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => PortalRoute,
+} as any)
+const PortalNfcRoute = PortalNfcRouteImport.update({
+  id: '/nfc',
+  path: '/nfc',
+  getParentRoute: () => PortalRoute,
+} as any)
+const PortalDashboardRoute = PortalDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => PortalRoute,
+} as any)
+const PortalClaimsRoute = PortalClaimsRouteImport.update({
+  id: '/claims',
+  path: '/claims',
+  getParentRoute: () => PortalRoute,
+} as any)
+const PortalAdminRoute = PortalAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => PortalRoute,
+} as any)
+const CustomerCustomerCodeRoute = CustomerCustomerCodeRouteImport.update({
+  id: '/customer/$customerCode',
+  path: '/customer/$customerCode',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
+  '/customer/$customerCode': typeof CustomerCustomerCodeRoute
+  '/portal/admin': typeof PortalAdminRoute
+  '/portal/claims': typeof PortalClaimsRoute
+  '/portal/dashboard': typeof PortalDashboardRoute
+  '/portal/nfc': typeof PortalNfcRoute
+  '/portal/profile': typeof PortalProfileRoute
+  '/portal/vehicles': typeof PortalVehiclesRoute
+  '/portal/warranties': typeof PortalWarrantiesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
+  '/customer/$customerCode': typeof CustomerCustomerCodeRoute
+  '/portal/admin': typeof PortalAdminRoute
+  '/portal/claims': typeof PortalClaimsRoute
+  '/portal/dashboard': typeof PortalDashboardRoute
+  '/portal/nfc': typeof PortalNfcRoute
+  '/portal/profile': typeof PortalProfileRoute
+  '/portal/vehicles': typeof PortalVehiclesRoute
+  '/portal/warranties': typeof PortalWarrantiesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
+  '/customer/$customerCode': typeof CustomerCustomerCodeRoute
+  '/portal/admin': typeof PortalAdminRoute
+  '/portal/claims': typeof PortalClaimsRoute
+  '/portal/dashboard': typeof PortalDashboardRoute
+  '/portal/nfc': typeof PortalNfcRoute
+  '/portal/profile': typeof PortalProfileRoute
+  '/portal/vehicles': typeof PortalVehiclesRoute
+  '/portal/warranties': typeof PortalWarrantiesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/projects'
+  fullPaths:
+    | '/'
+    | '/portal'
+    | '/projects'
+    | '/customer/$customerCode'
+    | '/portal/admin'
+    | '/portal/claims'
+    | '/portal/dashboard'
+    | '/portal/nfc'
+    | '/portal/profile'
+    | '/portal/vehicles'
+    | '/portal/warranties'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/projects'
-  id: '__root__' | '/' | '/projects'
+  to:
+    | '/'
+    | '/portal'
+    | '/projects'
+    | '/customer/$customerCode'
+    | '/portal/admin'
+    | '/portal/claims'
+    | '/portal/dashboard'
+    | '/portal/nfc'
+    | '/portal/profile'
+    | '/portal/vehicles'
+    | '/portal/warranties'
+  id:
+    | '__root__'
+    | '/'
+    | '/portal'
+    | '/projects'
+    | '/customer/$customerCode'
+    | '/portal/admin'
+    | '/portal/claims'
+    | '/portal/dashboard'
+    | '/portal/nfc'
+    | '/portal/profile'
+    | '/portal/vehicles'
+    | '/portal/warranties'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PortalRoute: typeof PortalRouteWithChildren
   ProjectsRoute: typeof ProjectsRoute
+  CustomerCustomerCodeRoute: typeof CustomerCustomerCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +175,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/portal': {
+      id: '/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof PortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -65,12 +189,93 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/portal/warranties': {
+      id: '/portal/warranties'
+      path: '/warranties'
+      fullPath: '/portal/warranties'
+      preLoaderRoute: typeof PortalWarrantiesRouteImport
+      parentRoute: typeof PortalRoute
+    }
+    '/portal/vehicles': {
+      id: '/portal/vehicles'
+      path: '/vehicles'
+      fullPath: '/portal/vehicles'
+      preLoaderRoute: typeof PortalVehiclesRouteImport
+      parentRoute: typeof PortalRoute
+    }
+    '/portal/profile': {
+      id: '/portal/profile'
+      path: '/profile'
+      fullPath: '/portal/profile'
+      preLoaderRoute: typeof PortalProfileRouteImport
+      parentRoute: typeof PortalRoute
+    }
+    '/portal/nfc': {
+      id: '/portal/nfc'
+      path: '/nfc'
+      fullPath: '/portal/nfc'
+      preLoaderRoute: typeof PortalNfcRouteImport
+      parentRoute: typeof PortalRoute
+    }
+    '/portal/dashboard': {
+      id: '/portal/dashboard'
+      path: '/dashboard'
+      fullPath: '/portal/dashboard'
+      preLoaderRoute: typeof PortalDashboardRouteImport
+      parentRoute: typeof PortalRoute
+    }
+    '/portal/claims': {
+      id: '/portal/claims'
+      path: '/claims'
+      fullPath: '/portal/claims'
+      preLoaderRoute: typeof PortalClaimsRouteImport
+      parentRoute: typeof PortalRoute
+    }
+    '/portal/admin': {
+      id: '/portal/admin'
+      path: '/admin'
+      fullPath: '/portal/admin'
+      preLoaderRoute: typeof PortalAdminRouteImport
+      parentRoute: typeof PortalRoute
+    }
+    '/customer/$customerCode': {
+      id: '/customer/$customerCode'
+      path: '/customer/$customerCode'
+      fullPath: '/customer/$customerCode'
+      preLoaderRoute: typeof CustomerCustomerCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface PortalRouteChildren {
+  PortalAdminRoute: typeof PortalAdminRoute
+  PortalClaimsRoute: typeof PortalClaimsRoute
+  PortalDashboardRoute: typeof PortalDashboardRoute
+  PortalNfcRoute: typeof PortalNfcRoute
+  PortalProfileRoute: typeof PortalProfileRoute
+  PortalVehiclesRoute: typeof PortalVehiclesRoute
+  PortalWarrantiesRoute: typeof PortalWarrantiesRoute
+}
+
+const PortalRouteChildren: PortalRouteChildren = {
+  PortalAdminRoute: PortalAdminRoute,
+  PortalClaimsRoute: PortalClaimsRoute,
+  PortalDashboardRoute: PortalDashboardRoute,
+  PortalNfcRoute: PortalNfcRoute,
+  PortalProfileRoute: PortalProfileRoute,
+  PortalVehiclesRoute: PortalVehiclesRoute,
+  PortalWarrantiesRoute: PortalWarrantiesRoute,
+}
+
+const PortalRouteWithChildren =
+  PortalRoute._addFileChildren(PortalRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PortalRoute: PortalRouteWithChildren,
   ProjectsRoute: ProjectsRoute,
+  CustomerCustomerCodeRoute: CustomerCustomerCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

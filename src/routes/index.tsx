@@ -113,6 +113,7 @@ function GlowworksPage() {
           </a>
 
           <div className={menuOpen ? 'nav-links is-open' : 'nav-links'}>
+            <a href={getAssetPath('/portal')} onClick={closeMenu}>Portal</a>
             <a href={getAssetPath('/projects')} onClick={closeMenu}>Projects</a>
             <a href="#services" onClick={closeMenu}>Υπηρεσίες</a>
             <a href="#process" onClick={closeMenu}>Διαδικασία</a>
