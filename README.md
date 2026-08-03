@@ -26,8 +26,8 @@ A premium, responsive landing page for Glowworks.lab, an automotive interior upg
 Install dependencies and start the development server:
 
 ```bash
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
 
 The Vite development server runs on port `3000`. For Netlify platform emulation, use:

@@ -36,4 +36,4 @@ This repository contains the single-page marketing website for Glowworks.lab, a 
 
 ## Local Development
 
-Use `pnpm dev` for local development. Netlify Forms registration and submissions should be verified on a deployed preview because the platform form handler is not active in the standard Vite development server.
+Use `npm run dev` for local development. Netlify Forms registration and submissions should be verified on a deployed preview because the platform form handler is not active in the standard Vite development server.
