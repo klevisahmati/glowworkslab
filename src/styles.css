@@ -49,7 +49,7 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
 .menu-button { display: none; background: none; border: 0; color: #fff; padding: 8px; }
 
 .hero { min-height: 850px; height: 100svh; position: relative; overflow: hidden; background: var(--ink); color: #fff; }
-.hero-image { position: absolute; inset: 0; background: url('/images/ambient-light.webp') center 57% / cover no-repeat; transform: scale(1.04); filter: saturate(.9) contrast(1.08); }
+.hero-image { position: absolute; inset: 0; background: url('/images/mercedes_a_class_w1772.jpg') center 57% / cover no-repeat; transform: scale(1.04); filter: saturate(.9) contrast(1.08); }
 .hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(6,6,10,.95) 0%, rgba(6,6,10,.78) 42%, rgba(6,6,10,.2) 72%), linear-gradient(0deg, rgba(6,6,10,.92) 0%, transparent 40%); }
 .hero-grid { position: absolute; inset: 0; z-index: 1; opacity: .09; background-image: linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px); background-size: 72px 72px; mask-image: linear-gradient(90deg, #000, transparent 70%); }
 .hero-content { position: relative; z-index: 2; height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: center; gap: 80px; padding-top: 76px; }
