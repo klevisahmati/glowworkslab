@@ -12,13 +12,7 @@ type PortalShellProps = {
 }
 
 const navItems = [
-  { key: 'dashboard', label: 'Πίνακας', href: '/portal/dashboard' },
-  { key: 'vehicles', label: 'Οχήματα', href: '/portal/vehicles' },
-  { key: 'warranties', label: 'Εγγυήσεις', href: '/portal/warranties' },
-  { key: 'claims', label: 'Αιτήσεις', href: '/portal/claims' },
-  { key: 'nfc', label: 'NFC', href: '/portal/nfc' },
   { key: 'admin', label: 'Διαχείριση', href: '/portal/admin' },
-  { key: 'profile', label: 'Προφίλ', href: '/portal/profile' },
 ]
 
 export function PortalShell({ children, active, title, subtitle }: PortalShellProps) {
@@ -34,8 +28,9 @@ export function PortalShell({ children, active, title, subtitle }: PortalShellPr
     <main className="portal-page">
       <div className="shell portal-shell">
         <nav className="portal-shell-nav">
-          <Link className="portal-brand" to="/portal/dashboard">
-            <ShieldCheck size={18} /> Glowworks Portal
+          <Link className="portal-brand" to="/">
+            <img className="portal-brand-logo" src="/images/glowworks-logo.webp" alt="Glowworks logo" />
+            <span>Glowworks Portal</span>
           </Link>
           <div className="portal-main-nav">
             {navItems.map((item) => {

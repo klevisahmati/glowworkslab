@@ -9,6 +9,8 @@ const createCustomer = (overrides: Partial<CustomerProfile> = {}): CustomerProfi
   address: 'Rhodes, Greece',
   loyaltyTier: 'Diamond',
   createdAt: '2025-06-01',
+  discountEnabled: true,
+  discountCode: 'GLOW10',
   ...overrides,
 })
 
