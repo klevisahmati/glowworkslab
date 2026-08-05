@@ -73,6 +73,85 @@ const steps = [
   ['04', 'Ζήσε τη διαφορά', 'Παραλαμβάνεις ένα εσωτερικό σχεδιασμένο για σένα.'],
 ]
 
+const vehicleBrands = [
+  'Acura','Alfa Romeo','Aston Martin','Audi','Bentley','BMW','Bugatti','Buick','Cadillac','Chevrolet','Chrysler',
+  'Citroën','Dodge','Ferrari','Fiat','Ford','Genesis','GMC','Honda','Hyundai','Infiniti','Jaguar','Jeep','Kia',
+  'Lamborghini','Land Rover','Lexus','Lincoln','Lotus','Maserati','Mazda','McLaren','Mercedes-Benz','Mini','Mitsubishi',
+  'Nissan','Opel','Peugeot','Porsche','Ram','Renault','Rolls-Royce','Saab','Seat','Skoda','Smart','Subaru','Suzuki',
+  'Tesla','Toyota','Volkswagen','Volvo','Alpine','BYD','MG','Polestar','Rivian','Vauxhall','Other'
+]
+
+const serviceOptions = [
+  'Ambient Light',
+  'Custom Τιμόνι',
+  'Αστέρια Οροφής',
+  'Οθόνες & Media',
+  'Συνδυασμός υπηρεσιών',
+  'Body Kits & Exterior Upgrades',
+]
+
+const vehicleModels: Record<string, string[]> = {
+  Acura: ['ILX', 'MDX', 'NSX', 'RDX', 'TLX', 'Other'],
+  'Alfa Romeo': ['Giulia', 'Stelvio', 'Tonale', 'Other'],
+  'Aston Martin': ['DB11', 'DBX', 'Vantage', 'Other'],
+  Audi: ['A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q3', 'Q5', 'Q7', 'Q8', 'R8', 'RS', 'TT', 'Other'],
+  Bentley: ['Bentayga', 'Continental', 'Flying Spur', 'Other'],
+  BMW: ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', '6 Series', '7 Series', '8 Series', 'i3', 'i4', 'iX', 'M Series', 'X1', 'X3', 'X5', 'X7', 'Z4', 'Other'],
+  Bugatti: ['Chiron', 'Divo', 'Veyron', 'Other'],
+  Buick: ['Enclave', 'Encore', 'Envision', 'LaCrosse', 'Regal', 'Other'],
+  Cadillac: ['ATS', 'CT4', 'CT5', 'CT6', 'Escalade', 'XT4', 'XT5', 'XT6', 'Other'],
+  Chevrolet: ['Camaro', 'Corvette', 'Cruze', 'Equinox', 'Malibu', 'Silverado', 'Spark', 'Suburban', 'Tahoe', 'Traverse', 'Volt', 'Other'],
+  Chrysler: ['300', 'Pacifica', 'Voyager', 'PT Cruiser', 'Other'],
+  Citroën: ['C3', 'C4', 'C5', 'Berlingo', 'Jumpy', 'Other'],
+  Dodge: ['Challenger', 'Charger', 'Durango', 'Journey', 'Viper', 'Other'],
+  Ferrari: ['488', '458', 'California', 'F8', 'Roma', 'SF90', 'Other'],
+  Fiat: ['500', 'Panda', 'Tipo', 'Doblo', 'Other'],
+  Ford: ['Bronco', 'C-Max', 'EcoSport', 'Escape', 'Explorer', 'F-150', 'Fiesta', 'Focus', 'Fusion', 'Kuga', 'Mustang', 'Ranger', 'Transit', 'Other'],
+  Genesis: ['G80', 'G90', 'GV60', 'GV70', 'GV80', 'Other'],
+  GMC: ['Acadia', 'Canyon', 'Sierra', 'Terrain', 'Yukon', 'Other'],
+  Honda: ['Accord', 'Civic', 'CR-V', 'Fit', 'HR-V', 'Insight', 'Jazz', 'Odyssey', 'Pilot', 'Ridgeline', 'S2000', 'Other'],
+  Hyundai: ['Accent', 'Elantra', 'Ioniq', 'Kona', 'Santa Fe', 'Sonata', 'Tucson', 'Veloster', 'Other'],
+  Infiniti: ['Q30', 'Q50', 'Q60', 'Q70', 'QX50', 'QX60', 'QX80', 'Other'],
+  Jaguar: ['E-Pace', 'F-Type', 'I-Pace', 'XE', 'XF', 'XJ', 'Other'],
+  Jeep: ['Cherokee', 'Compass', 'Gladiator', 'Grand Cherokee', 'Renegade', 'Wrangler', 'Other'],
+  Kia: ['Carens', 'Ceed', 'EV6', 'EV9', 'Niro', 'Optima', 'Picanto', 'Rio', 'Sorento', 'Soul', 'Sportage', 'Stinger', 'Other'],
+  Lamborghini: ['Aventador', 'Huracán', 'Urus', 'Other'],
+  'Land Rover': ['Defender', 'Discovery', 'Evoque', 'Freelander', 'Range Rover', 'Other'],
+  Lexus: ['CT', 'ES', 'GS', 'GX', 'IS', 'LC', 'LS', 'LX', 'NX', 'RC', 'RX', 'UX', 'Other'],
+  Lincoln: ['Aviator', 'Corsair', 'Nautilus', 'Navigator', 'Other'],
+  Lotus: ['Elise', 'Evora', 'Exige', 'Other'],
+  Maserati: ['Ghibli', 'GranTurismo', 'Levante', 'MC20', 'Quattroporte', 'Other'],
+  Mazda: ['2', '3', '5', '6', 'CX-3', 'CX-5', 'CX-60', 'MX-5', 'RX-7', 'Other'],
+  McLaren: ['540C', '570S', '600LT', '720S', 'Artura', 'GT', 'Other'],
+  'Mercedes-Benz': ['A-Class', 'C-Class', 'E-Class', 'S-Class', 'CLA', 'CLS', 'GLA', 'GLC', 'GLE', 'GLS', 'G-Class', 'SL', 'SLC', 'V-Class', 'AMG', 'Other'],
+  Mini: ['Clubman', 'Countryman', 'Cooper', 'One', 'Other'],
+  Mitsubishi: ['ASX', 'Eclipse Cross', 'Lancer', 'Outlander', 'Pajero', 'Space Star', 'Other'],
+  Nissan: ['350Z', '370Z', 'Altima', 'GT-R', 'Juke', 'Leaf', 'Micra', 'Murano', 'Note', 'Qashqai', 'X-Trail', 'Other'],
+  Opel: ['Astra', 'Corsa', 'Insignia', 'Mokka', 'Vectra', 'Zafira', 'Other'],
+  Peugeot: ['208', '308', '508', '2008', '3008', '5008', 'Partner', 'Other'],
+  Porsche: ['911', '718', 'Boxster', 'Cayenne', 'Cayman', 'Macan', 'Panth', 'Taycan', 'Other'],
+  Ram: ['1500', '2500', '3500', 'Dakota', 'Other'],
+  Renault: ['Clio', 'Captur', 'Kangoo', 'Megane', 'Scenic', 'Twingo', 'Zoe', 'Other'],
+  'Rolls-Royce': ['Cullinan', 'Ghost', 'Phantom', 'Wraith', 'Other'],
+  Saab: ['9-3', '9-5', 'Other'],
+  Seat: ['Ibiza', 'Leon', 'Ateca', 'Arona', 'Tarraco', 'Other'],
+  Skoda: ['Fabia', 'Octavia', 'Superb', 'Karoq', 'Kodiaq', 'Rapid', 'Other'],
+  Smart: ['ForTwo', 'ForFour', 'Other'],
+  Subaru: ['BRZ', 'Forester', 'Impreza', 'Legacy', 'Outback', 'WRX', 'XV', 'Other'],
+  Suzuki: ['Baleno', 'Celerio', 'Swift', 'Vitara', 'SX4', 'Other'],
+  Tesla: ['Model 3', 'Model S', 'Model X', 'Model Y', 'Roadster', 'Other'],
+  Toyota: ['Auris', 'Avensis', 'Aygo', 'Camry', 'Corolla', 'C-HR', 'Highlander', 'Land Cruiser', 'Prius', 'RAV4', 'Yaris', 'Other'],
+  Volkswagen: ['Beetle', 'Caddy', 'Golf', 'Jetta', 'Passat', 'Polo', 'T-Cross', 'T-Roc', 'Touareg', 'up!', 'Other'],
+  Volvo: ['C40', 'S60', 'S80', 'V40', 'V60', 'V70', 'XC40', 'XC60', 'XC90', 'Other'],
+  Alpine: ['A110', 'Other'],
+  BYD: ['Atto 3', 'Seal', 'Han', 'Tang', 'Other'],
+  MG: ['3', '4', '5', 'ZS', 'Other'],
+  Polestar: ['2', '3', '4', 'Other'],
+  Rivian: ['R1T', 'R1S', 'Other'],
+  Vauxhall: ['Astra', 'Corsa', 'Insignia', 'Mokka', 'Vivaro', 'Other'],
+  Other: ['Other'],
+}
+
 type FormStatus = 'idle' | 'sending' | 'success' | 'error'
 
 function getAssetPath(path: string) {
@@ -84,6 +163,18 @@ function GlowworksPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [formStatus, setFormStatus] = useState<FormStatus>('idle')
+  const [selectedVehicleBrand, setSelectedVehicleBrand] = useState('')
+  const [selectedVehicleModel, setSelectedVehicleModel] = useState('')
+  const [selectedVehicleYear, setSelectedVehicleYear] = useState('')
+  const [vehicleSearch, setVehicleSearch] = useState('')
+  const [vehicleModelSearch, setVehicleModelSearch] = useState('')
+  const [vehicleYearSearch, setVehicleYearSearch] = useState('')
+  const [isVehicleDropdownOpen, setIsVehicleDropdownOpen] = useState(false)
+  const [isVehicleModelDropdownOpen, setIsVehicleModelDropdownOpen] = useState(false)
+  const [isVehicleYearDropdownOpen, setIsVehicleYearDropdownOpen] = useState(false)
+  const [selectedService, setSelectedService] = useState('')
+  const [serviceSearch, setServiceSearch] = useState('')
+  const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -98,11 +189,51 @@ function GlowworksPage() {
 
     const form = event.currentTarget
     form.reset()
+    setSelectedVehicleBrand('')
+    setSelectedVehicleModel('')
+    setSelectedVehicleYear('')
+    setSelectedService('')
+    setVehicleSearch('')
+    setVehicleModelSearch('')
+    setVehicleYearSearch('')
+    setServiceSearch('')
     setFormStatus('success')
   }
 
   const closeMenu = () => setMenuOpen(false)
   const heroBackgroundImage = getAssetPath('/images/mercedes_a_class_w1172.jpg')
+  const filteredVehicleBrands = vehicleBrands.filter((brand) => {
+    const query = vehicleSearch.trim().toLowerCase()
+    if (!query) {
+      return true
+    }
+    return brand.toLowerCase().includes(query)
+  })
+
+  const filteredVehicleModels = (selectedVehicleBrand ? vehicleModels[selectedVehicleBrand] || [] : []).filter((model) => {
+    const query = vehicleModelSearch.trim().toLowerCase()
+    if (!query) {
+      return true
+    }
+    return model.toLowerCase().includes(query)
+  })
+
+  const yearOptions = Array.from({ length: 40 }, (_, index) => new Date().getFullYear() - index)
+  const filteredVehicleYears = yearOptions.filter((year) => {
+    const query = vehicleYearSearch.trim().toLowerCase()
+    if (!query) {
+      return true
+    }
+    return String(year).includes(query)
+  })
+
+  const filteredServices = serviceOptions.filter((service) => {
+    const query = serviceSearch.trim().toLowerCase()
+    if (!query) {
+      return true
+    }
+    return service.toLowerCase().includes(query)
+  })
 
   return (
 <main id="top">
@@ -113,8 +244,8 @@ function GlowworksPage() {
           </a>
 
           <div className={menuOpen ? 'nav-links is-open' : 'nav-links'}>
-            <a href={getAssetPath('/portal')} onClick={closeMenu}>Portal</a>
-            <a href={getAssetPath('/projects')} onClick={closeMenu}>Έργα</a>
+            <a href={getAssetPath('/portal/login')} onClick={closeMenu}>Portal</a>
+            <a href={getAssetPath('/projects')} onClick={closeMenu}>Projects</a>
             <a href="#services" onClick={closeMenu}>Υπηρεσίες</a>
             <a href="#process" onClick={closeMenu}>Διαδικασία</a>
             <a className="nav-book" href="#booking" onClick={closeMenu}>
@@ -172,7 +303,7 @@ function GlowworksPage() {
       </header>
 
       <section className="intro shell" id="work">
-        <div className="section-index">01 / Επιλεγμένα έργα</div>
+        <div className="section-index">01 / Selected Projects</div>
         <div className="intro-copy">
           <p className="eyebrow"><span /> Η δουλειά μας</p>
           <h2>Η λεπτομέρεια δεν είναι επιπλέον. Είναι η βάση.</h2>
@@ -182,7 +313,7 @@ function GlowworksPage() {
         </p>
       </section>
 
-      <section className="work-grid shell" aria-label="Έργα Glowworks.lab">
+      <section className="work-grid shell" aria-label="Projects Glowworks.lab">
         {services.map((service, index) => (
           <article className={`work-card work-card-${index + 1}`} key={service.title}>
             <img src={service.image} alt={service.title} />
@@ -286,16 +417,176 @@ function GlowworksPage() {
                 <div className="form-grid">
                   <label>Όνομα *<input name="name" type="text" autoComplete="name" required placeholder="Το όνομά σου" /></label>
                   <label>Τηλέφωνο *<input name="phone" type="tel" autoComplete="tel" required placeholder="69x xxx xxxx" /></label>
-                  <label className="full">Όχημα *<input name="vehicle" type="text" required placeholder="Μάρκα, μοντέλο, έτος" /></label>
+                  <label className="full">Όχημα *
+                    <div className="vehicle-selector">
+                      <input type="hidden" name="vehicle" value={selectedVehicleBrand ? `${selectedVehicleBrand}${selectedVehicleModel ? ` ${selectedVehicleModel}` : ''}${selectedVehicleYear ? ` ${selectedVehicleYear}` : ''}` : ''} required />
+                      <div className="vehicle-search-wrap">
+                        <input
+                          type="text"
+                          value={vehicleSearch || selectedVehicleBrand}
+                          onChange={(event) => {
+                            setVehicleSearch(event.target.value)
+                            setSelectedVehicleBrand('')
+                            setSelectedVehicleModel('')
+                            setSelectedVehicleYear('')
+                            setVehicleModelSearch('')
+                            setIsVehicleDropdownOpen(true)
+                            setIsVehicleModelDropdownOpen(false)
+                          }}
+                          onFocus={() => setIsVehicleDropdownOpen(true)}
+                          onBlur={() => setTimeout(() => setIsVehicleDropdownOpen(false), 120)}
+                          placeholder="Μάρκα"
+                        />
+                        {isVehicleDropdownOpen ? (
+                          <div className="vehicle-dropdown">
+                            {filteredVehicleBrands.length > 0 ? (
+                              filteredVehicleBrands.map((brand) => (
+                                <button
+                                  key={brand}
+                                  type="button"
+                                  className="vehicle-dropdown-option"
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={() => {
+                                    setSelectedVehicleBrand(brand)
+                                    setVehicleSearch(brand)
+                                    setSelectedVehicleModel('')
+                                    setSelectedVehicleYear('')
+                                    setVehicleModelSearch('')
+                                    setIsVehicleDropdownOpen(false)
+                                    setIsVehicleModelDropdownOpen(true)
+                                  }}
+                                >
+                                  {brand}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="vehicle-dropdown-empty">Δεν βρέθηκε η μάρκα σου. Μπορείς να γράψεις τη δική σου.</div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                      {selectedVehicleBrand ? (
+                        <div className="vehicle-search-wrap vehicle-search-wrap--secondary">
+                          <input
+                            type="text"
+                            value={vehicleModelSearch || selectedVehicleModel}
+                            onChange={(event) => {
+                              setVehicleModelSearch(event.target.value)
+                              setSelectedVehicleModel('')
+                              setIsVehicleModelDropdownOpen(true)
+                            }}
+                            onFocus={() => setIsVehicleModelDropdownOpen(true)}
+                            onBlur={() => setTimeout(() => setIsVehicleModelDropdownOpen(false), 120)}
+                            placeholder="Μοντέλο"
+                          />
+                          {isVehicleModelDropdownOpen ? (
+                            <div className="vehicle-dropdown">
+                              {filteredVehicleModels.length > 0 ? (
+                                filteredVehicleModels.map((model) => (
+                                  <button
+                                    key={model}
+                                    type="button"
+                                    className="vehicle-dropdown-option"
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => {
+                                      setSelectedVehicleModel(model)
+                                      setVehicleModelSearch(model)
+                                      setIsVehicleModelDropdownOpen(false)
+                                    }}
+                                  >
+                                    {model}
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="vehicle-dropdown-empty">Δεν βρέθηκε μοντέλο για αυτή τη μάρκα.</div>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      {selectedVehicleBrand ? (
+                        <div className="vehicle-search-wrap vehicle-search-wrap--secondary">
+                          <input type="hidden" name="year" value={selectedVehicleYear} required />
+                          <input
+                            type="text"
+                            value={vehicleYearSearch || selectedVehicleYear}
+                            onChange={(event) => {
+                              setVehicleYearSearch(event.target.value)
+                              setSelectedVehicleYear('')
+                              setIsVehicleYearDropdownOpen(true)
+                            }}
+                            onFocus={() => setIsVehicleYearDropdownOpen(true)}
+                            onBlur={() => setTimeout(() => setIsVehicleYearDropdownOpen(false), 120)}
+                            placeholder="Έτος"
+                          />
+                          {isVehicleYearDropdownOpen ? (
+                            <div className="vehicle-dropdown">
+                              {filteredVehicleYears.length > 0 ? (
+                                filteredVehicleYears.map((year) => (
+                                  <button
+                                    key={year}
+                                    type="button"
+                                    className="vehicle-dropdown-option"
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => {
+                                      setSelectedVehicleYear(String(year))
+                                      setVehicleYearSearch(String(year))
+                                      setIsVehicleYearDropdownOpen(false)
+                                    }}
+                                  >
+                                    {year}
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="vehicle-dropdown-empty">Δεν βρέθηκε έτος.</div>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  </label>
                   <label className="full">Υπηρεσία *
-                    <select name="service" required defaultValue="">
-                      <option value="" disabled>Επίλεξε υπηρεσία</option>
-                      <option>Ambient Light</option>
-                      <option>Custom Τιμόνι</option>
-                      <option>Αστέρια Οροφής</option>
-                      <option>Οθόνες & Media</option>
-                      <option>Συνδυασμός υπηρεσιών</option>
-                    </select>
+                    <div className="vehicle-selector">
+                      <input type="hidden" name="service" value={selectedService} required />
+                      <div className="vehicle-search-wrap">
+                        <input
+                          type="text"
+                          value={serviceSearch || selectedService}
+                          onChange={(event) => {
+                            setServiceSearch(event.target.value)
+                            setSelectedService('')
+                            setIsServiceDropdownOpen(true)
+                          }}
+                          onFocus={() => setIsServiceDropdownOpen(true)}
+                          onBlur={() => setTimeout(() => setIsServiceDropdownOpen(false), 120)}
+                          placeholder="Πληκτρολόγησε υπηρεσία ή διάλεξε"
+                        />
+                        {isServiceDropdownOpen ? (
+                          <div className="vehicle-dropdown">
+                            {filteredServices.length > 0 ? (
+                              filteredServices.map((service) => (
+                                <button
+                                  key={service}
+                                  type="button"
+                                  className="vehicle-dropdown-option"
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={() => {
+                                    setSelectedService(service)
+                                    setServiceSearch(service)
+                                    setIsServiceDropdownOpen(false)
+                                  }}
+                                >
+                                  {service}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="vehicle-dropdown-empty">Δεν βρέθηκε υπηρεσία.</div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
                   </label>
                   <label><CalendarDays size={16} /> Προτιμώμενη ημερομηνία<input name="date" type="date" /></label>
                   <label><Clock3 size={16} /> Ώρα

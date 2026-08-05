@@ -4,6 +4,7 @@ export interface PortalSession {
   role: PortalRole
   email: string
   signedInAt: string
+  adminCode?: string
 }
 
 export interface PortalPreferences {
@@ -39,6 +40,8 @@ export interface CustomerProfile {
   address: string
   loyaltyTier: string
   createdAt: string
+  discountEnabled?: boolean
+  discountCode?: string
 }
 
 export interface VehicleRecord {
@@ -89,6 +92,12 @@ export interface ServiceHistoryEntry {
   vehicle: string
   completedOn: string
   notes?: string
+  warrantyId?: string
+  warrantyNumber?: string
+  warrantyStartsOn?: string
+  warrantyEndsOn?: string
+  warrantyCoverage?: string
+  warrantyNotes?: string
 }
 
 export interface NFCRecord {
@@ -115,6 +124,7 @@ export interface AdminGalleryItem {
   imageUrl: string
   category: string
   featured: boolean
+  customerId?: string
 }
 
 export interface AdminDiscount {

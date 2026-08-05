@@ -5,9 +5,26 @@ export interface CustomerPortalLinkOptions {
   kind?: CustomerPortalLinkKind
 }
 
+export function generateSecureCustomerPortalSlug(existingCodes: string[] = []) {
+  const prefix = 'gwl_'
+  const randomPart = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID().replace(/-/g, '').slice(0, 10).toLowerCase()
+    : Math.random().toString(36).slice(2, 12)
+
+  let slug = `${prefix}${randomPart}`
+  let attempts = 0
+
+  while (existingCodes.some((code) => code.trim().toLowerCase() === slug.toLowerCase()) && attempts < 10) {
+    attempts += 1
+    slug = `${prefix}${Math.random().toString(36).slice(2, 12)}`
+  }
+
+  return slug
+}
+
 function normalizeCustomerCode(customerCode: string) {
   const value = customerCode.trim()
-  return value || 'GWL-000001'
+  return value || generateSecureCustomerPortalSlug()
 }
 
 export function buildCustomerPortalPath(customerCode: string) {

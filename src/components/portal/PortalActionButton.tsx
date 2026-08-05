@@ -8,7 +8,7 @@ type PortalActionButtonProps = {
   className?: string
   target?: string
   rel?: string
-  download?: string
+  download?: boolean | string
 }
 
 export function PortalActionButton({ children, href, onClick, primary = false, className = '', target, rel, download }: PortalActionButtonProps) {
