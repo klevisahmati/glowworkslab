@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate, useRouter } from '@tanstack/react-router'
 import { ShieldCheck, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD, authenticateAdmin, getStoredPortalRole, hasValidAdminSession, setStoredPortalRole } from '../lib/portal-auth'
+import { authenticateAdmin, getStoredPortalRole, hasValidAdminSession, setStoredPortalRole } from '../lib/portal-auth'
 
 export const Route = createFileRoute('/portal')({
   component: PortalLayout,
@@ -22,8 +22,8 @@ function PortalLandingPage() {
   const router = useRouter()
   const navigate = useNavigate()
   const [role, setRole] = useState<'admin' | null>(null)
-  const [adminEmail, setAdminEmail] = useState(DEFAULT_ADMIN_EMAIL)
-  const [adminPassword, setAdminPassword] = useState(DEFAULT_ADMIN_PASSWORD)
+  const [adminEmail, setAdminEmail] = useState('')
+  const [adminPassword, setAdminPassword] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
 
   const isAdminSessionActive = useMemo(() => hasValidAdminSession(), [role])
@@ -66,11 +66,11 @@ function PortalLandingPage() {
               <label className="form-grid">
                 <label className="full">
                   <span>Admin email</span>
-                  <input value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} placeholder={DEFAULT_ADMIN_EMAIL} autoComplete="email" />
+                  <input value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} placeholder="admin@your-domain.com" autoComplete="email" />
                 </label>
                 <label className="full">
                   <span>Admin password</span>
-                  <input value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} placeholder={DEFAULT_ADMIN_PASSWORD} type="password" autoComplete="current-password" />
+                  <input value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} placeholder="Enter admin password" type="password" autoComplete="current-password" />
                 </label>
               </label>
               <div className="portal-actions" style={{ marginTop: '14px' }}>

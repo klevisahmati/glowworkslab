@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
-import { DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD, authenticateAdmin, setStoredPortalRole } from '../../lib/portal-auth'
+import { authenticateAdmin, setStoredPortalRole } from '../../lib/portal-auth'
 
 export const Route = createFileRoute('/portal/login')({
   component: AdminLoginPage,
@@ -9,8 +9,8 @@ export const Route = createFileRoute('/portal/login')({
 
 function AdminLoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState(DEFAULT_ADMIN_EMAIL)
-  const [password, setPassword] = useState(DEFAULT_ADMIN_PASSWORD)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -36,7 +36,7 @@ function AdminLoginPage() {
             <div className="form-grid" style={{ marginTop: '16px' }}>
               <label className="full">
                 <span>Email</span>
-                <input value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
+                <input value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="admin@your-domain.com" />
               </label>
               <label className="full">
                 <span>Password</span>
@@ -46,6 +46,7 @@ function AdminLoginPage() {
                     onChange={(event) => setPassword(event.target.value)}
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
+                    placeholder="Enter admin password"
                     style={{ flex: 1 }}
                   />
                   <button

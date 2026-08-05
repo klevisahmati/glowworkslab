@@ -37,3 +37,7 @@ netlify dev --port 8889
 ```
 
 Netlify Forms submissions are fully registered and processed after deployment. The hidden form definition is stored in `public/__forms.html`.
+
+## Admin Portal
+
+Admin sign-in is configured through `VITE_ADMIN_EMAIL` and `VITE_ADMIN_PASSWORD`. The portal login only succeeds when both values match the submitted email and password.

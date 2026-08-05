@@ -1,13 +1,19 @@
 const STORAGE_KEY = 'glowworks.portal.role'
 const ADMIN_AUTH_STORAGE_KEY = 'glowworks.portal.adminAuth'
-export const OWNER_PORTAL_EMAIL = 'klevis.ahmati@gmail.com'
-export const DEFAULT_ADMIN_EMAIL = 'klevis.ahmati@gmail.com'
-export const DEFAULT_ADMIN_PASSWORD = 'Glowworks2026!'
-export const DEFAULT_ADMIN_ACCESS_CODE = 'GLOW2026'
+const ADMIN_EMAIL_ENV = 'VITE_ADMIN_EMAIL'
+const ADMIN_PASSWORD_ENV = 'VITE_ADMIN_PASSWORD'
 
 function getEnvValue(name: string, fallback: string) {
   const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
   return env?.[name]?.trim() || fallback
+}
+
+function getConfiguredAdminEmail() {
+  return getEnvValue(ADMIN_EMAIL_ENV, '').toLowerCase()
+}
+
+function getConfiguredAdminPassword() {
+  return getEnvValue(ADMIN_PASSWORD_ENV, '')
 }
 
 export function authenticateAdmin(email: string, password: string) {
@@ -17,9 +23,9 @@ export function authenticateAdmin(email: string, password: string) {
 
   const normalizedEmail = email.trim().toLowerCase()
   const normalizedPassword = password.trim()
-  const configuredEmail = getEnvValue('VITE_ADMIN_EMAIL', DEFAULT_ADMIN_EMAIL).toLowerCase()
-  const configuredPassword = getEnvValue('VITE_ADMIN_PASSWORD', DEFAULT_ADMIN_PASSWORD)
-  const isValid = normalizedEmail === configuredEmail && normalizedPassword === configuredPassword && normalizedEmail === OWNER_PORTAL_EMAIL
+  const configuredEmail = getConfiguredAdminEmail()
+  const configuredPassword = getConfiguredAdminPassword()
+  const isValid = Boolean(configuredEmail && configuredPassword) && normalizedEmail === configuredEmail && normalizedPassword === configuredPassword
 
   if (!isValid) {
     return false
@@ -52,7 +58,7 @@ export function getAdminAuthSession() {
 
 export function hasValidAdminSession() {
   const session = getAdminAuthSession()
-  return Boolean(session && session.email.toLowerCase() === DEFAULT_ADMIN_EMAIL.toLowerCase())
+  return Boolean(session && session.email.toLowerCase() === getConfiguredAdminEmail())
 }
 
 export function logoutAdminSession() {
@@ -70,7 +76,7 @@ export function getStoredPortalRole() {
   return role === 'admin' ? 'admin' : role === 'customer' ? 'customer' : null
 }
 
-export function setStoredPortalRole(role: 'admin' | 'customer', email = OWNER_PORTAL_EMAIL) {
+export function setStoredPortalRole(role: 'admin' | 'customer', email = '') {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(STORAGE_KEY, role)
     if (role === 'admin') {
