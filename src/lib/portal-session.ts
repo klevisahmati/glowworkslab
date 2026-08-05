@@ -1,21 +1,20 @@
 import { createInitialPortalState } from './portal-data'
 import { generateSecureCustomerPortalSlug } from './customer-links'
-import { authenticateAdmin, getStoredPortalRole, hasValidAdminSession, logoutAdminSession, setStoredPortalRole } from './portal-auth'
 import { createWarrantyRecord } from './warranty'
 import type { AdminAppointment, AdminDiscount, AdminGalleryItem, AdminService, AdminUploadBundle, CustomerProfile, PortalPreferences, PortalRole, PortalSession, PortalState, ServiceHistoryEntry, WarrantyClaim, WarrantyRecord } from '../types/portal'
 
 const STORAGE_KEY = 'glowworks.portal.role'
 const STATE_STORAGE_KEY = 'glowworks.portal.state'
-const ADMIN_ACCESS_CODE_STORAGE_KEY = 'glowworks.portal.adminCode'
 const ADMIN_AUTH_STORAGE_KEY = 'glowworks.portal.adminAuth'
-export const OWNER_PORTAL_EMAIL = 'klevis.ahmati@gmail.com'
-export const DEFAULT_ADMIN_ACCESS_CODE = 'GLOW2026'
-export const DEFAULT_ADMIN_EMAIL = 'klevis.ahmati@gmail.com'
-export const DEFAULT_ADMIN_PASSWORD = 'Glowworks2026!'
+const ADMIN_EMAIL_ENV = 'VITE_ADMIN_EMAIL'
 
 function getEnvValue(name: string, fallback: string) {
   const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
   return env?.[name]?.trim() || fallback
+}
+
+function getConfiguredAdminEmail() {
+  return getEnvValue(ADMIN_EMAIL_ENV, '').trim().toLowerCase()
 }
 
 function hasSupabaseConfig() {
@@ -156,26 +155,6 @@ export async function syncPortalStateToSupabase(state: PortalState) {
   return syncCustomersToSupabase(state)
 }
 
-export function isOwnerPortalEmail(email?: string | null) {
-  return (email ?? '').trim().toLowerCase() === OWNER_PORTAL_EMAIL
-}
-
-export function getAdminAccessCode() {
-  if (typeof window === 'undefined') {
-    return getEnvValue('VITE_ADMIN_ACCESS_CODE', DEFAULT_ADMIN_ACCESS_CODE)
-  }
-
-  const storedCode = window.localStorage.getItem(ADMIN_ACCESS_CODE_STORAGE_KEY)
-  return (storedCode ?? '').trim() || getEnvValue('VITE_ADMIN_ACCESS_CODE', DEFAULT_ADMIN_ACCESS_CODE)
-}
-
-export function setAdminAccessCode(code: string) {
-  if (typeof window !== 'undefined') {
-    const normalizedCode = code.trim()
-    window.localStorage.setItem(ADMIN_ACCESS_CODE_STORAGE_KEY, normalizedCode || DEFAULT_ADMIN_ACCESS_CODE)
-  }
-}
-
 export function getAdminAuthSession() {
   if (typeof window === 'undefined') {
     return null
@@ -193,21 +172,6 @@ export function getAdminAuthSession() {
   }
 }
 
-export function isOwnerAdminAccess(email?: string | null, enteredCode?: string | null) {
-  if (!isOwnerPortalEmail(email)) {
-    return false
-  }
-
-  const normalizedCode = (enteredCode ?? '').trim().toLowerCase()
-  const configuredCode = getAdminAccessCode().trim().toLowerCase()
-
-  if (!normalizedCode) {
-    return configuredCode === DEFAULT_ADMIN_ACCESS_CODE.toLowerCase()
-  }
-
-  return normalizedCode === configuredCode
-}
-
 export function getPortalSessionSnapshot() {
   if (typeof window === 'undefined') {
     return null
@@ -217,12 +181,10 @@ export function getPortalSessionSnapshot() {
   const rawRole = window.localStorage.getItem(STORAGE_KEY)
   const sessionRole = storedState?.session?.role ?? (rawRole === 'admin' ? 'admin' : rawRole === 'customer' ? 'customer' : null)
   const sessionEmail = storedState?.session?.email ?? storedState?.customer?.email ?? ''
-  const sessionAdminCode = storedState?.session?.adminCode ?? getAdminAccessCode()
 
   return {
     role: sessionRole,
     email: sessionEmail,
-    adminCode: sessionAdminCode,
   }
 }
 
@@ -232,7 +194,7 @@ export function hasValidOwnerAdminSession() {
     return false
   }
 
-  return isOwnerPortalEmail(snapshot.email) && (snapshot.adminCode === DEFAULT_ADMIN_ACCESS_CODE || isOwnerAdminAccess(snapshot.email, snapshot.adminCode))
+  return snapshot.email.trim().toLowerCase() === getConfiguredAdminEmail()
 }
 
 function readStoredState(): PortalState | null {
@@ -280,7 +242,7 @@ export function getStoredPortalRole(): PortalRole | null {
 
   const storedState = readStoredState()
   const sessionRole = storedState?.session?.role
-  if (sessionRole === 'admin' && !isOwnerPortalEmail(storedState?.session?.email)) {
+  if (sessionRole === 'admin' && storedState?.session?.email?.trim().toLowerCase() !== getConfiguredAdminEmail()) {
     return 'customer'
   }
   if (sessionRole) {
@@ -292,20 +254,16 @@ export function getStoredPortalRole(): PortalRole | null {
 
 function getStoredPortalRoleFromAuth() {
   const role = window.localStorage.getItem(STORAGE_KEY)
-  if (role === 'admin' && !isOwnerPortalEmail(getAdminAuthSession()?.email)) {
+  if (role === 'admin' && getAdminAuthSession()?.email?.trim().toLowerCase() !== getConfiguredAdminEmail()) {
     return 'customer'
   }
   return role === 'customer' || role === 'admin' ? role : null
 }
 
-export function setStoredPortalRole(role: PortalRole, email = OWNER_PORTAL_EMAIL, adminCode?: string) {
+export function setStoredPortalRole(role: PortalRole, email = '') {
   if (typeof window !== 'undefined') {
     const normalizedEmail = email.trim().toLowerCase()
-    const safeRole: PortalRole = role === 'admin' && !isOwnerPortalEmail(normalizedEmail) ? 'customer' : role
-    const normalizedAdminCode = (adminCode ?? '').trim() || getAdminAccessCode()
-    if (safeRole === 'admin') {
-      setAdminAccessCode(normalizedAdminCode)
-    }
+    const safeRole: PortalRole = role === 'admin' && normalizedEmail !== getConfiguredAdminEmail() ? 'customer' : role
     window.localStorage.setItem(STORAGE_KEY, safeRole)
     const state = getPortalState()
     const updatedState: PortalState = {
@@ -314,7 +272,6 @@ export function setStoredPortalRole(role: PortalRole, email = OWNER_PORTAL_EMAIL
         role: safeRole,
         email: normalizedEmail,
         signedInAt: new Date().toISOString(),
-        ...(safeRole === 'admin' ? { adminCode: normalizedAdminCode } : {}),
       },
     }
     savePortalState(updatedState)
