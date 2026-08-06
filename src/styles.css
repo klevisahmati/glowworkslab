@@ -254,6 +254,7 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   padding: 16px 22px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -354,7 +355,7 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
 }
 .portal-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 16px;
 }
 .portal-card {
@@ -392,7 +393,7 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
 }
 .portal-stat-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
 }
 .portal-stat {
@@ -492,9 +493,15 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
 }
 .portal-landing-card {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1fr;
   align-items: center;
   gap: 24px;
+}
+
+@media (min-width: 980px) {
+  .portal-landing-card {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
 }
 .portal-landing-copy h1 {
   margin-top: 16px;
@@ -858,6 +865,16 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
   .project-card, .project-card-1, .project-card-2, .project-card-5 { grid-column: span 6; }
   .projects-cta-layout { grid-template-columns: 1fr; align-items: start; gap: 42px; }
   .projects-cta .button { justify-self: start; }
+  .portal-shell-nav { flex-wrap: wrap; justify-content: flex-start; gap: 14px; border-radius: 24px; padding: 14px 16px; }
+  .portal-main-nav { order: 3; width: 100%; justify-content: flex-start; }
+  .portal-ghost-button { margin-left: auto; }
+  .portal-header { flex-direction: column; }
+  .portal-profile-pill { white-space: normal; }
+  .portal-landing-card { grid-template-columns: 1fr; }
+  .portal-stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .portal-row, .portal-row-with-actions { flex-direction: column; align-items: flex-start; }
+  .portal-row-meta { text-align: left; }
+  .portal-inline-button { justify-self: start; }
 }
 
 @media (max-width: 720px) {
@@ -917,6 +934,22 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
   .project-card-copy h3 { font-size: 2.7rem; }
   .projects-cta { padding: 78px 0; }
   .projects-cta .button { width: 100%; }
+  .portal-page { padding: 92px 0 58px; }
+  .portal-shell-nav { padding: 12px 14px; border-radius: 20px; gap: 12px; }
+  .portal-brand { font-size: .66rem; letter-spacing: .09em; }
+  .portal-brand-logo { width: 36px; height: 36px; }
+  .portal-main-nav { gap: 12px; }
+  .portal-nav-link { font-size: .66rem; }
+  .portal-ghost-button { width: 100%; justify-content: center; margin-left: 0; }
+  .portal-body-card { padding: 22px 16px; border-radius: 22px; }
+  .portal-header h1 { font-size: clamp(1.8rem, 10vw, 2.35rem); }
+  .portal-subtitle { font-size: .9rem; line-height: 1.65; }
+  .portal-profile-pill { width: 100%; justify-content: flex-start; }
+  .portal-grid, .portal-stat-row { grid-template-columns: 1fr; }
+  .portal-card { padding: 18px; border-radius: 18px; }
+  .portal-card-title-row { flex-wrap: wrap; }
+  .portal-actions .button, .portal-inline-button { width: 100%; justify-content: center; }
+  .portal-link-code { max-width: 100%; white-space: normal; word-break: break-word; }
   .customer-hero-card { flex-direction: column; align-items: flex-start; }
   .customer-hero-side { min-width: 0; width: 100%; }
   .customer-grid { grid-template-columns: 1fr; }
