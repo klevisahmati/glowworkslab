@@ -40,4 +40,14 @@ Netlify Forms submissions are fully registered and processed after deployment. T
 
 ## Admin Portal
 
-Admin sign-in is configured through `VITE_ADMIN_EMAIL` and `VITE_ADMIN_PASSWORD`. The portal login only succeeds when both values match the submitted email and password.
+Admin sign-in uses Netlify Identity. Passwords are managed by Netlify and are not included in the browser bundle.
+
+To create the first administrator after deployment:
+
+1. Open **Identity** in the Netlify project dashboard.
+2. Set registration to **Invite only** under the Identity settings.
+3. Invite the administrator's email address.
+4. Open the invited user after acceptance, add the `admin` role, and save.
+5. Sign in at `/portal/login` with the accepted Identity account.
+
+The login page also handles invitation acceptance and password recovery links. Access to `/portal/admin` is restricted by the Netlify `admin` role and verified again in the application.

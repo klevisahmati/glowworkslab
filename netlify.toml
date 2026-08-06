@@ -9,3 +9,14 @@
   command = "npm run dev"
   targetPort = 3000
   port = 8888
+
+[[redirects]]
+  from = "/portal/admin"
+  to = "/portal/admin"
+  status = 200
+  conditions = { Role = ["admin"] }
+
+[[redirects]]
+  from = "/portal/admin"
+  to = "/portal/login"
+  status = 302

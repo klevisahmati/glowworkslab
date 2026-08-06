@@ -1,69 +1,51 @@
+import { getUser, login, logout, type User } from '@netlify/identity'
+
 const STORAGE_KEY = 'glowworks.portal.role'
-const ADMIN_AUTH_STORAGE_KEY = 'glowworks.portal.adminAuth'
-const ADMIN_EMAIL_ENV = 'VITE_ADMIN_EMAIL'
-const ADMIN_PASSWORD_ENV = 'VITE_ADMIN_PASSWORD'
 
-function getEnvValue(name: string, fallback: string) {
-  const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
-  return env?.[name]?.trim() || fallback
+export class AdminRoleRequiredError extends Error {
+  constructor() {
+    super('This account does not have administrator access.')
+    this.name = 'AdminRoleRequiredError'
+  }
 }
 
-function getConfiguredAdminEmail() {
-  return getEnvValue(ADMIN_EMAIL_ENV, '').toLowerCase()
+export function isAdminUser(user: User | null) {
+  return Boolean(user && (user.role === 'admin' || user.roles?.includes('admin')))
 }
 
-function getConfiguredAdminPassword() {
-  return getEnvValue(ADMIN_PASSWORD_ENV, '')
-}
+export async function authenticateAdmin(email: string, password: string) {
+  const user = await login(email.trim().toLowerCase(), password)
 
-export function authenticateAdmin(email: string, password: string) {
-  if (typeof window === 'undefined') {
-    return false
+  if (!isAdminUser(user)) {
+    await logout()
+    clearStoredPortalRole()
+    throw new AdminRoleRequiredError()
   }
 
-  const normalizedEmail = email.trim().toLowerCase()
-  const normalizedPassword = password.trim()
-  const configuredEmail = getConfiguredAdminEmail()
-  const configuredPassword = getConfiguredAdminPassword()
-  const isValid = Boolean(configuredEmail && configuredPassword) && normalizedEmail === configuredEmail && normalizedPassword === configuredPassword
-
-  if (!isValid) {
-    return false
-  }
-
-  window.localStorage.setItem(ADMIN_AUTH_STORAGE_KEY, JSON.stringify({
-    email: normalizedEmail,
-    authenticatedAt: new Date().toISOString(),
-  }))
-
-  return true
+  setStoredPortalRole('admin')
+  return user
 }
 
-export function getAdminAuthSession() {
-  if (typeof window === 'undefined') {
+export async function getAuthenticatedAdmin() {
+  const user = await getUser()
+  if (!isAdminUser(user)) {
+    clearStoredPortalRole()
     return null
   }
 
-  const raw = window.localStorage.getItem(ADMIN_AUTH_STORAGE_KEY)
-  if (!raw) {
-    return null
-  }
+  setStoredPortalRole('admin')
+  return user
+}
 
+export async function hasValidAdminSession() {
+  return Boolean(await getAuthenticatedAdmin())
+}
+
+export async function logoutAdminSession() {
   try {
-    return JSON.parse(raw) as { email: string; authenticatedAt: string }
-  } catch {
-    return null
-  }
-}
-
-export function hasValidAdminSession() {
-  const session = getAdminAuthSession()
-  return Boolean(session && session.email.toLowerCase() === getConfiguredAdminEmail())
-}
-
-export function logoutAdminSession() {
-  if (typeof window !== 'undefined') {
-    window.localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY)
+    await logout()
+  } finally {
+    clearStoredPortalRole()
   }
 }
 
@@ -76,14 +58,14 @@ export function getStoredPortalRole() {
   return role === 'admin' ? 'admin' : role === 'customer' ? 'customer' : null
 }
 
-export function setStoredPortalRole(role: 'admin' | 'customer', email = '') {
+export function setStoredPortalRole(role: 'admin' | 'customer') {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(STORAGE_KEY, role)
-    if (role === 'admin') {
-      window.localStorage.setItem(ADMIN_AUTH_STORAGE_KEY, JSON.stringify({
-        email: email.trim().toLowerCase(),
-        authenticatedAt: new Date().toISOString(),
-      }))
-    }
+  }
+}
+
+export function clearStoredPortalRole() {
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(STORAGE_KEY)
   }
 }

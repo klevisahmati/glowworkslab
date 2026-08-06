@@ -6,8 +6,6 @@ import type { AdminAppointment, AdminDiscount, AdminGalleryItem, AdminService, A
 
 const STORAGE_KEY = 'glowworks.portal.role'
 const STATE_STORAGE_KEY = 'glowworks.portal.state'
-const ADMIN_AUTH_STORAGE_KEY = 'glowworks.portal.adminAuth'
-const ADMIN_EMAIL_ENV = 'VITE_ADMIN_EMAIL'
 
 function hasStoredPortalState() {
   if (typeof window === 'undefined') {
@@ -20,10 +18,6 @@ function hasStoredPortalState() {
 function getEnvValue(name: string, fallback: string) {
   const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
   return env?.[name]?.trim() || fallback
-}
-
-function getConfiguredAdminEmail() {
-  return getEnvValue(ADMIN_EMAIL_ENV, '').trim().toLowerCase()
 }
 
 function hasSupabaseConfig() {
@@ -169,48 +163,6 @@ export async function syncPortalStateToSupabase(state: PortalState) {
   return syncCustomersToSupabase(state)
 }
 
-export function getAdminAuthSession() {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
-  const raw = window.localStorage.getItem(ADMIN_AUTH_STORAGE_KEY)
-  if (!raw) {
-    return null
-  }
-
-  try {
-    return JSON.parse(raw) as { email: string; authenticatedAt: string }
-  } catch {
-    return null
-  }
-}
-
-export function getPortalSessionSnapshot() {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
-  const storedState = readStoredState()
-  const rawRole = window.localStorage.getItem(STORAGE_KEY)
-  const sessionRole = storedState?.session?.role ?? (rawRole === 'admin' ? 'admin' : rawRole === 'customer' ? 'customer' : null)
-  const sessionEmail = storedState?.session?.email ?? storedState?.customer?.email ?? ''
-
-  return {
-    role: sessionRole,
-    email: sessionEmail,
-  }
-}
-
-export function hasValidOwnerAdminSession() {
-  const snapshot = getPortalSessionSnapshot()
-  if (!snapshot || snapshot.role !== 'admin') {
-    return false
-  }
-
-  return snapshot.email.trim().toLowerCase() === getConfiguredAdminEmail()
-}
-
 function normalizeWebsiteContent(content: Partial<WebsiteContent> | null | undefined): WebsiteContent {
   const baseContent = deepCloneWebsiteContent(DEFAULT_WEBSITE_CONTENT)
 
@@ -275,56 +227,6 @@ function readStoredState(): PortalState | null {
     }
   } catch {
     return null
-  }
-}
-
-export function getStoredPortalRole(): PortalRole | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
-  const storedState = readStoredState()
-  const sessionRole = storedState?.session?.role
-  if (sessionRole === 'admin' && storedState?.session?.email?.trim().toLowerCase() !== getConfiguredAdminEmail()) {
-    return 'customer'
-  }
-  if (sessionRole) {
-    return sessionRole
-  }
-
-  return getStoredPortalRoleFromAuth()
-}
-
-function getStoredPortalRoleFromAuth() {
-  const role = window.localStorage.getItem(STORAGE_KEY)
-  if (role === 'admin' && getAdminAuthSession()?.email?.trim().toLowerCase() !== getConfiguredAdminEmail()) {
-    return 'customer'
-  }
-  return role === 'customer' || role === 'admin' ? role : null
-}
-
-export function setStoredPortalRole(role: PortalRole, email = '') {
-  if (typeof window !== 'undefined') {
-    const normalizedEmail = email.trim().toLowerCase()
-    const safeRole: PortalRole = role === 'admin' && normalizedEmail !== getConfiguredAdminEmail() ? 'customer' : role
-    window.localStorage.setItem(STORAGE_KEY, safeRole)
-    const state = getPortalState()
-    const updatedState: PortalState = {
-      ...state,
-      session: {
-        role: safeRole,
-        email: normalizedEmail,
-        signedInAt: new Date().toISOString(),
-      },
-    }
-    savePortalState(updatedState)
-  }
-}
-
-export function clearStoredPortalRole() {
-  if (typeof window !== 'undefined') {
-    window.localStorage.removeItem(STORAGE_KEY)
-    window.localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY)
   }
 }
 
