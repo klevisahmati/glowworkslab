@@ -3,7 +3,7 @@ import { Copy, PencilLine, Search, ShieldCheck, Trash2, UserPlus } from 'lucide-
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PortalShell } from '../../components/portal/PortalShell'
 import { buildCustomerPortalUrl, generateSecureCustomerPortalSlug } from '../../lib/customer-links'
-import { hasValidAdminSession } from '../../lib/portal-auth'
+import { getAuthenticatedAdmin } from '../../lib/portal-auth'
 import { DEFAULT_WEBSITE_CONTENT, deepCloneWebsiteContent, WEBSITE_CONTENT_VERSION } from '../../lib/site-content'
 import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, updatePortalVehicle, updatePortalWebsiteContent } from '../../lib/portal-session'
 import type { AdminGalleryItem, CustomerProfile, PortalState, PublicProjectContent, PublicServiceContent, ServiceHistoryEntry, VehicleRecord, WarrantyRecord, WebsiteContent } from '../../types/portal'
@@ -233,21 +233,38 @@ function AdminPage() {
   const [serviceDraft, setServiceDraft] = useState(() => makeServiceDraft())
   const [editingServiceEntryId, setEditingServiceEntryId] = useState<string | null>(null)
   const [copiedCustomerId, setCopiedCustomerId] = useState<string | null>(null)
-
-  const isAuthorizedAdmin = hasValidAdminSession()
+  const [adminAccess, setAdminAccess] = useState<'checking' | 'authorized' | 'denied'>('checking')
 
   useEffect(() => {
-    if (!isAuthorizedAdmin) {
-      navigate({ to: '/portal' })
+    let active = true
+
+    void getAuthenticatedAdmin().then((admin) => {
+      if (!active) {
+        return
+      }
+      if (!admin) {
+        setAdminAccess('denied')
+        window.location.href = '/portal/login'
+        return
+      }
+      setAdminAccess('authorized')
+    })
+
+    return () => {
+      active = false
     }
-  }, [isAuthorizedAdmin, navigate])
+  }, [])
 
   useEffect(() => {
+    if (adminAccess !== 'authorized') {
+      return
+    }
+
     void hydratePortalStateFromSupabase().then((hydratedState) => {
       setState(hydratedState)
       setWebsiteContentDraft(deepCloneWebsiteContent(hydratedState.websiteContent ?? DEFAULT_WEBSITE_CONTENT))
     })
-  }, [])
+  }, [adminAccess])
 
   const filteredCustomers = useMemo(() => {
     const query = search.toLowerCase()
@@ -807,6 +824,21 @@ function AdminPage() {
     }).catch(() => {
       setPendingGalleryImages((current) => current)
     })
+  }
+
+  if (adminAccess !== 'authorized') {
+    return (
+      <main className="portal-page">
+        <div className="shell portal-landing">
+          <section className="portal-body-card portal-landing-card">
+            <div className="portal-card">
+              <p className="portal-eyebrow">Secure admin access</p>
+              <h1>{adminAccess === 'checking' ? 'Checking your session…' : 'Redirecting to login…'}</h1>
+            </div>
+          </section>
+        </div>
+      </main>
+    )
   }
 
   return (

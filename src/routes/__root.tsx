@@ -1,4 +1,5 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import '../styles.css'
 
 export const Route = createRootRoute({
@@ -19,7 +20,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="el">
       <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <body><IdentityCallbackRedirect />{children}<Scripts /></body>
     </html>
   )
+}
+
+function IdentityCallbackRedirect() {
+  useEffect(() => {
+    const isIdentityCallback = /^#(confirmation_token|invite_token|recovery_token|access_token|token)=/.test(window.location.hash)
+    if (isIdentityCallback && window.location.pathname !== '/portal/login') {
+      window.location.replace(`/portal/login${window.location.hash}`)
+    }
+  }, [])
+
+  return null
 }

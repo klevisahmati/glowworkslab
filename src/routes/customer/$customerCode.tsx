@@ -4,7 +4,7 @@ import { jsPDF } from 'jspdf'
 import { useEffect, useMemo, useState } from 'react'
 import { PortalActionButton } from '../../components/portal/PortalActionButton'
 import { PortalEmptyState, PortalSectionCard } from '../../components/portal/PortalSectionCard'
-import { hasValidAdminSession } from '../../lib/portal-auth'
+import { getAuthenticatedAdmin } from '../../lib/portal-auth'
 import { getPortalState } from '../../lib/portal-session'
 import { calculateWarrantyMeta } from '../../lib/warranty'
 import type { CustomerProfile, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyRecord } from '../../types/portal'
@@ -105,7 +105,22 @@ function CustomerPortalPage() {
     nfcTagId: 'Pending',
   }
   const [now, setNow] = useState(new Date())
-  const isAdminViewingCustomer = hasValidAdminSession()
+  const [isAdminViewingCustomer, setIsAdminViewingCustomer] = useState(false)
+
+  useEffect(() => {
+    let active = true
+
+    void getAuthenticatedAdmin().then((admin) => {
+      if (active) {
+        setIsAdminViewingCustomer(Boolean(admin))
+      }
+    })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
   const serviceEntriesWithWarranties = useMemo(() => {
     return customerHistory.slice().sort((a, b) => b.completedOn.localeCompare(a.completedOn)).map((entry) => ({
       entry,

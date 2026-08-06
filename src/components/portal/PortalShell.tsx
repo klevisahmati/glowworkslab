@@ -1,8 +1,7 @@
-import { Link, useRouter } from '@tanstack/react-router'
-import { ArrowLeft, ShieldCheck, UserCircle2 } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { ArrowLeft, UserCircle2 } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { clearStoredPortalRole, getStoredPortalRole } from '../../lib/portal-session'
-import type { PortalRole } from '../../types/portal'
+import { getStoredPortalRole, logoutAdminSession } from '../../lib/portal-auth'
 
 type PortalShellProps = {
   children: ReactNode
@@ -16,12 +15,11 @@ const navItems = [
 ]
 
 export function PortalShell({ children, active, title, subtitle }: PortalShellProps) {
-  const router = useRouter()
   const role = getStoredPortalRole()
 
-  const handleExit = () => {
-    clearStoredPortalRole()
-    router.navigate({ to: '/portal' })
+  const handleExit = async () => {
+    await logoutAdminSession()
+    window.location.href = '/portal'
   }
 
   return (
