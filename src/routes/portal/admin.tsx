@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { PortalShell } from '../../components/portal/PortalShell'
 import { buildCustomerPortalUrl, generateSecureCustomerPortalSlug } from '../../lib/customer-links'
 import { hasValidAdminSession } from '../../lib/portal-auth'
-import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, updatePortalVehicle, updatePortalWarranty } from '../../lib/portal-session'
-import type { AdminGalleryItem, CustomerProfile, PortalState, VehicleRecord, WarrantyRecord } from '../../types/portal'
+import { DEFAULT_WEBSITE_CONTENT, deepCloneWebsiteContent, WEBSITE_CONTENT_VERSION } from '../../lib/site-content'
+import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, updatePortalVehicle, updatePortalWebsiteContent } from '../../lib/portal-session'
+import type { AdminGalleryItem, CustomerProfile, PortalState, PublicProjectContent, PublicServiceContent, ServiceHistoryEntry, VehicleRecord, WarrantyRecord, WebsiteContent } from '../../types/portal'
 
 export const Route = createFileRoute('/portal/admin')({
   component: AdminPage,
@@ -14,36 +15,6 @@ export const Route = createFileRoute('/portal/admin')({
 const DEFAULT_WARRANTY_TERMS = `Η εγγύηση καλύπτει την εγκατάσταση και τη λειτουργία του προϊόντος για τη διάρκεια της συμφωνίας, υπό προϋποθέσεις που ορίζονται στο έγγραφο της Glowworks. Η κάλυψη περιλαμβάνει επισκευή ή αντικατάσταση σε περίπτωση βλάβης που αποδίδεται σε ελαττωματικό υλικό ή εργασία. Η εγγύηση δεν καλύπτει φθορές από κακή χρήση, μηχανική βλάβη, τροποποιήσεις ή ζημιές που προκύπτουν από φυσική καταστροφή.`
 
 const SERVICE_PRESET_OPTIONS = ['Ambient Lighting', 'Starlight Headliner', 'Alcantara Interior', 'Carbon Trim', 'Premium Audio', 'Sunroof', 'Seat Upgrade', 'Interior Mood Lighting', 'Custom Trim', 'Other']
-
-const VEHICLE_BRAND_MODELS: Record<string, string[]> = {
-  Audi: ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q2', 'Q3', 'Q4', 'Q5', 'Q7', 'R8', 'TT', 'e-tron', 'RS3', 'RS5', 'RS6', 'RS7'],
-  BMW: ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', '6 Series', '7 Series', '8 Series', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'M3', 'M4', 'M5', 'i3', 'i4', 'iX'],
-  'Mercedes-Benz': ['A-Class', 'B-Class', 'C-Class', 'CLA', 'CLS', 'E-Class', 'G-Class', 'GLA', 'GLB', 'GLC', 'GLE', 'GLS', 'S-Class', 'EQE', 'EQS', 'AMG GT', 'SL', 'SLC'],
-  Volkswagen: ['Golf', 'Passat', 'Polo', 'Tiguan', 'Touareg', 'Up!', 'Arteon', 'ID.3', 'ID.4', 'T-Cross', 'Scirocco', 'Sharan'],
-  Porsche: ['911', '718', 'Panthera', 'Cayenne', 'Macan', 'Taycan', 'Boxster', 'Cayman', 'Panth', '918 Spyder'],
-  Ford: ['Fiesta', 'Focus', 'Mondeo', 'Mustang', 'Kuga', 'Explorer', 'F-150', 'Puma', 'Edge', 'Ranger'],
-  Toyota: ['Yaris', 'Corolla', 'Auris', 'Camry', 'Prius', 'RAV4', 'Highlander', 'Land Cruiser', 'C-HR', 'Aygo', 'Supra'],
-  Honda: ['Civic', 'Accord', 'Jazz', 'CR-V', 'HR-V', 'Pilot', 'Type R', 'NSX', 'City', 'FR-V'],
-  Nissan: ['Micra', 'Qashqai', 'Juke', 'Leaf', 'X-Trail', 'GT-R', '350Z', '370Z', 'Altima', 'Primera'],
-  Hyundai: ['i10', 'i20', 'i30', 'Elantra', 'Tucson', 'Santa Fe', 'Ioniq', 'Kona', 'Bayon', 'IONIQ 5'],
-  Kia: ['Picanto', 'Rio', 'Ceed', 'Sportage', 'Sorento', 'EV6', 'EV9', 'Niro', 'Carnival', 'Stinger'],
-  Mazda: ['2', '3', '5', '6', 'CX-3', 'CX-5', 'CX-30', 'MX-5', 'MX-30', 'CX-60'],
-  Subaru: ['Impreza', 'Legacy', 'Outback', 'Forester', 'Crosstrek', 'BRZ', 'WRX', 'Levorg', 'XV', 'Tribeca'],
-  Volvo: ['V40', 'V60', 'V70', 'XC40', 'XC60', 'XC90', 'S60', 'S90', 'V90', 'EX30'],
-  Peugeot: ['208', '308', '508', '2008', '3008', '5008', '508 SW', '208 GTI', 'RCZ', 'Traveller'],
-  Citroen: ['C1', 'C3', 'C4', 'C5', 'C-Elysee', 'Jumper', 'Cactus', 'Berlingo', 'Spacetourer', 'C6'],
-  Opel: ['Corsa', 'Astra', 'Insignia', 'Mokka', 'Crossland', 'Grandland', 'Vectra', 'Zafira', 'Adam', 'Combo'],
-  Renault: ['Clio', 'Megane', 'Kadjar', 'Captur', 'Austral', 'Scenic', 'Twingo', 'Laguna', 'Koleos', 'Zoe'],
-  Seat: ['Ibiza', 'Leon', 'Ateca', 'Tarraco', 'Arona', 'Alhambra', 'Mii', 'Cordoba', 'Exeo'],
-  Skoda: ['Fabia', 'Octavia', 'Superb', 'Karoq', 'Kodiaq', 'Enyaq', 'Rapid', 'Yeti', 'Scala', 'Citigo'],
-  'Land Rover': ['Defender', 'Discovery', 'Range Rover Evoque', 'Range Rover Sport', 'Range Rover Velar', 'Freelander', 'Range Rover', 'Discovery Sport'],
-  Lexus: ['IS', 'ES', 'GS', 'LS', 'UX', 'NX', 'RX', 'LX', 'RC', 'LC'],
-  Maserati: ['Ghibli', 'Quattroporte', 'Levante', 'GranTurismo', 'GranCabrio'],
-  'Alfa Romeo': ['Giulia', 'Stelvio', 'Giulietta', '4C', 'Tonale'],
-  Mini: ['Cooper', 'Countryman', 'Clubman', 'One', 'Paceman'],
-}
-
-const VEHICLE_BRAND_OPTIONS = Object.keys(VEHICLE_BRAND_MODELS).sort()
 
 const makeCustomerDraft = (): CustomerProfile => ({
   id: `cust-${Math.random().toString(36).slice(2, 8)}`,
@@ -243,6 +214,14 @@ function SearchableSelect({ value, onSelect, options, placeholder, emptyText }: 
 
 function AdminPage() {
   const [state, setState] = useState<PortalState>(() => getPortalState())
+  const [websiteContentDraft, setWebsiteContentDraft] = useState<WebsiteContent>(() => deepCloneWebsiteContent(getPortalState().websiteContent ?? DEFAULT_WEBSITE_CONTENT))
+  const [selectedProjectDraftId, setSelectedProjectDraftId] = useState('')
+  const [selectedServiceDraftId, setSelectedServiceDraftId] = useState('')
+  const [selectedBrandDraftName, setSelectedBrandDraftName] = useState('')
+  const [selectedModelDraftName, setSelectedModelDraftName] = useState('')
+  const [newBrandName, setNewBrandName] = useState('')
+  const [newBrandFirstModel, setNewBrandFirstModel] = useState('')
+  const [newModelName, setNewModelName] = useState('')
   const [search, setSearch] = useState('')
   const navigate = useNavigate()
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
@@ -266,6 +245,7 @@ function AdminPage() {
   useEffect(() => {
     void hydratePortalStateFromSupabase().then((hydratedState) => {
       setState(hydratedState)
+      setWebsiteContentDraft(deepCloneWebsiteContent(hydratedState.websiteContent ?? DEFAULT_WEBSITE_CONTENT))
     })
   }, [])
 
@@ -279,8 +259,103 @@ function AdminPage() {
 
   const selectedVehicleModels = useMemo(() => {
     const make = vehicleDraft.make.trim()
-    return VEHICLE_BRAND_MODELS[make] ?? []
-  }, [vehicleDraft.make])
+    return state.websiteContent.vehicleBrandModels[make] ?? []
+  }, [state.websiteContent.vehicleBrandModels, vehicleDraft.make])
+
+  const vehicleBrandOptions = useMemo(
+    () => Object.keys(state.websiteContent.vehicleBrandModels ?? {}).sort(),
+    [state.websiteContent.vehicleBrandModels],
+  )
+  const projectSelectorOptions = useMemo(
+    () => websiteContentDraft.projects.map((project) => ({
+      id: project.id,
+      label: project.title?.trim() ? `${project.title} (${project.id})` : project.id,
+    })),
+    [websiteContentDraft.projects],
+  )
+  const selectedProjectDraft = useMemo(
+    () => websiteContentDraft.projects.find((project) => project.id === selectedProjectDraftId) ?? null,
+    [selectedProjectDraftId, websiteContentDraft.projects],
+  )
+  const selectedProjectSelectorValue = useMemo(
+    () => projectSelectorOptions.find((project) => project.id === selectedProjectDraftId)?.label ?? '',
+    [projectSelectorOptions, selectedProjectDraftId],
+  )
+  const serviceSelectorOptions = useMemo(
+    () => websiteContentDraft.services.map((service) => ({
+      id: service.id,
+      label: `${service.title} (${service.id})`,
+    })),
+    [websiteContentDraft.services],
+  )
+  const selectedServiceDraft = useMemo(
+    () => websiteContentDraft.services.find((service) => service.id === selectedServiceDraftId) ?? null,
+    [selectedServiceDraftId, websiteContentDraft.services],
+  )
+  const selectedServiceSelectorValue = useMemo(
+    () => serviceSelectorOptions.find((service) => service.id === selectedServiceDraftId)?.label ?? '',
+    [selectedServiceDraftId, serviceSelectorOptions],
+  )
+  const brandSelectorOptions = useMemo(
+    () => Object.keys(websiteContentDraft.vehicleBrandModels).sort(),
+    [websiteContentDraft.vehicleBrandModels],
+  )
+  const selectedBrandModels = useMemo(
+    () => websiteContentDraft.vehicleBrandModels[selectedBrandDraftName] ?? [],
+    [selectedBrandDraftName, websiteContentDraft.vehicleBrandModels],
+  )
+
+  useEffect(() => {
+    if (!websiteContentDraft.projects.length) {
+      if (selectedProjectDraftId) {
+        setSelectedProjectDraftId('')
+      }
+      return
+    }
+
+    if (!selectedProjectDraftId || !websiteContentDraft.projects.some((project) => project.id === selectedProjectDraftId)) {
+      setSelectedProjectDraftId(websiteContentDraft.projects[0]?.id ?? '')
+    }
+  }, [selectedProjectDraftId, websiteContentDraft.projects])
+
+  useEffect(() => {
+    if (!websiteContentDraft.services.length) {
+      if (selectedServiceDraftId) {
+        setSelectedServiceDraftId('')
+      }
+      return
+    }
+
+    if (!selectedServiceDraftId || !websiteContentDraft.services.some((service) => service.id === selectedServiceDraftId)) {
+      setSelectedServiceDraftId(websiteContentDraft.services[0]?.id ?? '')
+    }
+  }, [selectedServiceDraftId, websiteContentDraft.services])
+
+  useEffect(() => {
+    if (!brandSelectorOptions.length) {
+      if (selectedBrandDraftName) {
+        setSelectedBrandDraftName('')
+      }
+      return
+    }
+
+    if (!selectedBrandDraftName || !brandSelectorOptions.includes(selectedBrandDraftName)) {
+      setSelectedBrandDraftName(brandSelectorOptions[0] ?? '')
+    }
+  }, [brandSelectorOptions, selectedBrandDraftName])
+
+  useEffect(() => {
+    if (!selectedBrandModels.length) {
+      if (selectedModelDraftName) {
+        setSelectedModelDraftName('')
+      }
+      return
+    }
+
+    if (!selectedModelDraftName || !selectedBrandModels.includes(selectedModelDraftName)) {
+      setSelectedModelDraftName(selectedBrandModels[0] ?? '')
+    }
+  }, [selectedBrandModels, selectedModelDraftName])
 
   const openCustomerProfile = (customer: CustomerProfile) => {
     navigate({
@@ -319,7 +394,6 @@ function AdminPage() {
     setEditingCustomerId(null)
     setCustomerDraft(makeCustomerDraft())
     setVehicleDraft(makeVehicleDraft())
-    setWarrantyDraft(makeWarrantyDraft())
     setGalleryDraft(makeGalleryDraft())
     setEditingServiceEntryId(null)
     setServiceDraft(makeServiceDraft())
@@ -437,7 +511,6 @@ function AdminPage() {
     setState(nextState)
     setCustomerDraft(makeCustomerDraft())
     setVehicleDraft(makeVehicleDraft())
-    setWarrantyDraft(makeWarrantyDraft())
     setGalleryDraft(makeGalleryDraft())
     setServiceDraft({
       title: '',
@@ -452,6 +525,230 @@ function AdminPage() {
       warrantyNotes: '',
     })
     setEditingCustomerId(null)
+  }
+
+  const updateDraftService = (serviceId: string, updates: Partial<PublicServiceContent>) => {
+    const nextServiceId = updates.id?.trim()
+    setWebsiteContentDraft((current) => ({
+      ...current,
+      services: current.services.map((service) => (service.id === serviceId ? { ...service, ...updates, id: nextServiceId || service.id } : service)),
+    }))
+
+    if (nextServiceId && nextServiceId !== serviceId) {
+      setSelectedServiceDraftId(nextServiceId)
+    }
+  }
+
+  const updateSelectedProjectDraft = (updates: Partial<PublicProjectContent>) => {
+    if (!selectedProjectDraftId) {
+      return
+    }
+
+    const nextProjectId = updates.id?.trim()
+    setWebsiteContentDraft((current) => ({
+      ...current,
+      projects: current.projects.map((project) => (project.id === selectedProjectDraftId ? { ...project, ...updates } : project)),
+    }))
+
+    if (nextProjectId && nextProjectId !== selectedProjectDraftId) {
+      setSelectedProjectDraftId(nextProjectId)
+    }
+  }
+
+  const addWebsiteService = () => {
+    const nextIndex = websiteContentDraft.services.length + 1
+    const id = `service-${Date.now()}`
+    setWebsiteContentDraft((current) => ({
+      ...current,
+      services: [
+        ...current.services,
+        { id, number: String(nextIndex).padStart(2, '0'), title: 'New Service', description: '', image: '/images/ambient-light.webp' },
+      ],
+    }))
+    setSelectedServiceDraftId(id)
+  }
+
+  const removeWebsiteService = (serviceId: string) => {
+    const nextServices = websiteContentDraft.services.filter((service) => service.id !== serviceId)
+    const nextProjects = websiteContentDraft.projects.filter((project) => project.serviceId !== serviceId)
+
+    setWebsiteContentDraft((current) => ({
+      ...current,
+      services: nextServices,
+      projects: nextProjects,
+    }))
+
+    if (selectedServiceDraftId === serviceId) {
+      setSelectedServiceDraftId(nextServices[0]?.id ?? '')
+    }
+  }
+
+  const addWebsiteProject = () => {
+    const firstServiceId = websiteContentDraft.services[0]?.id ?? 'ambient-lighting'
+    const newProjectId = `project-${Date.now()}`
+    setWebsiteContentDraft((current) => ({
+      ...current,
+      projects: [
+        ...current.projects,
+        {
+          id: newProjectId,
+          serviceId: firstServiceId,
+          brand: 'Brand',
+          model: 'Model',
+          title: 'New project title',
+          image: '/images/ambient-light.webp',
+        },
+      ],
+    }))
+    setSelectedProjectDraftId(newProjectId)
+  }
+
+  const removeWebsiteProject = (projectId: string) => {
+    const nextProjects = websiteContentDraft.projects.filter((project) => project.id !== projectId)
+    setWebsiteContentDraft((current) => ({
+      ...current,
+      projects: nextProjects,
+    }))
+    if (selectedProjectDraftId === projectId) {
+      setSelectedProjectDraftId(nextProjects[0]?.id ?? '')
+    }
+  }
+
+  const addWebsiteBrand = () => {
+    const brand = newBrandName.trim()
+    if (!brand) {
+      return
+    }
+
+    setWebsiteContentDraft((current) => ({
+      ...current,
+      vehicleBrandModels: {
+        ...current.vehicleBrandModels,
+        [brand]: newBrandFirstModel.trim() ? [newBrandFirstModel.trim()] : ['Other'],
+      },
+    }))
+    setSelectedBrandDraftName(brand)
+    setSelectedModelDraftName(newBrandFirstModel.trim() || 'Other')
+    setNewBrandName('')
+    setNewBrandFirstModel('')
+  }
+
+  const removeWebsiteBrand = (brand: string) => {
+    setWebsiteContentDraft((current) => {
+      const nextVehicleBrandModels = { ...current.vehicleBrandModels }
+      delete nextVehicleBrandModels[brand]
+      return {
+        ...current,
+        vehicleBrandModels: nextVehicleBrandModels,
+      }
+    })
+  }
+
+  const renameWebsiteBrand = (currentBrand: string, nextBrandValue: string) => {
+    const nextBrand = nextBrandValue.trim()
+    if (!nextBrand || nextBrand === currentBrand) {
+      return
+    }
+
+    setWebsiteContentDraft((current) => ({
+      ...current,
+      projects: current.projects.map((project) => (project.brand === currentBrand ? { ...project, brand: nextBrand } : project)),
+      vehicleBrandModels: Object.fromEntries(
+        Object.entries(current.vehicleBrandModels).map(([brand, models]) => (brand === currentBrand ? [nextBrand, models] : [brand, models])),
+      ),
+    }))
+    setSelectedBrandDraftName(nextBrand)
+  }
+
+  const addBrandModel = () => {
+    const model = newModelName.trim()
+    if (!selectedBrandDraftName || !model) {
+      return
+    }
+
+    setWebsiteContentDraft((current) => {
+      const currentModels = current.vehicleBrandModels[selectedBrandDraftName] ?? []
+      if (currentModels.includes(model)) {
+        return current
+      }
+
+      return {
+        ...current,
+        vehicleBrandModels: {
+          ...current.vehicleBrandModels,
+          [selectedBrandDraftName]: [...currentModels, model],
+        },
+      }
+    })
+    setSelectedModelDraftName(model)
+    setNewModelName('')
+  }
+
+  const renameBrandModel = (brand: string, model: string, nextModelValue: string) => {
+    const nextModel = nextModelValue.trim()
+    if (!nextModel || nextModel === model) {
+      return
+    }
+
+    setWebsiteContentDraft((current) => ({
+      ...current,
+      projects: current.projects.map((project) => (project.brand === brand && project.model === model ? { ...project, model: nextModel } : project)),
+      vehicleBrandModels: {
+        ...current.vehicleBrandModels,
+        [brand]: (current.vehicleBrandModels[brand] ?? []).map((entry) => (entry === model ? nextModel : entry)),
+      },
+    }))
+    setSelectedModelDraftName(nextModel)
+  }
+
+  const removeBrandModel = (brand: string, model: string) => {
+    setWebsiteContentDraft((current) => {
+      const nextModels = (current.vehicleBrandModels[brand] ?? []).filter((entry) => entry !== model)
+      const safeModels = nextModels.length ? nextModels : ['Other']
+      return {
+        ...current,
+        vehicleBrandModels: {
+          ...current.vehicleBrandModels,
+          [brand]: safeModels,
+        },
+      }
+    })
+  }
+
+  const saveWebsiteContent = () => {
+    const sanitized: WebsiteContent = {
+      contentVersion: WEBSITE_CONTENT_VERSION,
+      heroImage: websiteContentDraft.heroImage.trim() || DEFAULT_WEBSITE_CONTENT.heroImage,
+      services: websiteContentDraft.services
+        .map((service, index) => ({
+          ...service,
+          id: service.id.trim() || `service-${index + 1}`,
+          number: service.number.trim() || String(index + 1).padStart(2, '0'),
+          title: service.title.trim() || `Service ${index + 1}`,
+          description: service.description.trim(),
+          image: service.image.trim() || DEFAULT_WEBSITE_CONTENT.heroImage,
+        })),
+      projects: websiteContentDraft.projects
+        .map((project, index) => ({
+          ...project,
+          id: project.id.trim() || `project-${index + 1}`,
+          serviceId: project.serviceId.trim() || websiteContentDraft.services[0]?.id || 'ambient-lighting',
+          brand: project.brand.trim() || 'Brand',
+          model: project.model.trim() || 'Model',
+          title: project.title.trim() || `Project ${index + 1}`,
+          image: project.image.trim() || DEFAULT_WEBSITE_CONTENT.heroImage,
+        })),
+      vehicleBrandModels: Object.fromEntries(
+        Object.entries(websiteContentDraft.vehicleBrandModels).map(([brand, models]) => [
+          brand.trim(),
+          models.map((model) => model.trim()).filter(Boolean),
+        ]).filter(([brand, models]) => Boolean(brand) && models.length),
+      ),
+    }
+
+    const nextState = updatePortalWebsiteContent(sanitized)
+    setState(nextState)
+    setWebsiteContentDraft(deepCloneWebsiteContent(sanitized))
   }
 
   const saveGalleryItem = () => {
@@ -640,7 +937,7 @@ function AdminPage() {
                 <SearchableSelect
                   value={vehicleDraft.make}
                   onSelect={(brand) => setVehicleDraft((current) => ({ ...current, make: brand, model: '' }))}
-                  options={VEHICLE_BRAND_OPTIONS}
+                  options={vehicleBrandOptions}
                   placeholder="Mercedes-Benz"
                   emptyText="No matching brand"
                 />
@@ -880,6 +1177,262 @@ function AdminPage() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="portal-card" style={{ marginTop: '16px' }}>
+        <div className="portal-card-title-row">
+          <h3>Website content manager</h3>
+          <div className="portal-chip">Admin only</div>
+        </div>
+        <p className="portal-muted" style={{ marginBottom: '12px' }}>
+          Edit homepage images, project gallery entries, and available brand/model options used in booking forms.
+        </p>
+
+        <div className="form-grid">
+          <label className="full">
+            <span>Hero image path</span>
+            <input
+              value={websiteContentDraft.heroImage}
+              onChange={(event) => setWebsiteContentDraft((current) => ({ ...current, heroImage: event.target.value }))}
+              placeholder="/images/ambient-light.webp"
+            />
+          </label>
+        </div>
+
+        <div className="portal-card" style={{ marginTop: '14px', border: '1px solid rgba(76, 211, 209, 0.18)', padding: '14px' }}>
+          <div className="portal-card-title-row" style={{ marginBottom: '10px' }}>
+            <h4 style={{ fontSize: '0.95rem' }}>Services</h4>
+            <button className="button button-secondary" type="button" onClick={addWebsiteService}>Add service</button>
+          </div>
+          {serviceSelectorOptions.length ? (
+            <div className="form-grid">
+              <label className="full">
+                <span>Select service</span>
+                <SearchableSelect
+                  value={selectedServiceSelectorValue}
+                  onSelect={(selectedLabel) => {
+                    const selectedService = serviceSelectorOptions.find((service) => service.label === selectedLabel)
+                    if (selectedService) {
+                      setSelectedServiceDraftId(selectedService.id)
+                    }
+                  }}
+                  options={serviceSelectorOptions.map((service) => service.label)}
+                  placeholder="Ambient Lighting (ambient-lighting)"
+                  emptyText="No matching service"
+                />
+              </label>
+              {selectedServiceDraft ? (
+                <>
+                  <label>
+                    <span>Service ID</span>
+                    <input value={selectedServiceDraft.id} onChange={(event) => updateDraftService(selectedServiceDraft.id, { id: event.target.value })} />
+                  </label>
+                  <label>
+                    <span>Number</span>
+                    <input value={selectedServiceDraft.number} onChange={(event) => updateDraftService(selectedServiceDraft.id, { number: event.target.value })} />
+                  </label>
+                  <label className="full">
+                    <span>Title</span>
+                    <input value={selectedServiceDraft.title} onChange={(event) => updateDraftService(selectedServiceDraft.id, { title: event.target.value })} />
+                  </label>
+                  <label className="full">
+                    <span>Description</span>
+                    <textarea value={selectedServiceDraft.description} onChange={(event) => updateDraftService(selectedServiceDraft.id, { description: event.target.value })} />
+                  </label>
+                  <label className="full">
+                    <span>Image path</span>
+                    <input value={selectedServiceDraft.image} onChange={(event) => updateDraftService(selectedServiceDraft.id, { image: event.target.value })} />
+                  </label>
+                  <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
+                    <button className="portal-ghost-button" type="button" onClick={() => removeWebsiteService(selectedServiceDraft.id)}>
+                      <Trash2 size={14} /> Remove selected service
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <p className="portal-muted">No services yet. Click “Add service”.</p>
+          )}
+        </div>
+
+        <div className="portal-card" style={{ marginTop: '14px', border: '1px solid rgba(76, 211, 209, 0.18)', padding: '14px' }}>
+          <div className="portal-card-title-row" style={{ marginBottom: '10px' }}>
+            <h4 style={{ fontSize: '0.95rem' }}>Projects</h4>
+            <button className="button button-secondary" type="button" onClick={addWebsiteProject}>Add project</button>
+          </div>
+          {projectSelectorOptions.length ? (
+            <div className="form-grid">
+              <label className="full">
+                <span>Select project name</span>
+                <SearchableSelect
+                  value={selectedProjectSelectorValue}
+                  onSelect={(selectedLabel) => {
+                    const selectedProject = projectSelectorOptions.find((project) => project.label === selectedLabel)
+                    if (selectedProject) {
+                      setSelectedProjectDraftId(selectedProject.id)
+                    }
+                  }}
+                  options={projectSelectorOptions.map((project) => project.label)}
+                  placeholder="Ambient Lighting • Mercedes A-Class W177"
+                  emptyText="No matching project name"
+                />
+              </label>
+              {selectedProjectDraft ? (
+                <>
+                  <label>
+                    <span>Project ID</span>
+                    <input value={selectedProjectDraft.id} onChange={(event) => updateSelectedProjectDraft({ id: event.target.value })} />
+                  </label>
+                  <label>
+                    <span>Service ID</span>
+                    <SearchableSelect
+                      value={serviceSelectorOptions.find((service) => service.id === selectedProjectDraft.serviceId)?.label ?? selectedProjectDraft.serviceId}
+                      onSelect={(selectedLabel) => {
+                        const selectedService = serviceSelectorOptions.find((service) => service.label === selectedLabel)
+                        if (selectedService) {
+                          updateSelectedProjectDraft({ serviceId: selectedService.id })
+                        }
+                      }}
+                      options={serviceSelectorOptions.map((service) => service.label)}
+                      placeholder="Ambient Light (ambient-lighting)"
+                      emptyText="No matching service"
+                    />
+                  </label>
+                  <label>
+                    <span>Brand</span>
+                    <SearchableSelect
+                      value={selectedProjectDraft.brand}
+                      onSelect={(brand) => updateSelectedProjectDraft({ brand, model: '' })}
+                      options={brandSelectorOptions}
+                      placeholder="Mercedes-Benz"
+                      emptyText="No matching brand"
+                    />
+                  </label>
+                  <label>
+                    <span>Model</span>
+                    <SearchableSelect
+                      value={selectedProjectDraft.model}
+                      onSelect={(model) => updateSelectedProjectDraft({ model })}
+                      options={websiteContentDraft.vehicleBrandModels[selectedProjectDraft.brand] ?? []}
+                      placeholder="A-Class W177"
+                      emptyText="No matching model"
+                    />
+                  </label>
+                  <label className="full">
+                    <span>Title</span>
+                    <input value={selectedProjectDraft.title} onChange={(event) => updateSelectedProjectDraft({ title: event.target.value })} />
+                  </label>
+                  <label className="full">
+                    <span>Image path</span>
+                    <input value={selectedProjectDraft.image} onChange={(event) => updateSelectedProjectDraft({ image: event.target.value })} />
+                  </label>
+                  <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
+                    <button className="portal-ghost-button" type="button" onClick={() => removeWebsiteProject(selectedProjectDraft.id)}>
+                      <Trash2 size={14} /> Remove selected project
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <p className="portal-muted">No projects yet. Click “Add project”.</p>
+          )}
+        </div>
+
+        <div className="portal-card" style={{ marginTop: '14px', border: '1px solid rgba(76, 211, 209, 0.18)', padding: '14px' }}>
+          <div className="portal-card-title-row" style={{ marginBottom: '10px' }}>
+            <h4 style={{ fontSize: '0.95rem' }}>Brand / model catalog</h4>
+            <div className="portal-chip">Used in booking dropdowns</div>
+          </div>
+          <div className="form-grid">
+            <label>
+              <span>New brand</span>
+              <input value={newBrandName} onChange={(event) => setNewBrandName(event.target.value)} placeholder="Lamborghini" />
+            </label>
+            <label>
+              <span>First model (optional)</span>
+              <input value={newBrandFirstModel} onChange={(event) => setNewBrandFirstModel(event.target.value)} placeholder="Huracan" />
+            </label>
+            <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
+              <button className="button button-secondary" type="button" onClick={addWebsiteBrand}>Add brand</button>
+            </div>
+          </div>
+          {brandSelectorOptions.length ? (
+            <div className="form-grid" style={{ marginTop: '12px' }}>
+              <label className="full">
+                <span>Select brand</span>
+                <SearchableSelect
+                  value={selectedBrandDraftName}
+                  onSelect={setSelectedBrandDraftName}
+                  options={brandSelectorOptions}
+                  placeholder="Mercedes-Benz"
+                  emptyText="No matching brand"
+                />
+              </label>
+
+              {selectedBrandDraftName ? (
+                <>
+                  <label className="full">
+                    <span>Brand name</span>
+                    <input
+                      value={selectedBrandDraftName}
+                      onChange={(event) => renameWebsiteBrand(selectedBrandDraftName, event.target.value)}
+                    />
+                  </label>
+                  <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
+                    <button className="portal-ghost-button" type="button" onClick={() => removeWebsiteBrand(selectedBrandDraftName)}>
+                      <Trash2 size={14} /> Remove selected brand
+                    </button>
+                  </div>
+
+                  <label className="full">
+                    <span>Select model</span>
+                    <SearchableSelect
+                      value={selectedModelDraftName}
+                      onSelect={setSelectedModelDraftName}
+                      options={selectedBrandModels}
+                      placeholder="A-Class"
+                      emptyText="No matching model"
+                    />
+                  </label>
+                  {selectedModelDraftName ? (
+                    <>
+                      <label className="full">
+                        <span>Model name</span>
+                        <input
+                          value={selectedModelDraftName}
+                          onChange={(event) => renameBrandModel(selectedBrandDraftName, selectedModelDraftName, event.target.value)}
+                        />
+                      </label>
+                      <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
+                        <button className="portal-ghost-button" type="button" onClick={() => removeBrandModel(selectedBrandDraftName, selectedModelDraftName)}>
+                          <Trash2 size={14} /> Remove selected model
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
+
+                  <label className="full">
+                    <span>Add new model</span>
+                    <input value={newModelName} onChange={(event) => setNewModelName(event.target.value)} placeholder="GLC Coupe" />
+                  </label>
+                  <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
+                    <button className="button button-secondary" type="button" onClick={addBrandModel}>Add model</button>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <p className="portal-muted" style={{ marginTop: '12px' }}>No brands yet. Add a brand first.</p>
+          )}
+        </div>
+
+        <div className="portal-actions" style={{ marginTop: '12px', justifyContent: 'flex-start' }}>
+          <button className="button button-primary" type="button" onClick={saveWebsiteContent}>
+            Save website content
+          </button>
         </div>
       </div>
 

@@ -19,52 +19,12 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
+import { getPortalState } from '../lib/portal-session'
+import { DEFAULT_WEBSITE_CONTENT, SERVICE_SEARCH_ALIASES, type PublicService, type WebsiteContent } from '../lib/site-content'
 
 export const Route = createFileRoute('/')({
   component: GlowworksPage,
 })
-
-const services = [
-  {
-    number: '01',
-    title: 'Ambient Light',
-    description:
-      'OEM-style φωτισμός σε πόρτες, ταμπλό και κονσόλα με χρώματα και δυναμικά προγράμματα.',
-    image: '/images/mercedes_glc_w205_coupe.jpg',
-    icon: Lightbulb,
-  },
-  {
-    number: '02',
-    title: 'Custom Τιμόνι',
-    description:
-      'Δέρμα, Alcantara ή carbon look, custom ραφές και σχεδιασμός που ταιριάζει απόλυτα στο αυτοκίνητό σου.',
-    image: '/images/custom-steering.webp',
-    icon: LucideCircleGauge,
-  },
-  {
-    number: '03',
-    title: 'Αστέρια Οροφής',
-    description:
-      'Πάνω από 600 οπτικές ίνες, shooting stars και ατμόσφαιρα που αλλάζει όλο το εσωτερικό.',
-    image: '/images/starlight-headliner.webp',
-    icon: Sparkles,
-  },
-  {
-    number: '04',
-    title: 'Οθόνες & Media',
-    description:
-      'Οθόνες υψηλής ανάλυσης, σύγχρονο infotainment και καθαρή εργοστασιακή εφαρμογή στο ταμπλό.',
-    image: '/images/android-display.webp',
-    icon: MonitorPlay,
-  },{
-    number: '05',
-    title: 'body kits & exterior upgrades',
-    description:
-      'Premium body kits κορυφαίας σχεδίασης και αεροδυναμικής. Χαρίστε στο αυτοκίνητό σας την απόλυτη πολυτελή σπορ εμφάνιση.',
-    image: '/images/IMG_2085.JPEG',
-    icon: CarFront,
-  },
-]
 
 const steps = [
   ['01', 'Στείλε αίτημα', 'Μας λες το όχημα και την αναβάθμιση που θέλεις.'],
@@ -73,85 +33,6 @@ const steps = [
   ['04', 'Ζήσε τη διαφορά', 'Παραλαμβάνεις ένα εσωτερικό σχεδιασμένο για σένα.'],
 ]
 
-const vehicleBrands = [
-  'Acura','Alfa Romeo','Aston Martin','Audi','Bentley','BMW','Bugatti','Buick','Cadillac','Chevrolet','Chrysler',
-  'Citroën','Dodge','Ferrari','Fiat','Ford','Genesis','GMC','Honda','Hyundai','Infiniti','Jaguar','Jeep','Kia',
-  'Lamborghini','Land Rover','Lexus','Lincoln','Lotus','Maserati','Mazda','McLaren','Mercedes-Benz','Mini','Mitsubishi',
-  'Nissan','Opel','Peugeot','Porsche','Ram','Renault','Rolls-Royce','Saab','Seat','Skoda','Smart','Subaru','Suzuki',
-  'Tesla','Toyota','Volkswagen','Volvo','Alpine','BYD','MG','Polestar','Rivian','Vauxhall','Other'
-]
-
-const serviceOptions = [
-  'Ambient Light',
-  'Custom Τιμόνι',
-  'Αστέρια Οροφής',
-  'Οθόνες & Media',
-  'Συνδυασμός υπηρεσιών',
-  'Body Kits & Exterior Upgrades',
-]
-
-const vehicleModels: Record<string, string[]> = {
-  Acura: ['ILX', 'MDX', 'NSX', 'RDX', 'TLX', 'Other'],
-  'Alfa Romeo': ['Giulia', 'Stelvio', 'Tonale', 'Other'],
-  'Aston Martin': ['DB11', 'DBX', 'Vantage', 'Other'],
-  Audi: ['A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q3', 'Q5', 'Q7', 'Q8', 'R8', 'RS', 'TT', 'Other'],
-  Bentley: ['Bentayga', 'Continental', 'Flying Spur', 'Other'],
-  BMW: ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', '6 Series', '7 Series', '8 Series', 'i3', 'i4', 'iX', 'M Series', 'X1', 'X3', 'X5', 'X7', 'Z4', 'Other'],
-  Bugatti: ['Chiron', 'Divo', 'Veyron', 'Other'],
-  Buick: ['Enclave', 'Encore', 'Envision', 'LaCrosse', 'Regal', 'Other'],
-  Cadillac: ['ATS', 'CT4', 'CT5', 'CT6', 'Escalade', 'XT4', 'XT5', 'XT6', 'Other'],
-  Chevrolet: ['Camaro', 'Corvette', 'Cruze', 'Equinox', 'Malibu', 'Silverado', 'Spark', 'Suburban', 'Tahoe', 'Traverse', 'Volt', 'Other'],
-  Chrysler: ['300', 'Pacifica', 'Voyager', 'PT Cruiser', 'Other'],
-  Citroën: ['C3', 'C4', 'C5', 'Berlingo', 'Jumpy', 'Other'],
-  Dodge: ['Challenger', 'Charger', 'Durango', 'Journey', 'Viper', 'Other'],
-  Ferrari: ['488', '458', 'California', 'F8', 'Roma', 'SF90', 'Other'],
-  Fiat: ['500', 'Panda', 'Tipo', 'Doblo', 'Other'],
-  Ford: ['Bronco', 'C-Max', 'EcoSport', 'Escape', 'Explorer', 'F-150', 'Fiesta', 'Focus', 'Fusion', 'Kuga', 'Mustang', 'Ranger', 'Transit', 'Other'],
-  Genesis: ['G80', 'G90', 'GV60', 'GV70', 'GV80', 'Other'],
-  GMC: ['Acadia', 'Canyon', 'Sierra', 'Terrain', 'Yukon', 'Other'],
-  Honda: ['Accord', 'Civic', 'CR-V', 'Fit', 'HR-V', 'Insight', 'Jazz', 'Odyssey', 'Pilot', 'Ridgeline', 'S2000', 'Other'],
-  Hyundai: ['Accent', 'Elantra', 'Ioniq', 'Kona', 'Santa Fe', 'Sonata', 'Tucson', 'Veloster', 'Other'],
-  Infiniti: ['Q30', 'Q50', 'Q60', 'Q70', 'QX50', 'QX60', 'QX80', 'Other'],
-  Jaguar: ['E-Pace', 'F-Type', 'I-Pace', 'XE', 'XF', 'XJ', 'Other'],
-  Jeep: ['Cherokee', 'Compass', 'Gladiator', 'Grand Cherokee', 'Renegade', 'Wrangler', 'Other'],
-  Kia: ['Carens', 'Ceed', 'EV6', 'EV9', 'Niro', 'Optima', 'Picanto', 'Rio', 'Sorento', 'Soul', 'Sportage', 'Stinger', 'Other'],
-  Lamborghini: ['Aventador', 'Huracán', 'Urus', 'Other'],
-  'Land Rover': ['Defender', 'Discovery', 'Evoque', 'Freelander', 'Range Rover', 'Other'],
-  Lexus: ['CT', 'ES', 'GS', 'GX', 'IS', 'LC', 'LS', 'LX', 'NX', 'RC', 'RX', 'UX', 'Other'],
-  Lincoln: ['Aviator', 'Corsair', 'Nautilus', 'Navigator', 'Other'],
-  Lotus: ['Elise', 'Evora', 'Exige', 'Other'],
-  Maserati: ['Ghibli', 'GranTurismo', 'Levante', 'MC20', 'Quattroporte', 'Other'],
-  Mazda: ['2', '3', '5', '6', 'CX-3', 'CX-5', 'CX-60', 'MX-5', 'RX-7', 'Other'],
-  McLaren: ['540C', '570S', '600LT', '720S', 'Artura', 'GT', 'Other'],
-  'Mercedes-Benz': ['A-Class', 'C-Class', 'E-Class', 'S-Class', 'CLA', 'CLS', 'GLA', 'GLC', 'GLE', 'GLS', 'G-Class', 'SL', 'SLC', 'V-Class', 'AMG', 'Other'],
-  Mini: ['Clubman', 'Countryman', 'Cooper', 'One', 'Other'],
-  Mitsubishi: ['ASX', 'Eclipse Cross', 'Lancer', 'Outlander', 'Pajero', 'Space Star', 'Other'],
-  Nissan: ['350Z', '370Z', 'Altima', 'GT-R', 'Juke', 'Leaf', 'Micra', 'Murano', 'Note', 'Qashqai', 'X-Trail', 'Other'],
-  Opel: ['Astra', 'Corsa', 'Insignia', 'Mokka', 'Vectra', 'Zafira', 'Other'],
-  Peugeot: ['208', '308', '508', '2008', '3008', '5008', 'Partner', 'Other'],
-  Porsche: ['911', '718', 'Boxster', 'Cayenne', 'Cayman', 'Macan', 'Panth', 'Taycan', 'Other'],
-  Ram: ['1500', '2500', '3500', 'Dakota', 'Other'],
-  Renault: ['Clio', 'Captur', 'Kangoo', 'Megane', 'Scenic', 'Twingo', 'Zoe', 'Other'],
-  'Rolls-Royce': ['Cullinan', 'Ghost', 'Phantom', 'Wraith', 'Other'],
-  Saab: ['9-3', '9-5', 'Other'],
-  Seat: ['Ibiza', 'Leon', 'Ateca', 'Arona', 'Tarraco', 'Other'],
-  Skoda: ['Fabia', 'Octavia', 'Superb', 'Karoq', 'Kodiaq', 'Rapid', 'Other'],
-  Smart: ['ForTwo', 'ForFour', 'Other'],
-  Subaru: ['BRZ', 'Forester', 'Impreza', 'Legacy', 'Outback', 'WRX', 'XV', 'Other'],
-  Suzuki: ['Baleno', 'Celerio', 'Swift', 'Vitara', 'SX4', 'Other'],
-  Tesla: ['Model 3', 'Model S', 'Model X', 'Model Y', 'Roadster', 'Other'],
-  Toyota: ['Auris', 'Avensis', 'Aygo', 'Camry', 'Corolla', 'C-HR', 'Highlander', 'Land Cruiser', 'Prius', 'RAV4', 'Yaris', 'Other'],
-  Volkswagen: ['Beetle', 'Caddy', 'Golf', 'Jetta', 'Passat', 'Polo', 'T-Cross', 'T-Roc', 'Touareg', 'up!', 'Other'],
-  Volvo: ['C40', 'S60', 'S80', 'V40', 'V60', 'V70', 'XC40', 'XC60', 'XC90', 'Other'],
-  Alpine: ['A110', 'Other'],
-  BYD: ['Atto 3', 'Seal', 'Han', 'Tang', 'Other'],
-  MG: ['3', '4', '5', 'ZS', 'Other'],
-  Polestar: ['2', '3', '4', 'Other'],
-  Rivian: ['R1T', 'R1S', 'Other'],
-  Vauxhall: ['Astra', 'Corsa', 'Insignia', 'Mokka', 'Vivaro', 'Other'],
-  Other: ['Other'],
-}
-
 type FormStatus = 'idle' | 'sending' | 'success' | 'error'
 
 function getAssetPath(path: string) {
@@ -159,7 +40,28 @@ function getAssetPath(path: string) {
   return path.startsWith('/') ? `${normalizedBase}${path}` : `${normalizedBase}/${path}`
 }
 
+function resolveServiceId(value: string) {
+  const normalized = value.trim().toLowerCase()
+  return SERVICE_SEARCH_ALIASES[normalized] ?? null
+}
+
+function getServiceIcon(serviceId: string) {
+  switch (serviceId) {
+    case 'ambient-lighting':
+      return Lightbulb
+    case 'carbon-steering-wheels':
+      return LucideCircleGauge
+    case 'starlight-headliner':
+      return Sparkles
+    case 'screens-media':
+      return MonitorPlay
+    default:
+      return CarFront
+  }
+}
+
 function GlowworksPage() {
+  const [websiteContent, setWebsiteContent] = useState<WebsiteContent>(DEFAULT_WEBSITE_CONTENT)
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [formStatus, setFormStatus] = useState<FormStatus>('idle')
@@ -183,6 +85,13 @@ function GlowworksPage() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  useEffect(() => {
+    const loaded = getPortalState().websiteContent
+    if (loaded) {
+      setWebsiteContent(loaded)
+    }
+  }, [])
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFormStatus('sending')
@@ -201,7 +110,11 @@ function GlowworksPage() {
   }
 
   const closeMenu = () => setMenuOpen(false)
-  const heroBackgroundImage = getAssetPath('/images/mercedes_a_class_w1172.jpg')
+  const serviceCards = websiteContent.services.length ? websiteContent.services : DEFAULT_WEBSITE_CONTENT.services
+  const vehicleBrandModels = websiteContent.vehicleBrandModels
+  const vehicleBrands = Object.keys(vehicleBrandModels).sort()
+  const serviceOptions = [...new Set([...serviceCards.map((service) => service.title), 'Συνδυασμός υπηρεσιών'])]
+  const heroBackgroundImage = getAssetPath(websiteContent.heroImage || DEFAULT_WEBSITE_CONTENT.heroImage)
   const filteredVehicleBrands = vehicleBrands.filter((brand) => {
     const query = vehicleSearch.trim().toLowerCase()
     if (!query) {
@@ -210,7 +123,7 @@ function GlowworksPage() {
     return brand.toLowerCase().includes(query)
   })
 
-  const filteredVehicleModels = (selectedVehicleBrand ? vehicleModels[selectedVehicleBrand] || [] : []).filter((model) => {
+  const filteredVehicleModels = (selectedVehicleBrand ? vehicleBrandModels[selectedVehicleBrand] || [] : []).filter((model) => {
     const query = vehicleModelSearch.trim().toLowerCase()
     if (!query) {
       return true
@@ -234,6 +147,12 @@ function GlowworksPage() {
     }
     return service.toLowerCase().includes(query)
   })
+
+  const selectedOrTypedService = selectedService || serviceSearch
+  const relatedServiceId = resolveServiceId(selectedOrTypedService)
+  const relatedProjectsPath = relatedServiceId
+    ? getAssetPath(`/projects?service=${encodeURIComponent(relatedServiceId)}`)
+    : null
 
   return (
 <main id="top">
@@ -270,7 +189,7 @@ function GlowworksPage() {
         <div className="hero-grid" aria-hidden="true" />
         <div className="shell hero-content">
           <div className="hero-copy reveal">
-            <p className="eyebrow"><span /> φωτισμός & custom αναβαθμίσεις αυτοκινήτων</p>
+            <p className="eyebrow"><span /> automovive lighting & customization <span /></p>
             <h1>
               Άλλαξε την
               <span>ατμόσφαιρα.</span>
@@ -314,8 +233,12 @@ function GlowworksPage() {
       </section>
 
       <section className="work-grid shell" aria-label="Projects Glowworks.lab">
-        {services.map((service, index) => (
-          <article className={`work-card work-card-${index + 1}`} key={service.title}>
+        {serviceCards.map((service, index) => (
+          <a
+            className={`work-card work-card-${index + 1}`}
+            key={service.title}
+            href={getAssetPath(`/projects?service=${encodeURIComponent(service.id)}`)}
+          >
             <img src={service.image} alt={service.title} />
             <div className="work-shade" />
             <div className="work-card-content">
@@ -323,7 +246,7 @@ function GlowworksPage() {
               <h3>{service.title}</h3>
             </div>
             <ArrowUpRight className="work-arrow" size={23} />
-          </article>
+          </a>
         ))}
       </section>
 
@@ -339,16 +262,20 @@ function GlowworksPage() {
           </div>
 
           <div className="service-list">
-            {services.map((service) => {
-              const Icon = service.icon
+            {serviceCards.map((service) => {
+              const Icon = getServiceIcon(service.id)
               return (
-                <article className="service-row" key={service.title}>
+                <a
+                  className="service-row"
+                  key={service.title}
+                  href={getAssetPath(`/projects?service=${encodeURIComponent(service.id)}`)}
+                >
                   <span className="service-number">{service.number}</span>
                   <div className="service-icon"><Icon size={23} strokeWidth={1.6} /></div>
                   <h3>{service.title}</h3>
                   <p>{service.description}</p>
                   <ChevronRight className="service-arrow" size={22} />
-                </article>
+                </a>
               )
             })}
           </div>
@@ -575,6 +502,10 @@ function GlowworksPage() {
                                     setSelectedService(service)
                                     setServiceSearch(service)
                                     setIsServiceDropdownOpen(false)
+                                    const matchedServiceId = resolveServiceId(service)
+                                    if (matchedServiceId) {
+                                      window.location.href = getAssetPath(`/projects?service=${encodeURIComponent(matchedServiceId)}`)
+                                    }
                                   }}
                                 >
                                   {service}
@@ -586,6 +517,11 @@ function GlowworksPage() {
                           </div>
                         ) : null}
                       </div>
+                      {relatedProjectsPath ? (
+                        <a className="button button-secondary" href={relatedProjectsPath}>
+                          Δες σχετικά projects <ArrowUpRight size={16} />
+                        </a>
+                      ) : null}
                     </div>
                   </label>
                   <label><CalendarDays size={16} /> Προτιμώμενη ημερομηνία<input name="date" type="date" /></label>

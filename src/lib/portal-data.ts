@@ -1,4 +1,5 @@
 import type { AdminAppointment, AdminDiscount, AdminGalleryItem, AdminService, AdminSummary, AdminUploadBundle, CustomerProfile, NFCRecord, PortalPreferences, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyClaim, WarrantyRecord } from '../types/portal'
+import { DEFAULT_WEBSITE_CONTENT, deepCloneWebsiteContent } from './site-content'
 
 const createCustomer = (overrides: Partial<CustomerProfile> = {}): CustomerProfile => ({
   id: `cust-${Math.random().toString(36).slice(2, 8)}`,
@@ -219,6 +220,7 @@ export function createInitialPortalState(): PortalState {
     },
     adminSummary: { ...portalAdminSummary },
     preferences: { ...portalPreferences },
+    websiteContent: deepCloneWebsiteContent(DEFAULT_WEBSITE_CONTENT),
   }
 }
 

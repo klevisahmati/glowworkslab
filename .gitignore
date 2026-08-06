@@ -9,3 +9,7 @@ node_modules/
 
 # Local editor files
 .vscode/
+
+# Local environment secrets
+.env
+.env.local

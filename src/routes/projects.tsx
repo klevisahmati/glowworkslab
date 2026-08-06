@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ArrowLeft, ArrowUpRight, BadgeCheck, Camera, CarFront, Sparkles, Star, Zap } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { getPortalState } from '../lib/portal-session'
+import { DEFAULT_WEBSITE_CONTENT, SERVICE_SEARCH_ALIASES, type WebsiteContent } from '../lib/site-content'
 
 export const Route = createFileRoute('/projects')({
   component: ProjectsPage,
@@ -15,21 +17,6 @@ export const Route = createFileRoute('/projects')({
   }),
 })
 
-type ServiceCategory = {
-  id: string
-  title: string
-  description: string
-  icon: typeof Sparkles
-}
-
-type ProjectGalleryItem = {
-  serviceId: string
-  brand: string
-  model: string
-  image: string
-  title: string
-}
-
 function getAssetPath(path: string) {
   const normalizedBase = import.meta.env.BASE_URL.replace(/\/$/, '')
   return path.startsWith('/') ? `${normalizedBase}${path}` : `${normalizedBase}/${path}`
@@ -39,151 +26,63 @@ function normalizeValue(value: string) {
   return value.trim().toLowerCase()
 }
 
-const serviceCategories: ServiceCategory[] = [
-  {
-    id: 'ambient-lighting',
-    title: 'Ambient Lighting',
-    description: 'Atmospheric cabin lighting with tailored illumination.',
-    icon: Sparkles,
-  },
-  {
-    id: 'carbon-steering-wheels',
-    title: 'Carbon Steering Wheels',
-    description: 'Sporty carbon accents with a premium, motorsport feel.',
-    icon: BadgeCheck,
-  },
-  {
-    id: 'leather-steering-wheel-covers',
-    title: 'Leather Steering Wheel Covers',
-    description: 'Bespoke leather wraps designed for comfort and presence.',
-    icon: CarFront,
-  },
-  {
-    id: 'starlight-headliner',
-    title: 'Starlight Headliner',
-    description: 'A custom star-map ceiling experience for the cabin.',
-    icon: Star,
-  },
-  {
-    id: 'body-kit',
-    title: 'Body Kit',
-    description: 'Front lip, rear diffuser and rear spoiler in one package.',
-    icon: Zap,
-  },
-]
-
-const projectGallery: ProjectGalleryItem[] = [
-  {
-    serviceId: 'ambient-lighting',
-    brand: 'Mercedes-Benz',
-    model: 'A-Class W177',
-    title: 'Ambient Lighting • Mercedes A-Class W177',
-    image: '/images/mercedes_a_class_w117.jpg',
-  },
-  {
-    serviceId: 'ambient-lighting',
-    brand: 'Mercedes-Benz',
-    model: 'C-Class w205',
-    title: 'Ambient Lighting • Mercedes C-Class W205',
-    image: '/images/mercedes_a_class_w117.jpg',
-  },
-  {
-    serviceId: 'ambient-lighting',
-    brand: 'Mercedes-Benz',
-    model: 'A-Class W176',
-    title: 'Ambient Lighting • Mercedes A-Class W176',
-    image: '/images/mercedes_a_class_w117.jpg',
-  },
-  {
-    serviceId: 'ambient-lighting',
-    brand: 'Mercedes-Benz',
-    model: 'GLA X156',
-    title: 'Ambient Lighting • Mercedes GLA X156',
-    image: '/images/mercedes_a_class_w117.jpg',
-  },
-  {
-    serviceId: 'ambient-lighting',
-    brand: 'Mercedes-Benz',
-    model: 'GLB X247',
-    title: 'Ambient Lighting • Mercedes GLB X247',
-    image: '/images/mercedes_a_class_w117.jpg',
-  },
-  {
-    serviceId: 'ambient-lighting',
-    brand: 'BMW',
-    model: 'M4 G82',
-    title: 'Ambient Lighting • BMW M4 G82',
-    image: '/images/mercedes_c_class_w205_coupe.jpg',
-  },
-  {
-    serviceId: 'ambient-lighting',
-    brand: 'Audi',
-    model: 'a3',
-    title: 'Ambient Lighting • Audi a3',
-    image: '/images/mercedes_glc_w205_coupe.jpg',
-  },
-  {
-    serviceId: 'carbon-steering-wheels',
-    brand: 'BMW',
-    model: 'M3 G80',
-    title: 'Carbon Steering Wheel • BMW M3 G80',
-    image: '/images/mercedes_a_class_w1172.jpg',
-  },
-  {
-    serviceId: 'carbon-steering-wheels',
-    brand: 'Audi',
-    model: 'A3',
-    title: 'Carbon Steering Wheel • Audi A3',
-    image: '/images/mercedes_a_class_w117_1.jpg',
-  },
-  {
-    serviceId: 'leather-steering-wheel-covers',
-    brand: 'Mercedes-Benz',
-    model: 'G-Class',
-    title: 'Leather Steering Wheel Cover • Mercedes G-Class',
-    image: '/images/mercedes_glc_w205_coupe.jpg',
-  },
-  {
-    serviceId: 'leather-steering-wheel-covers',
-    brand: 'Audi',
-    model: 'A3',
-    title: 'Leather Steering Wheel Cover • Audi A3',
-    image: '/images/mercedes_a_class_w117.jpg',
-  },
-  {
-    serviceId: 'starlight-headliner',
-    brand: 'Mercedes-Benz',
-    model: 'V-Class',
-    title: 'Starlight Headliner • Mercedes V-Class',
-    image: '/images/mercedes_c_class_w205_coupe.jpg',
-  },
-  {
-    serviceId: 'starlight-headliner',
-    brand: 'BMW',
-    model: 'i8',
-    title: 'Starlight Headliner • BMW i8',
-    image: '/images/mercedes_a_class_w1172.jpg',
-  },
-  {
-    serviceId: 'body-kit',
-    brand: 'BMW',
-    model: '118i f40',
-    title: 'Body Kit • BMW 118i f40',
-    image: '/images/mercedes_a_class_w117_1.jpg',
-  },
-  {
-    serviceId: 'body-kit',
-    brand: 'Volkswagen',
-    model: 'golf mk8',
-    title: 'Body Kit • Volkswagen golf mk8',
-    image: '/images/mercedes_glc_w205_coupe.jpg',
-  },
-]
+function getServiceIcon(serviceId: string) {
+  switch (serviceId) {
+    case 'ambient-lighting':
+      return Sparkles
+    case 'carbon-steering-wheels':
+      return BadgeCheck
+    case 'starlight-headliner':
+      return Star
+    case 'body-kit':
+      return Zap
+    default:
+      return CarFront
+  }
+}
 
 function ProjectsPage() {
+  const [websiteContent, setWebsiteContent] = useState<WebsiteContent>(DEFAULT_WEBSITE_CONTENT)
   const [activeServiceId, setActiveServiceId] = useState<string | null>(null)
   const [activeBrand, setActiveBrand] = useState<string | null>(null)
   const [activeModel, setActiveModel] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loaded = getPortalState().websiteContent
+    if (loaded) {
+      setWebsiteContent(loaded)
+    }
+  }, [])
+
+  const serviceCategories = useMemo(() => websiteContent.services.map((service) => ({
+    id: service.id,
+    title: service.title,
+    description: service.description,
+    icon: getServiceIcon(service.id),
+  })), [websiteContent.services])
+
+  const projectGallery = useMemo(() => websiteContent.projects, [websiteContent.projects])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const params = new URLSearchParams(window.location.search)
+    const requestedService = params.get('service')?.trim().toLowerCase()
+    if (!requestedService) {
+      return
+    }
+
+    const resolvedServiceId = SERVICE_SEARCH_ALIASES[requestedService]
+    if (!resolvedServiceId || resolvedServiceId === activeServiceId) {
+      return
+    }
+
+    setActiveServiceId(resolvedServiceId)
+    setActiveBrand(null)
+    setActiveModel(null)
+  }, [activeServiceId])
 
   const selectedService = useMemo(
     () => serviceCategories.find((service) => service.id === activeServiceId) ?? null,

@@ -1,12 +1,21 @@
 import { createInitialPortalState } from './portal-data'
 import { generateSecureCustomerPortalSlug } from './customer-links'
 import { createWarrantyRecord } from './warranty'
-import type { AdminAppointment, AdminDiscount, AdminGalleryItem, AdminService, AdminUploadBundle, CustomerProfile, PortalPreferences, PortalRole, PortalSession, PortalState, ServiceHistoryEntry, WarrantyClaim, WarrantyRecord } from '../types/portal'
+import { DEFAULT_WEBSITE_CONTENT, deepCloneWebsiteContent, WEBSITE_CONTENT_VERSION } from './site-content'
+import type { AdminAppointment, AdminDiscount, AdminGalleryItem, AdminService, AdminUploadBundle, CustomerProfile, PortalPreferences, PortalRole, PortalSession, PortalState, ServiceHistoryEntry, WarrantyClaim, WarrantyRecord, WebsiteContent } from '../types/portal'
 
 const STORAGE_KEY = 'glowworks.portal.role'
 const STATE_STORAGE_KEY = 'glowworks.portal.state'
 const ADMIN_AUTH_STORAGE_KEY = 'glowworks.portal.adminAuth'
 const ADMIN_EMAIL_ENV = 'VITE_ADMIN_EMAIL'
+
+function hasStoredPortalState() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  return Boolean(window.localStorage.getItem(STATE_STORAGE_KEY))
+}
 
 function getEnvValue(name: string, fallback: string) {
   const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
@@ -117,6 +126,11 @@ export async function hydratePortalStateFromSupabase(baseState: PortalState = ge
     return baseState
   }
 
+  // Keep local edits as source of truth once a local state snapshot exists.
+  if (hasStoredPortalState()) {
+    return baseState
+  }
+
   try {
     const supabase = await getSupabaseClient()
     if (!supabase) {
@@ -197,6 +211,34 @@ export function hasValidOwnerAdminSession() {
   return snapshot.email.trim().toLowerCase() === getConfiguredAdminEmail()
 }
 
+function normalizeWebsiteContent(content: Partial<WebsiteContent> | null | undefined): WebsiteContent {
+  const baseContent = deepCloneWebsiteContent(DEFAULT_WEBSITE_CONTENT)
+
+  if (!content || typeof content !== 'object') {
+    return baseContent
+  }
+
+  const normalizedContent: WebsiteContent = {
+    ...baseContent,
+    ...content,
+    contentVersion: typeof content.contentVersion === 'string' ? content.contentVersion : baseContent.contentVersion,
+    heroImage: typeof content.heroImage === 'string' ? content.heroImage : baseContent.heroImage,
+    services: Array.isArray(content.services)
+      ? content.services.map((service) => ({ ...service }))
+      : baseContent.services,
+    projects: Array.isArray(content.projects)
+      ? content.projects.map((project) => ({ ...project }))
+      : baseContent.projects,
+    vehicleBrandModels: content.vehicleBrandModels && typeof content.vehicleBrandModels === 'object'
+      ? Object.fromEntries(
+          Object.entries(content.vehicleBrandModels).map(([brand, models]) => [brand, Array.isArray(models) ? [...models] : []]),
+        )
+      : baseContent.vehicleBrandModels,
+  }
+
+  return normalizedContent.contentVersion === WEBSITE_CONTENT_VERSION ? normalizedContent : baseContent
+}
+
 function readStoredState(): PortalState | null {
   if (typeof window === 'undefined') {
     return null
@@ -228,6 +270,7 @@ function readStoredState(): PortalState | null {
       uploads: parsed.uploads ?? baseState.uploads,
       adminSummary: parsed.adminSummary ?? baseState.adminSummary,
       preferences: parsed.preferences ?? baseState.preferences,
+      websiteContent: normalizeWebsiteContent(parsed.websiteContent),
       session: parsed.session ?? null,
     }
   } catch {
@@ -304,7 +347,25 @@ export function savePortalState(state: PortalState) {
     session: state.session ?? null,
   }
 
-  window.localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(normalizedState))
+  try {
+    window.localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(normalizedState))
+  } catch (error) {
+    const compactState: PortalState = {
+      ...normalizedState,
+      gallery: normalizedState.gallery.map((item) => ({
+        ...item,
+        imageUrl: item.imageUrl.startsWith('data:') ? '' : item.imageUrl,
+      })),
+    }
+
+    try {
+      window.localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(compactState))
+      console.warn('Portal state exceeded localStorage limits; large inline gallery images were excluded from persistence.')
+    } catch (fallbackError) {
+      console.error('Failed to persist portal state to localStorage.', fallbackError ?? error)
+    }
+  }
+
   if (state.session?.role) {
     window.localStorage.setItem(STORAGE_KEY, state.session.role)
   }
@@ -327,6 +388,15 @@ export function updatePortalPreferences(preferences: PortalPreferences) {
   const nextState = {
     ...getPortalState(),
     preferences,
+  }
+  savePortalState(nextState)
+  return nextState
+}
+
+export function updatePortalWebsiteContent(content: WebsiteContent) {
+  const nextState = {
+    ...getPortalState(),
+    websiteContent: normalizeWebsiteContent(content),
   }
   savePortalState(nextState)
   return nextState
