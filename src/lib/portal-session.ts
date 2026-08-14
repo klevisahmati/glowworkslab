@@ -8,10 +8,8 @@ const STORAGE_KEY = 'glowworks.portal.role'
 const STATE_STORAGE_KEY = 'glowworks.portal.state'
 const ADMIN_ACCESS_CODE_STORAGE_KEY = 'glowworks.portal.adminCode'
 const ADMIN_AUTH_STORAGE_KEY = 'glowworks.portal.adminAuth'
-export const OWNER_PORTAL_EMAIL = 'klevis.ahmati@gmail.com'
-export const DEFAULT_ADMIN_ACCESS_CODE = 'GLOW2026'
-export const DEFAULT_ADMIN_EMAIL = 'klevis.ahmati@gmail.com'
-export const DEFAULT_ADMIN_PASSWORD = 'Glowworks2026!'
+export const OWNER_PORTAL_EMAIL = 'klevis.ahmati@icloud.com'
+export const DEFAULT_ADMIN_ACCESS_CODE = ''
 
 function getEnvValue(name: string, fallback: string) {
   const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env

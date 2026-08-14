@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate, useRouter } from '@tanstack/react-router'
 import { ShieldCheck, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD, authenticateAdmin, getStoredPortalRole, hasValidAdminSession, setStoredPortalRole } from '../lib/portal-auth'
+import { DEFAULT_ADMIN_EMAIL, authenticateAdmin, getStoredPortalRole, hasValidAdminSession, setStoredPortalRole } from '../lib/portal-auth'
 
 export const Route = createFileRoute('/portal')({
   component: PortalLayout,
@@ -23,7 +23,7 @@ function PortalLandingPage() {
   const navigate = useNavigate()
   const [role, setRole] = useState<'admin' | null>(null)
   const [adminEmail, setAdminEmail] = useState(DEFAULT_ADMIN_EMAIL)
-  const [adminPassword, setAdminPassword] = useState(DEFAULT_ADMIN_PASSWORD)
+  const [adminPassword, setAdminPassword] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
 
   const isAdminSessionActive = useMemo(() => hasValidAdminSession(), [role])
@@ -36,20 +36,17 @@ function PortalLandingPage() {
     }
   }, [isAdminSessionActive, navigate])
 
-  const continueAsAdmin = () => {
-    const normalizedEmail = adminEmail.trim().toLowerCase()
-
-    if (!authenticateAdmin(adminEmail, adminPassword)) {
-      setNotice('The admin email or password is incorrect.')
-      return
-    }
-
-    setNotice(null)
-    setStoredPortalRole('admin', normalizedEmail)
-    setRole('admin')
-    router.navigate({ to: '/portal/admin' })
+  const continueAsAdmin = async () => {
+  if (!(await authenticateAdmin(adminEmail, adminPassword))) {
+    setNotice('The admin email or password is incorrect.')
+    return
   }
 
+  setNotice(null)
+  setStoredPortalRole('admin')
+  setRole('admin')
+  router.navigate({ to: '/portal/admin' })
+}
   return (
     <main className="portal-page">
       <div className="shell portal-landing">
@@ -70,7 +67,7 @@ function PortalLandingPage() {
                 </label>
                 <label className="full">
                   <span>Admin password</span>
-                  <input value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} placeholder={DEFAULT_ADMIN_PASSWORD} type="password" autoComplete="current-password" />
+                  <input value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} placeholder="Admin password" type="password" autoComplete="current-password" />
                 </label>
               </label>
               <div className="portal-actions" style={{ marginTop: '14px' }}>

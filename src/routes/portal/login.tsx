@@ -3,7 +3,6 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import {
   DEFAULT_ADMIN_EMAIL,
-  DEFAULT_ADMIN_PASSWORD,
   authenticateAdmin,
   setStoredPortalRole,
 } from '../../lib/portal-auth'
@@ -15,18 +14,24 @@ export const Route = createFileRoute('/portal/login')({
 function AdminLoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState(DEFAULT_ADMIN_EMAIL)
-  const [password, setPassword] = useState(DEFAULT_ADMIN_PASSWORD)
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [isSigningIn, setIsSigningIn] = useState(false)
 
-  const submit = () => {
-    if (!authenticateAdmin(email, password)) {
+  const submit = async () => {
+    setIsSigningIn(true)
+    setNotice(null)
+
+    const isAuthenticated = await authenticateAdmin(email, password)
+
+    if (!isAuthenticated) {
       setNotice('The admin email or password is incorrect.')
+      setIsSigningIn(false)
       return
     }
 
-    setNotice(null)
-    setStoredPortalRole('admin', email)
+    setStoredPortalRole('admin')
     navigate({ to: '/portal/admin' })
   }
 
@@ -94,8 +99,9 @@ function AdminLoginPage() {
                 type="button"
                 className="button button-primary"
                 onClick={submit}
+                disabled={isSigningIn}
               >
-                Sign in
+                {isSigningIn ? 'Signing in…' : 'Sign in'}
               </button>
             </div>
 
