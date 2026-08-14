@@ -55,7 +55,7 @@ function mapRemoteCustomerRow(row: Record<string, unknown>): CustomerProfile {
 function mapRemoteVehicleRow(row: Record<string, unknown>): VehicleRecord {
   return {
     id: String(row.id ?? ''),
-    customerId: String(row.costumer_id ?? ''),
+    customerId: String(row.customer_id ?? ''),
     make: String(row.make ?? ''),
     model: String(row.model ?? ''),
     year: Number(row.year ?? 0),
@@ -95,7 +95,7 @@ async function syncCustomersToSupabase(state: PortalState) {
     }
 
     const { error } = await supabase
-      .from('costumers')
+      .from('customers')
       .upsert(payload, { onConflict: 'customer_id' })
 
     if (error) {
@@ -121,7 +121,7 @@ async function deleteCustomerFromSupabase(customerCode: string) {
       return false
     }
 
-    const { error } = await supabase.from('costumers').delete().eq('customer_id', customerCode)
+    const { error } = await supabase.from('customers').delete().eq('customer_id', customerCode)
     if (error) {
       throw error
     }
@@ -144,7 +144,7 @@ async function deleteCustomerFromSupabase(customerCode: string) {
   }
 
   const { data: customerData, error: customerError } = await supabase
-    .from('costumers')
+    .from('customers')
     .select('*')
     .order('created_at', { ascending: false })
 
