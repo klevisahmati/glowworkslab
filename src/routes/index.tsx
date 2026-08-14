@@ -156,7 +156,9 @@ type FormStatus = 'idle' | 'sending' | 'success' | 'error'
 
 function getAssetPath(path: string) {
   const normalizedBase = import.meta.env.BASE_URL.replace(/\/$/, '')
-  return path.startsWith('/') ? `${normalizedBase}${path}` : `${normalizedBase}/${path}`
+  return path.startsWith('/')
+    ? `${normalizedBase}${path}`
+    : `${normalizedBase}/${path}`
 }
 
 function GlowworksPage() {
@@ -201,7 +203,7 @@ function GlowworksPage() {
   }
 
   const closeMenu = () => setMenuOpen(false)
-  const heroBackgroundImage = getAssetPath('/images/mercedes_a_class_w1172.jpg')
+  const heroBackgroundImage = '/images/homepage-ambient-mercedes.png'
   const filteredVehicleBrands = vehicleBrands.filter((brand) => {
     const query = vehicleSearch.trim().toLowerCase()
     if (!query) {

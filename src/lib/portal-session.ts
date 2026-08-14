@@ -1,8 +1,8 @@
-import { createInitialPortalState } from './portal-data'
+ import { createInitialPortalState } from './portal-data'
 import { generateSecureCustomerPortalSlug } from './customer-links'
 import { authenticateAdmin, getStoredPortalRole, hasValidAdminSession, logoutAdminSession, setStoredPortalRole } from './portal-auth'
 import { createWarrantyRecord } from './warranty'
-import type { AdminAppointment, AdminDiscount, AdminGalleryItem, AdminService, AdminUploadBundle, CustomerProfile, PortalPreferences, PortalRole, PortalSession, PortalState, ServiceHistoryEntry, WarrantyClaim, WarrantyRecord } from '../types/portal'
+import type { AdminAppointment, AdminDiscount, AdminGalleryItem, AdminService, AdminUploadBundle, CustomerProfile, PortalPreferences, PortalRole, PortalSession, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyClaim, WarrantyRecord } from '../types/portal'
 
 const STORAGE_KEY = 'glowworks.portal.role'
 const STATE_STORAGE_KEY = 'glowworks.portal.state'
@@ -37,11 +37,10 @@ function mapCustomerToRemoteRow(customer: CustomerProfile) {
     updated_at: new Date().toISOString(),
   }
 }
-
 function mapRemoteCustomerRow(row: Record<string, unknown>): CustomerProfile {
   return {
-    id: String(row.customer_id ?? ''),
-    customerCode: String(row.customer_id ?? ''),
+    id: String(row.customer_id ?? row.id ?? ''),
+    customerCode: String(row.customer_id ?? row.id ?? ''),
     name: String(row.full_name ?? ''),
     email: String(row.email ?? ''),
     phone: String(row.phone ?? ''),
@@ -50,6 +49,20 @@ function mapRemoteCustomerRow(row: Record<string, unknown>): CustomerProfile {
     createdAt: String(row.created_at ?? new Date().toISOString()),
     discountEnabled: false,
     discountCode: '',
+  }
+}
+
+function mapRemoteVehicleRow(row: Record<string, unknown>): VehicleRecord {
+  return {
+    id: String(row.id ?? ''),
+    customerId: String(row.costumer_id ?? ''),
+    make: String(row.make ?? ''),
+    model: String(row.model ?? ''),
+    year: Number(row.year ?? 0),
+    vin: String(row.vin ?? ''),
+    plate: String(row.registration ?? ''),
+    purchaseDate: String(row.created_at ?? ''),
+    nfcTagId: undefined,
   }
 }
 
@@ -69,17 +82,22 @@ async function syncCustomersToSupabase(state: PortalState) {
   }
 
   try {
-    const payload = state.customers.map(mapCustomerToRemoteRow)
-    if (!payload.length) {
-      return true
-    }
-
     const supabase = await getSupabaseClient()
+
     if (!supabase) {
       return false
     }
 
-    const { error } = await supabase.from('customers').upsert(payload, { onConflict: 'customer_id' })
+    const payload = state.customers.map(mapCustomerToRemoteRow)
+
+    if (!payload.length) {
+      return true
+    }
+
+    const { error } = await supabase
+      .from('costumers')
+      .upsert(payload, { onConflict: 'customer_id' })
+
     if (error) {
       throw error
     }
@@ -90,6 +108,7 @@ async function syncCustomersToSupabase(state: PortalState) {
     return false
   }
 }
+
 
 async function deleteCustomerFromSupabase(customerCode: string) {
   if (!hasSupabaseConfig()) {
@@ -102,7 +121,7 @@ async function deleteCustomerFromSupabase(customerCode: string) {
       return false
     }
 
-    const { error } = await supabase.from('customers').delete().eq('customer_id', customerCode)
+    const { error } = await supabase.from('costumers').delete().eq('customer_id', customerCode)
     if (error) {
       throw error
     }
@@ -113,36 +132,48 @@ async function deleteCustomerFromSupabase(customerCode: string) {
   }
 }
 
-export async function hydratePortalStateFromSupabase(baseState: PortalState = getPortalState()) {
+  export async function hydratePortalStateFromSupabase(baseState: PortalState) {
   if (!hasSupabaseConfig()) {
     return baseState
   }
 
   try {
-    const supabase = await getSupabaseClient()
-    if (!supabase) {
-      return baseState
-    }
+  const supabase = await getSupabaseClient()
+  if (!supabase) {
+    return baseState
+  }
 
-    const { data, error } = await supabase.from('customers').select('*').order('created_at', { ascending: false })
-    if (error) {
-      throw error
-    }
+  const { data: customerData, error: customerError } = await supabase
+    .from('costumers')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-    const remoteCustomers = (data ?? []).map(mapRemoteCustomerRow)
-    if (!remoteCustomers.length) {
-      return baseState
-    }
+  if (customerError) {
+    throw customerError
+  }
 
-    const mergedCustomers = Array.from(new Map([...remoteCustomers, ...baseState.customers].map((customer) => [customer.customerCode, customer])).values())
-    const nextState = {
-      ...baseState,
-      customers: mergedCustomers,
-      customer: mergedCustomers[0] ?? baseState.customer,
-    }
+  const { data: vehicleData, error: vehicleError } = await supabase
+    .from('vehicles')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (vehicleError) {
+    throw vehicleError
+  }
+
+  const remoteCustomers = (customerData ?? []).map(mapRemoteCustomerRow)
+  const remoteVehicles = (vehicleData ?? []).map(mapRemoteVehicleRow)
+
+  const nextState = {
+    ...baseState,
+    customers: remoteCustomers,
+    customer: remoteCustomers[0] ?? baseState.customer,
+    vehicles: remoteVehicles,
+  }
+
     savePortalState(nextState)
     return nextState
-  } catch (error) {
+    } catch (error) {
     console.warn('Failed to hydrate portal state from Supabase', error)
     return baseState
   }

@@ -105,19 +105,44 @@ function CustomerPortalPage() {
     nfcTagId: 'Pending',
   }
   const [now, setNow] = useState(new Date())
-  const isAdminViewingCustomer = hasValidAdminSession()
-  const serviceEntriesWithWarranties = useMemo(() => {
-    return customerHistory.slice().sort((a, b) => b.completedOn.localeCompare(a.completedOn)).map((entry) => ({
+
+const [isAdminViewingCustomer, setIsAdminViewingCustomer] = useState(false)
+
+useEffect(() => {
+  setIsAdminViewingCustomer(hasValidAdminSession())
+}, [])
+
+const warrantyHistory = useMemo(() => {
+  return customerHistory
+    .slice()
+    .sort((a, b) => b.completedOn.localeCompare(a.completedOn))
+    .map((entry) => ({
       entry,
-      warranty: portalState.warranties.find((warranty) => warranty.id === entry.warrantyId) ?? null,
-      warrantyMeta: portalState.warranties.find((warranty) => warranty.id === entry.warrantyId)
-        ? calculateWarrantyMeta(portalState.warranties.find((warranty) => warranty.id === entry.warrantyId) as WarrantyRecord, now)
+      warranty: portalState.warranties.find(
+        (warranty) => warranty.id === entry.warrantyId,
+      ) ?? null,
+      warrantyMeta: portalState.warranties.find(
+        (warranty) => warranty.id === entry.warrantyId,
+      )
+        ? calculateWarrantyMeta(
+            portalState.warranties.find(
+              (warranty) => warranty.id === entry.warrantyId,
+            ) as WarrantyRecord,
+            now,
+          )
         : null,
     }))
-  }, [customerHistory, now, portalState.warranties])
-  const activeDiscount = customer.discountEnabled
-    ? (portalState.discounts.find((discount) => discount.active && discount.validTo >= new Date().toISOString().slice(0, 10)) ?? portalState.discounts[0])
-    : null
+}, [customerHistory, now, portalState.warranties])
+
+const activeDiscount = customer.discountEnabled
+  ? (
+      portalState.discounts.find(
+        (discount) =>
+          discount.active &&
+          discount.validTo >= new Date().toISOString().slice(0, 10),
+      ) ?? portalState.discounts[0]
+    )
+  : null
 
   useEffect(() => {
     const nextState = getPortalState()
@@ -334,9 +359,9 @@ function CustomerPortalPage() {
         </PortalSectionCard>
 
         <PortalSectionCard eyebrow="Warranty" title="Job warranties" icon={<ShieldCheck size={16} />}>
-          {serviceEntriesWithWarranties.length ? (
+          {warrantyHistory.length ? (
             <div className="customer-list">
-              {serviceEntriesWithWarranties.map(({ entry, warranty, warrantyMeta }) => (
+              {warrantyHistory.map(({ entry, warranty, warrantyMeta }) => (
                 <div className="customer-detail" key={entry.id} style={{ alignItems: 'flex-start', gap: '10px' }}>
                   <div style={{ flex: 1 }}>
                     <span>{entry.completedOn}</span>

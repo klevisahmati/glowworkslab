@@ -5,7 +5,8 @@ import { PortalShell } from '../../components/portal/PortalShell'
 import { buildCustomerPortalUrl, generateSecureCustomerPortalSlug } from '../../lib/customer-links'
 import { hasValidAdminSession } from '../../lib/portal-auth'
 import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, updatePortalVehicle, updatePortalWarranty } from '../../lib/portal-session'
-import type { AdminGalleryItem, CustomerProfile, PortalState, VehicleRecord, WarrantyRecord } from '../../types/portal'
+import type { AdminGalleryItem, CustomerProfile, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyRecord } from '../../types/portal'
+import { createInitialPortalState } from '../../lib/portal-data'
 
 export const Route = createFileRoute('/portal/admin')({
   component: AdminPage,
@@ -242,13 +243,14 @@ function SearchableSelect({ value, onSelect, options, placeholder, emptyText }: 
 }
 
 function AdminPage() {
-  const [state, setState] = useState<PortalState>(() => getPortalState())
+  const [state, setState] = useState<PortalState>(() => createInitialPortalState())
   const [search, setSearch] = useState('')
   const navigate = useNavigate()
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
   const [customerDraft, setCustomerDraft] = useState<CustomerProfile>(makeCustomerDraft)
   const [vehicleDraft, setVehicleDraft] = useState<VehicleRecord>(() => makeVehicleDraft())
+  const [warrantyDraft, setWarrantyDraft] = useState<WarrantyRecord>(() => makeWarrantyDraft())
   const [galleryDraft, setGalleryDraft] = useState<AdminGalleryItem>(() => makeGalleryDraft())
   const [pendingGalleryImages, setPendingGalleryImages] = useState<string[]>([])
   const [serviceDraft, setServiceDraft] = useState(() => makeServiceDraft())
@@ -264,10 +266,10 @@ function AdminPage() {
   }, [isAuthorizedAdmin, navigate])
 
   useEffect(() => {
-    void hydratePortalStateFromSupabase().then((hydratedState) => {
-      setState(hydratedState)
-    })
-  }, [])
+  void hydratePortalStateFromSupabase(getPortalState()).then((hydratedState) => {
+    setState(hydratedState)
+  })
+},[])
 
   const filteredCustomers = useMemo(() => {
     const query = search.toLowerCase()
@@ -400,8 +402,8 @@ function AdminPage() {
     return state.serviceHistory.filter((entry) => entry.customerId === customerId).slice().sort((a, b) => b.completedOn.localeCompare(a.completedOn))
   }, [editingCustomerId, selectedCustomerId, state.serviceHistory])
 
-  const saveCustomer = () => {
-    if (!customerDraft.name.trim() || !customerDraft.email.trim()) {
+const saveCustomer = async () => {
+      if (!customerDraft.name.trim() || !customerDraft.email.trim()) {
       return
     }
 
@@ -422,11 +424,10 @@ function AdminPage() {
     }
 
     let nextState = editingCustomerId
-      ? updatePortalCustomer({ ...nextCustomer, id: editingCustomerId })
-      : createPortalCustomer(nextCustomer)
-
+  ? updatePortalCustomer({ ...nextCustomer, id: editingCustomerId })
+  : await createPortalCustomer(nextCustomer);
     if (editingCustomerId) {
-      const customerVehicle = {
+            const customerVehicle = {
         ...vehicleDraft,
         customerId: editingCustomerId,
         id: vehicleDraft.id || `veh-${Math.random().toString(36).slice(2, 8)}`,
@@ -560,7 +561,12 @@ function AdminPage() {
                 <p>{customer.email} • {customer.phone}</p>
                 <div className="portal-link-inline">
                   <span className="portal-chip">NFC / QR ready</span>
-                  <code className="portal-link-code">{buildCustomerPortalUrl(customer.customerCode, { kind: 'nfc' })}</code>
+                  <div className="portal-link-inline">
+  <span className="portal-chip">NFC / QR ready</span>
+  <code className="portal-link-code">
+    {`/customer/${customer.customerCode}`}
+  </code>
+</div>
                 </div>
               </div>
               <div className="portal-row-meta">
