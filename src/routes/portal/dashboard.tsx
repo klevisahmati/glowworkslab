@@ -2,7 +2,6 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowRight, CarFront, ShieldCheck, Sparkles } from 'lucide-react'
 import { PortalShell } from '../../components/portal/PortalShell'
 import { portalAdminSummary, portalCustomer, portalVehicles, portalWarranties } from '../../lib/portal-data'
-import SupabaseTest from '../../SupabaseTest'
 
 export const Route = createFileRoute('/portal/dashboard')({
   component: DashboardPage,
@@ -11,7 +10,6 @@ export const Route = createFileRoute('/portal/dashboard')({
 function DashboardPage() {
   return (
     <PortalShell active="dashboard" title="Πίνακας ελέγχου" subtitle="Η επισκόπηση της εγγύησης και της ιδιοκτησίας σου.">
-      <SupabaseTest />
       <div className="portal-grid">
         <div className="portal-card portal-highlight-card">
 
