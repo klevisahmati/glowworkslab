@@ -39,8 +39,8 @@ function mapCustomerToRemoteRow(customer: CustomerProfile) {
 }
 function mapRemoteCustomerRow(row: Record<string, unknown>): CustomerProfile {
   return {
-    id: String(row.costumer_id ?? row.id ?? ''),
-    customerCode: String(row.costumer_id ?? row.id ?? ''),
+    id: String(row.id ?? ''),
+customerCode: String(row.costumer_id ?? row.id ?? ''),
     name: String(row.full_name ?? ''),
     email: String(row.email ?? ''),
     phone: String(row.phone ?? ''),
@@ -95,8 +95,9 @@ async function syncCustomersToSupabase(state: PortalState) {
     }
 
     const { error } = await supabase
-      .from('costumers')
-      .upsert(payload, { onConflict: 'costumer_id' })
+  .from('costumers')
+  .delete()
+  .eq('id', customerCode)
 
     if (error) {
       throw error
@@ -121,7 +122,7 @@ async function deleteCustomerFromSupabase(customerCode: string) {
       return false
     }
 
-    const { error } = await supabase.from('costumers').delete().eq('costumer_id', customerCode)
+    const { error } = await supabase.from('costumers').delete().eq('id', customerId)
     if (error) {
       throw error
     }
@@ -489,8 +490,8 @@ export function deletePortalCustomer(customerId: string) {
     claims: baseState.claims.filter((claim) => claim.customerId !== customerId),
   }
   savePortalState(nextState)
-  if (removedCustomer?.customerCode) {
-    void deleteCustomerFromSupabase(removedCustomer.customerCode)
+  if (removedCustomer?.id) {
+    void deleteCustomerFromSupabase(removedCustomer.id)
   }
   return nextState
 }
