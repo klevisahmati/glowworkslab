@@ -26,7 +26,7 @@ function hasSupabaseConfig() {
 
 function mapCustomerToRemoteRow(customer: CustomerProfile) {
   return {
-    customer_id: customer.customerCode,
+    costumer_id: customer.customerCode,
     full_name: customer.name,
     email: customer.email,
     phone: customer.phone || null,
@@ -39,8 +39,8 @@ function mapCustomerToRemoteRow(customer: CustomerProfile) {
 }
 function mapRemoteCustomerRow(row: Record<string, unknown>): CustomerProfile {
   return {
-    id: String(row.customer_id ?? row.id ?? ''),
-    customerCode: String(row.customer_id ?? row.id ?? ''),
+    id: String(row.costumer_id ?? row.id ?? ''),
+    customerCode: String(row.costumer_id ?? row.id ?? ''),
     name: String(row.full_name ?? ''),
     email: String(row.email ?? ''),
     phone: String(row.phone ?? ''),
@@ -55,7 +55,7 @@ function mapRemoteCustomerRow(row: Record<string, unknown>): CustomerProfile {
 function mapRemoteVehicleRow(row: Record<string, unknown>): VehicleRecord {
   return {
     id: String(row.id ?? ''),
-    customerId: String(row.customer_id ?? ''),
+    customerId: String(row.costumer_id ?? ''),
     make: String(row.make ?? ''),
     model: String(row.model ?? ''),
     year: Number(row.year ?? 0),
@@ -95,8 +95,8 @@ async function syncCustomersToSupabase(state: PortalState) {
     }
 
     const { error } = await supabase
-      .from('customers')
-      .upsert(payload, { onConflict: 'customer_id' })
+      .from('costumers')
+      .upsert(payload, { onConflict: 'costumer_id' })
 
     if (error) {
       throw error
@@ -121,7 +121,7 @@ async function deleteCustomerFromSupabase(customerCode: string) {
       return false
     }
 
-    const { error } = await supabase.from('customers').delete().eq('customer_id', customerCode)
+    const { error } = await supabase.from('costumers').delete().eq('costumer_id', customerCode)
     if (error) {
       throw error
     }
@@ -144,7 +144,7 @@ async function deleteCustomerFromSupabase(customerCode: string) {
   }
 
   const { data: customerData, error: customerError } = await supabase
-    .from('customers')
+    .from('costumers')
     .select('*')
     .order('created_at', { ascending: false })
 
