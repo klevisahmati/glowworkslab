@@ -122,7 +122,7 @@ async function deleteCustomerFromSupabase(customerCode: string) {
       return false
     }
 
-    const { error } = await supabase.from('costumers').delete().eq('id', customerId)
+    const { error } = await supabase.from('costumers').delete().eq('id', customerCode)
     if (error) {
       throw error
     }
