@@ -382,11 +382,17 @@ function AdminPage() {
       warrantyNotes: serviceDraft.warrantyNotes.trim() || undefined,
     }
 
-    setState((current) => editingServiceEntryId
-      ? updatePortalServiceHistoryEntry(serviceEntry as ServiceHistoryEntry, current)
-      : addPortalServiceHistoryEntry(serviceEntry as ServiceHistoryEntry, current))
+    const nextState = editingServiceEntryId
+  ? updatePortalServiceHistoryEntry(
+      serviceEntry as ServiceHistoryEntry,
+      state,
+    )
+  : addPortalServiceHistoryEntry(
+      serviceEntry as ServiceHistoryEntry,
+      state,
+    )
 
-    resetServiceDraft()
+setState(nextState)
   }
 
   const handleRemoveServiceHistory = (entryId: string) => {

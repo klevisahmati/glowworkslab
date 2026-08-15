@@ -155,7 +155,123 @@ async function syncVehicleToSupabase(vehicle: VehicleRecord) {
     return false
   }
 }
+async function syncServiceHistoryToSupabase(
+  entry: ServiceHistoryEntry,
+  warranty: WarrantyRecord,
+  state: PortalState,
+) {
+  if (!hasSupabaseConfig()) {
+    return false
+  }
 
+  try {
+    const supabase = await getSupabaseClient()
+
+    if (!supabase) {
+      return false
+    }
+
+    const vehicle = state.vehicles.find(
+      (item) => item.customerId === entry.customerId,
+    )
+
+    const vehicleId = Number(vehicle?.id)
+
+    if (!Number.isInteger(vehicleId) || vehicleId <= 0) {
+      console.warn('Service cannot sync without a valid Supabase vehicle ID')
+      return false
+    }
+
+    const servicePayload = {
+      vehicle_id: vehicleId,
+      services_type: entry.title || null,
+      description: entry.notes || null,
+      service_date: entry.completedOn || null,
+      price: null,
+      note: entry.notes || null,
+    }
+
+    const hasServiceDatabaseId = /^\d+$/.test(entry.id)
+
+    const serviceQuery = hasServiceDatabaseId
+      ? supabase
+          .from('services')
+          .update(servicePayload)
+          .eq('id', Number(entry.id))
+          .select('id')
+          .single()
+      : supabase
+          .from('services')
+          .insert(servicePayload)
+          .select('id')
+          .single()
+
+    const { data: serviceData, error: serviceError } =
+      await serviceQuery
+
+    if (serviceError) {
+      throw serviceError
+    }
+
+    const serviceId = Number(serviceData.id)
+
+    const warrantyPayload = {
+      service_id: serviceId,
+      warranty_type: warranty.product || null,
+      start_date: warranty.startsOn || null,
+      end_date: warranty.endsOn || null,
+      status: warranty.status || null,
+      notes: warranty.notes || null,
+    }
+
+    const hasWarrantyDatabaseId = /^\d+$/.test(warranty.id)
+
+    const { error: warrantyError } = hasWarrantyDatabaseId
+      ? await supabase
+          .from('warranties')
+          .update(warrantyPayload)
+          .eq('id', Number(warranty.id))
+      : await supabase
+          .from('warranties')
+          .insert(warrantyPayload)
+
+    if (warrantyError) {
+      throw warrantyError
+    }
+
+    return true
+  } catch (error) {
+    console.warn('Failed to sync service history to Supabase', error)
+    return false
+  }
+}
+async function deleteServiceHistoryFromSupabase(entryId: string) {
+  if (!hasSupabaseConfig() || !/^\d+$/.test(entryId)) {
+    return false
+  }
+
+  try {
+    const supabase = await getSupabaseClient()
+
+    if (!supabase) {
+      return false
+    }
+
+    const { error } = await supabase
+      .from('services')
+      .delete()
+      .eq('id', Number(entryId))
+
+    if (error) {
+      throw error
+    }
+
+    return true
+  } catch (error) {
+    console.warn('Failed to delete service from Supabase', error)
+    return false
+  }
+}
 async function deleteCustomerFromSupabase(customerCode: string) {
   if (!hasSupabaseConfig()) {
     return false
@@ -206,15 +322,95 @@ async function deleteCustomerFromSupabase(customerCode: string) {
   if (vehicleError) {
     throw vehicleError
   }
+const { data: serviceData, error: serviceError } = await supabase
+    .from('services')
+    .select('*')
+    .order('service_date', { ascending: false })
+
+  if (serviceError) {
+    throw serviceError
+  }
+
+  const { data: warrantyData, error: warrantyError } = await supabase
+    .from('warranties')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (warrantyError) {
+    throw warrantyError
+  }
 
   const remoteCustomers = (customerData ?? []).map(mapRemoteCustomerRow)
   const remoteVehicles = (vehicleData ?? []).map(mapRemoteVehicleRow)
+
+    const remoteServiceHistory: ServiceHistoryEntry[] = (serviceData ?? []).map(
+    (row) => {
+      const vehicle = remoteVehicles.find(
+        (item) => item.id === String(row.vehicle_id),
+      )
+
+      const warranty = (warrantyData ?? []).find(
+        (item) => String(item.service_id) === String(row.id),
+      )
+
+      return {
+        id: String(row.id),
+        customerId: vehicle?.customerId ?? '',
+        title: String(row.services_type ?? ''),
+        vehicle: vehicle
+          ? `${vehicle.make} ${vehicle.model}`.trim()
+          : '',
+        completedOn: String(row.service_date ?? ''),
+        notes: String(row.note ?? row.description ?? ''),
+        warrantyId: warranty ? String(warranty.id) : undefined,
+        warrantyStartsOn: warranty
+          ? String(warranty.start_date ?? '')
+          : undefined,
+        warrantyEndsOn: warranty
+          ? String(warranty.end_date ?? '')
+          : undefined,
+        warrantyNotes: warranty
+          ? String(warranty.notes ?? '')
+          : undefined,
+      }
+    },
+  )
+
+  const remoteWarranties: WarrantyRecord[] = (warrantyData ?? []).map(
+    (row) => {
+      const service = (serviceData ?? []).find(
+        (item) => String(item.id) === String(row.service_id),
+      )
+
+      const vehicle = remoteVehicles.find(
+        (item) => item.id === String(service?.vehicle_id),
+      )
+
+      return {
+        id: String(row.id),
+        customerId: vehicle?.customerId ?? '',
+        vehicleId: vehicle?.id ?? '',
+        product: String(
+          row.warranty_type ?? service?.services_type ?? '',
+        ),
+        status: String(row.status ?? 'Active') as WarrantyRecord['status'],
+        installedAt: 'Glowworks Rhodes Studio',
+        startsOn: String(row.start_date ?? ''),
+        endsOn: String(row.end_date ?? ''),
+        coverage: String(row.notes ?? ''),
+        notes: String(row.notes ?? ''),
+        installationDate: String(service?.service_date ?? ''),
+      }
+    },
+  )
 
   const nextState = {
     ...baseState,
     customers: remoteCustomers,
     customer: remoteCustomers[0] ?? baseState.customer,
     vehicles: remoteVehicles,
+    serviceHistory: remoteServiceHistory,
+    warranties: remoteWarranties,
   }
 
     savePortalState(nextState)
@@ -655,7 +851,9 @@ export function addPortalServiceHistoryEntry(entry: ServiceHistoryEntry, baseSta
     serviceHistory: [nextEntry, ...baseState.serviceHistory.filter((item) => item.id !== entry.id)],
   }
   savePortalState(nextState)
-  return nextState
+void syncServiceHistoryToSupabase(nextEntry, warrantyRecord, nextState)
+
+return nextState
 }
 
 export function updatePortalServiceHistoryEntry(entry: ServiceHistoryEntry, baseState: PortalState = getPortalState()) {
@@ -703,7 +901,9 @@ export function updatePortalServiceHistoryEntry(entry: ServiceHistoryEntry, base
   }
 
   savePortalState(nextState)
-  return nextState
+void syncServiceHistoryToSupabase(nextEntry, warrantyRecord, nextState)
+
+return nextState
 }
 
 export function removePortalServiceHistoryEntry(entryId: string, baseState: PortalState = getPortalState()) {
@@ -714,7 +914,9 @@ export function removePortalServiceHistoryEntry(entryId: string, baseState: Port
     warranties: baseState.warranties.filter((item) => item.id !== removedEntry?.warrantyId),
   }
   savePortalState(nextState)
-  return nextState
+void deleteServiceHistoryFromSupabase(entryId)
+
+return nextState
 }
 
 export function createPortalWarranty(warranty: WarrantyRecord, baseState: PortalState = getPortalState()) {
