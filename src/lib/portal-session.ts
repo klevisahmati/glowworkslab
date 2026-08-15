@@ -1,6 +1,5 @@
  import { createInitialPortalState } from './portal-data'
 import { generateSecureCustomerPortalSlug } from './customer-links'
-import { authenticateAdmin, getStoredPortalRole, hasValidAdminSession, logoutAdminSession, setStoredPortalRole } from './portal-auth'
 import { createWarrantyRecord } from './warranty'
 import type { AdminAppointment, AdminDiscount, AdminGalleryItem, AdminService, AdminUploadBundle, CustomerProfile, PortalPreferences, PortalRole, PortalSession, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyClaim, WarrantyRecord } from '../types/portal'
 
@@ -106,7 +105,56 @@ async function syncCustomersToSupabase(state: PortalState) {
     return false
   }
 }
+async function syncVehicleToSupabase(vehicle: VehicleRecord) {
+  if (!hasSupabaseConfig()) {
+    return false
+  }
 
+  try {
+    const supabase = await getSupabaseClient()
+
+    if (!supabase) {
+      return false
+    }
+
+    const costumerId = Number(vehicle.customerId)
+
+    if (!Number.isInteger(costumerId) || costumerId <= 0) {
+      console.warn('Vehicle cannot sync without a valid Supabase customer ID')
+      return false
+    }
+
+    const payload = {
+      costumer_id: costumerId,
+      make: vehicle.make || null,
+      model: vehicle.model || null,
+      year: vehicle.year || null,
+      registration: vehicle.plate || null,
+      vin: vehicle.vin || null,
+      created_at: vehicle.purchaseDate || new Date().toISOString(),
+    }
+
+    const hasDatabaseId = /^\d+$/.test(vehicle.id)
+
+    const { error } = hasDatabaseId
+      ? await supabase
+          .from('vehicles')
+          .update(payload)
+          .eq('id', Number(vehicle.id))
+      : await supabase
+          .from('vehicles')
+          .insert(payload)
+
+    if (error) {
+      throw error
+    }
+
+    return true
+  } catch (error) {
+    console.warn('Failed to sync vehicle to Supabase', error)
+    return false
+  }
+}
 
 async function deleteCustomerFromSupabase(customerCode: string) {
   if (!hasSupabaseConfig()) {
@@ -419,21 +467,34 @@ export function createPortalClaim(claim: Omit<WarrantyClaim, 'id' | 'submittedAt
   savePortalState(nextState)
   return nextState
 }
-
-export function updatePortalCustomer(customer: CustomerProfile, baseState: PortalState = getPortalState()) {
+export function updatePortalCustomer(
+  customer: CustomerProfile,
+  baseState: PortalState = getPortalState(),
+) {
   const nextCustomer: CustomerProfile = {
     ...customer,
-    customerCode: (customer.customerCode ?? '').trim() || generateSecureCustomerPortalSlug(baseState.customers.map((item) => item.customerCode)),
+    customerCode:
+      (customer.customerCode ?? '').trim() ||
+      generateSecureCustomerPortalSlug(
+        baseState.customers.map((item) => item.customerCode),
+      ),
   }
+
   const nextState = {
     ...baseState,
     customer: nextCustomer,
-    customers: baseState.customers.some((item) => item.id === nextCustomer.id)
-      ? baseState.customers.map((item) => item.id === nextCustomer.id ? nextCustomer : item)
+    customers: baseState.customers.some(
+      (item) => item.id === nextCustomer.id,
+    )
+      ? baseState.customers.map((item) =>
+          item.id === nextCustomer.id ? nextCustomer : item,
+        )
       : [nextCustomer, ...baseState.customers],
   }
+
   savePortalState(nextState)
   void syncPortalStateToSupabase(nextState)
+
   return nextState
 }
 
@@ -441,12 +502,18 @@ export function updatePortalVehicle(vehicle: VehicleRecord) {
   const nextState = {
     ...getPortalState(),
     vehicles: getPortalState().vehicles.some((item) => item.id === vehicle.id)
-      ? getPortalState().vehicles.map((item) => item.id === vehicle.id ? vehicle : item)
+      ? getPortalState().vehicles.map((item) =>
+          item.id === vehicle.id ? vehicle : item,
+        )
       : [vehicle, ...getPortalState().vehicles],
   }
+
   savePortalState(nextState)
+  void syncVehicleToSupabase(vehicle)
+
   return nextState
 }
+
 
 export function updatePortalWarranty(warranty: WarrantyRecord) {
   const nextState = {
