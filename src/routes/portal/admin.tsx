@@ -442,6 +442,7 @@ const saveCustomer = async () => {
     }
 
     setState(nextState)
+    resetServiceDraft()
     setCustomerDraft(makeCustomerDraft())
     setVehicleDraft(makeVehicleDraft())
     setWarrantyDraft(makeWarrantyDraft())
