@@ -92,10 +92,9 @@ async function syncCustomersToSupabase(state: PortalState) {
       return true
     }
 
-    const { error } = await supabase
+   const { error } = await supabase
   .from('costumers')
-  .delete()
-  .eq('id', customerCode)
+  .upsert(payload, { onConflict: 'costumer_id' })
 
     if (error) {
       throw error
