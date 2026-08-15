@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import {
-  DEFAULT_ADMIN_EMAIL,
+
   authenticateAdmin,
   setStoredPortalRole,
 } from '../../lib/portal-auth'

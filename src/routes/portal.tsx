@@ -9,7 +9,6 @@ import {
 import { ShieldCheck, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
-  DEFAULT_ADMIN_EMAIL,
   authenticateAdmin,
   getStoredPortalRole,
   hasValidAdminSession,

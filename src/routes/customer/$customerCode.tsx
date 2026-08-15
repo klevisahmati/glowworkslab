@@ -1,5 +1,18 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, CarFront, Download, FileText, ShieldCheck, Sparkles } from 'lucide-react'
+import {
+  ArrowLeft,
+  CarFront,
+  Download,
+  FileText,
+  Home,
+  Instagram,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { useEffect, useMemo, useState } from 'react'
 import { PortalActionButton } from '../../components/portal/PortalActionButton'
@@ -339,7 +352,53 @@ const activeDiscount = customer.discountEnabled
             </div>
           </PortalSectionCard>
         </section>
+<PortalSectionCard
+  eyebrow="Quick actions"
+  title="Contact Glowworks"
+  icon={<Sparkles size={16} />}
+>
+  <div
+    className="customer-card-actions"
+    style={{ justifyContent: 'flex-start', flexWrap: 'wrap' }}
+  >
+    <PortalActionButton
+      href="https://www.instagram.com/glowworks.lab/"
+      target="_blank"
+      rel="noreferrer"
+    >
+      <Instagram size={16} /> Instagram
+    </PortalActionButton>
 
+    <PortalActionButton href="tel:+306937153914">
+      <Phone size={16} /> Call us
+    </PortalActionButton>
+
+    <PortalActionButton href="mailto:klevis.ahmati@icloud.com">
+      <Mail size={16} /> Email
+    </PortalActionButton>
+
+    <PortalActionButton
+      href="https://maps.app.goo.gl/va2psSDWoRwo5FZG9"
+      target="_blank"
+      rel="noreferrer"
+    >
+      <MapPin size={16} /> Location
+    </PortalActionButton>
+
+    <PortalActionButton
+      href="https://wa.me/306937153914"
+      target="_blank"
+      rel="noreferrer"
+      primary
+    >
+      <MessageCircle size={16} /> WhatsApp
+    </PortalActionButton>
+
+    <PortalActionButton href="/">
+      <Home size={16} /> Main website
+    </PortalActionButton>
+  </div>
+</PortalSectionCard>
         <PortalSectionCard eyebrow="Gallery" title="Customer photos" icon={<Sparkles size={16} />}>
           {customerGallery.length ? (
             <div className="customer-gallery">

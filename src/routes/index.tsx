@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Sparkles,
   X,
+  MapPin,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 
@@ -186,10 +187,30 @@ function GlowworksPage() {
   }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setFormStatus('sending')
+  event.preventDefault()
+  setFormStatus('sending')
 
-    const form = event.currentTarget
+  const form = event.currentTarget
+  const formData = new FormData(form)
+  const body = new URLSearchParams()
+
+  formData.forEach((value, key) => {
+    body.append(key, String(value))
+  })
+
+  try {
+    const response = await fetch('/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    })
+
+    if (!response.ok) {
+      throw new Error('Appointment submission failed')
+    }
+
     form.reset()
     setSelectedVehicleBrand('')
     setSelectedVehicleModel('')
@@ -200,7 +221,11 @@ function GlowworksPage() {
     setVehicleYearSearch('')
     setServiceSearch('')
     setFormStatus('success')
+  } catch (error) {
+    console.error('Failed to submit appointment', error)
+    setFormStatus('error')
   }
+}
 
   const closeMenu = () => setMenuOpen(false)
   const heroBackgroundImage = '/images/homepage-ambient-mercedes.png'
@@ -393,6 +418,7 @@ function GlowworksPage() {
             <div className="contact-list">
               <a href="tel:+306937153914"><Phone size={19} /> <span><small>Κλήση / SMS</small>693 715 3914</span></a>
               <a href="https://www.instagram.com/glowworks.lab/" target="_blank" rel="noreferrer"><Instagram size={19} /> <span><small>Instagram</small>@glowworks.lab</span></a>
+              <a href="https://maps.app.goo.gl/va2psSDWoRwo5FZG9" target="_blank" rel="noreferrer"><MapPin size={19} /> <span><small>Τοποθεσία</small>Glowworks.lab, Ρόδος</span></a>
             </div>
           </div>
 
