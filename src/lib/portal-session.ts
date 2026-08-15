@@ -58,7 +58,7 @@ function mapRemoteVehicleRow(row: Record<string, unknown>): VehicleRecord {
     year: Number(row.year ?? 0),
     vin: String(row.vin ?? ''),
     plate: String(row.registration ?? ''),
-    purchaseDate: String(row.created_at ?? ''),
+    purchaseDate: String(row.created_at ?? '').slice(0, 10),
     nfcTagId: undefined,
   }
 }
