@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { PortalShell } from '../../components/portal/PortalShell'
 import { buildCustomerPortalUrl, generateSecureCustomerPortalSlug } from '../../lib/customer-links'
 import { hasValidAdminSession } from '../../lib/portal-auth'
-import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, updatePortalVehicle, updatePortalWarranty } from '../../lib/portal-session'
+import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, updatePortalVehicle } from '../../lib/portal-session'
 import type { AdminGalleryItem, CustomerProfile, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyRecord } from '../../types/portal'
 import { createInitialPortalState } from '../../lib/portal-data'
 
@@ -250,7 +250,7 @@ function AdminPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
   const [customerDraft, setCustomerDraft] = useState<CustomerProfile>(makeCustomerDraft)
   const [vehicleDraft, setVehicleDraft] = useState<VehicleRecord>(() => makeVehicleDraft())
-  const [warrantyDraft, setWarrantyDraft] = useState<WarrantyRecord>(() => makeWarrantyDraft())
+  const [, setWarrantyDraft] = useState<WarrantyRecord>(() => makeWarrantyDraft())
   const [galleryDraft, setGalleryDraft] = useState<AdminGalleryItem>(() => makeGalleryDraft())
   const [pendingGalleryImages, setPendingGalleryImages] = useState<string[]>([])
   const [serviceDraft, setServiceDraft] = useState(() => makeServiceDraft())
@@ -310,7 +310,6 @@ function AdminPage() {
 
   const startEditingCustomer = (customer: CustomerProfile) => {
     const existingVehicle = state.vehicles.find((vehicle) => vehicle.customerId === customer.id)
-    const existingWarranty = state.warranties.find((warranty) => warranty.customerId === customer.id)
     setCustomerDraft(customer)
     setVehicleDraft(existingVehicle ?? makeVehicleDraft(customer.id))
     setEditingCustomerId(customer.id)
@@ -569,11 +568,11 @@ const saveCustomer = async () => {
                 <div className="portal-link-inline">
                   <span className="portal-chip">NFC / QR ready</span>
                   <div className="portal-link-inline">
-  <span className="portal-chip">NFC / QR ready</span>
-  <code className="portal-link-code">
-    {`/customer/${customer.customerCode}`}
-  </code>
-</div>
+                   <span className="portal-chip">NFC / QR ready</span>
+                   <code className="portal-link-code">
+                    {`/customer/${customer.customerCode}`}
+                    </code>
+                  </div>
                 </div>
               </div>
               <div className="portal-row-meta">

@@ -35,7 +35,7 @@ function PortalLandingPage() {
   const router = useRouter()
   const navigate = useNavigate()
   const [role, setRole] = useState<'admin' | null>(null)
-  const [adminEmail, setAdminEmail] = useState(DEFAULT_ADMIN_EMAIL)
+  const [adminEmail, setAdminEmail] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -106,55 +106,57 @@ function PortalLandingPage() {
                   <input
                     value={adminEmail}
                     onChange={(event) => setAdminEmail(event.target.value)}
-                    placeholder={DEFAULT_ADMIN_EMAIL}
+                    placeholder="Admin email"
                     autoComplete="email"
                   />
                 </label>
 
-                <label className="full">
-                  <span>Admin password</span>
-                  <input
-                    value={adminPassword}
-                    onChange={(event) => setAdminPassword(event.target.value)}
-                    placeholder="Admin password"
-                    type="password"
-                    autoComplete="current-password"
-                  />
-                </label>
-              </div>
+                  <label className="full">
+  <label className="full">
+  <span>Admin password</span>
+  <input
+    value={adminPassword}
+    onChange={(event) => setAdminPassword(event.target.value)}
+    placeholder="Admin password"
+    type="password"
+    autoComplete="current-password"
+  />
+</label>
+</label>
+                </div>
 
-              <div
-                className="portal-actions"
-                style={{ marginTop: '14px' }}
-              >
-                <button
-                  className="button button-primary"
-                  type="button"
-                  onClick={continueAsAdmin}
+                <div
+                  className="portal-actions"
+                  style={{ marginTop: '14px' }}
                 >
-                  Συνέχεια ως διαχειριστής <ShieldCheck size={18} />
-                </button>
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    onClick={continueAsAdmin}
+                  >
+                    Συνέχεια ως διαχειριστής <ShieldCheck size={18} />
+                  </button>
+                </div>
+
+                {notice ? (
+                  <p
+                    className="portal-muted"
+                    style={{ marginTop: '12px' }}
+                  >
+                    {notice}
+                  </p>
+                ) : null}
               </div>
 
-              {notice ? (
-                <p
-                  className="portal-muted"
-                  style={{ marginTop: '12px' }}
-                >
-                  {notice}
-                </p>
-              ) : null}
-            </div>
+              <div className="portal-landing-info">
+                <div>
+                  <Sparkles size={18} />
+                  <span>Live στιγμιότυπα εγγύησης</span>
+                </div>
 
-            <div className="portal-landing-info">
-              <div>
-                <Sparkles size={18} />
-                <span>Live στιγμιότυπα εγγύησης</span>
-              </div>
-
-              <div>
-                <Sparkles size={18} />
-                <span>Αναζήτηση υπηρεσίας με NFC</span>
+                <div>
+                  <Sparkles size={18} />
+                  <span>Αναζήτηση υπηρεσίας με NFC</span>
               </div>
             </div>
           </div>

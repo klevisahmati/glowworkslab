@@ -13,7 +13,7 @@ export const Route = createFileRoute('/portal/login')({
 
 function AdminLoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState(DEFAULT_ADMIN_EMAIL)
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -58,10 +58,11 @@ function AdminLoginPage() {
               <label>
                 Email
                 <input
-                  value={email}
+                 value={email}
                   onChange={(event) => setEmail(event.target.value)}
+                  placeholder="Admin email"
                   autoComplete="email"
-                />
+                  />
               </label>
 
               <label>
