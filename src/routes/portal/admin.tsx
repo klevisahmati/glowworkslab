@@ -4,17 +4,108 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { PortalShell } from '../../components/portal/PortalShell'
 import { buildCustomerPortalUrl, generateSecureCustomerPortalSlug } from '../../lib/customer-links'
 import { hasValidAdminSession } from '../../lib/portal-auth'
-import { DEFAULT_WEBSITE_CONTENT, deepCloneWebsiteContent, WEBSITE_CONTENT_VERSION } from '../../lib/site-content'
-import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, updatePortalVehicle, updatePortalWebsiteContent } from '../../lib/portal-session'
-import type { AdminGalleryItem, CustomerProfile, PortalState, PublicProjectContent, PublicServiceContent, ServiceHistoryEntry, VehicleRecord, WarrantyRecord, WebsiteContent } from '../../types/portal'
+import {
+  createProject,
+  deleteProject,
+  deleteProjectMedia,
+  fetchProjects,
+  setProjectCover,
+  updateProject,
+  uploadProjectImages,
+} from '../../lib/projects'
+import type { ProjectDraft, ProjectMedia, ProjectRecord } from '../../types/projects'
+import {
+  fetchHomepageImages,
+  uploadHomepageImage,
+  type HomepageImageRecord,
+  type HomepageImageSlot,
+} from '../../lib/homepage-images'
+import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, updatePortalVehicle } from '../../lib/portal-session'
+import type { AdminGalleryItem, CustomerProfile, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyRecord } from '../../types/portal'
+import { createInitialPortalState } from '../../lib/portal-data'
 
 export const Route = createFileRoute('/portal/admin')({
   component: AdminPage,
 })
 
-const DEFAULT_WARRANTY_TERMS = `Η εγγύηση καλύπτει την εγκατάσταση και τη λειτουργία του προϊόντος για τη διάρκεια της συμφωνίας, υπό προϋποθέσεις που ορίζονται στο έγγραφο της Glowworks. Η κάλυψη περιλαμβάνει επισκευή ή αντικατάσταση σε περίπτωση βλάβης που αποδίδεται σε ελαττωματικό υλικό ή εργασία. Η εγγύηση δεν καλύπτει φθορές από κακή χρήση, μηχανική βλάβη, τροποποιήσεις ή ζημιές που προκύπτουν από φυσική καταστροφή.`
+const DEFAULT_WARRANTY_TERMS = `Η εγγύηση καλύπτει την εγκατάσταση και τη λειτουργία του προϊόντος για τη συμφωνημένη διάρκεια. Η κάλυψη περιλαμβάνει επισκευή ή αντικατάσταση σε περίπτωση βλάβης που οφείλεται σε ελαττωματικό υλικό ή εργασία. Δεν καλύπτονται φθορές από κακή χρήση, μηχανική βλάβη, μη εξουσιοδοτημένες τροποποιήσεις ή ζημιές από φυσική καταστροφή.`
 
 const SERVICE_PRESET_OPTIONS = ['Ambient Lighting', 'Starlight Headliner', 'Alcantara Interior', 'Carbon Trim', 'Premium Audio', 'Sunroof', 'Seat Upgrade', 'Interior Mood Lighting', 'Custom Trim', 'Other']
+
+const VEHICLE_BRAND_MODELS: Record<string, string[]> = {
+  'Audi': ['A1 8X', 'A1 GB', 'A3 8L', 'A3 8P', 'A3 8V', 'A3 8Y', 'A4 B6', 'A4 B7', 'A4 B8', 'A4 B9', 'A5 8T', 'A5 F5', 'A6 C6', 'A6 C7', 'A6 C8', 'A7 4G', 'A7 4K', 'A8 D3', 'A8 D4', 'A8 D5', 'Q2 GA', 'Q3 8U', 'Q3 F3', 'Q4 e-tron F4', 'Q5 8R', 'Q5 FY', 'Q7 4L', 'Q7 4M', 'Q8 4M8', 'TT 8J', 'TT 8S', 'R8 Type 42', 'R8 Type 4S', 'S3 8V', 'S3 8Y', 'S4 B9', 'S5 F5', 'RS3 8V', 'RS3 8Y', 'RS4 B9', 'RS5 F5', 'RS6 C7', 'RS6 C8', 'RS7 4K', 'e-tron GE', 'e-tron GT FW'],
+  'BMW': ['1 Series E81/E82/E87/E88', '1 Series F20/F21', '1 Series F40', '1 Series F70', '2 Series F22/F23', '2 Series F44', '2 Series G42', '3 Series E46', '3 Series E90/E91/E92/E93', '3 Series F30/F31/F34', '3 Series G20/G21', '4 Series F32/F33/F36', '4 Series G22/G23/G26', '5 Series E60/E61', '5 Series F10/F11', '5 Series G30/G31', '5 Series G60/G61', '6 Series E63/E64', '6 Series F12/F13/F06', '7 Series F01/F02', '7 Series G11/G12', '7 Series G70', '8 Series G14/G15/G16', 'X1 E84', 'X1 F48', 'X1 U11', 'X2 F39', 'X2 U10', 'X3 F25', 'X3 G01', 'X3 G45', 'X4 F26', 'X4 G02', 'X5 E70', 'X5 F15', 'X5 G05', 'X6 E71', 'X6 F16', 'X6 G06', 'X7 G07', 'M2 F87', 'M2 G87', 'M3 E46', 'M3 E90/E92/E93', 'M3 F80', 'M3 G80/G81', 'M4 F82/F83', 'M4 G82/G83', 'M5 F10', 'M5 F90', 'M5 G90/G99', 'i3 I01', 'i4 G26', 'i5 G60', 'i7 G70', 'i8 I12/I15', 'iX I20'],
+  'Mercedes-Benz': ['A-Class W169', 'A-Class W176', 'A-Class W177', 'B-Class W245', 'B-Class W246', 'B-Class W247', 'C-Class W203', 'C-Class W204', 'C-Class W205', 'C-Class W206', 'C-Class Coupe C204', 'C-Class Coupe C205', 'CLA C117', 'CLA C118', 'CLS C218', 'CLS C257', 'E-Class W211', 'E-Class W212', 'E-Class W213', 'E-Class W214', 'E-Class Coupe C207', 'E-Class Coupe C238', 'G-Class W463', 'G-Class W465', 'GLA X156', 'GLA H247', 'GLB X247', 'GLC X253', 'GLC Coupe C253', 'GLC X254', 'GLC Coupe C254', 'GLE W166', 'GLE V167', 'GLE Coupe C292', 'GLE Coupe C167', 'GLS X166', 'GLS X167', 'S-Class W221', 'S-Class W222', 'S-Class W223', 'S-Class Coupe C217', 'SL R231', 'SL R232', 'AMG GT C190', 'AMG GT C192', 'V-Class W447', 'Vito W447', 'EQA H243', 'EQB X243', 'EQC N293', 'EQE V295', 'EQS V297'],
+  'Volkswagen': ['Golf MK4', 'Golf MK5', 'Golf MK6', 'Golf MK7', 'Golf MK7.5', 'Golf MK8', 'Golf MK8.5', 'Golf GTI MK5', 'Golf GTI MK6', 'Golf GTI MK7', 'Golf GTI MK8', 'Golf R MK6', 'Golf R MK7', 'Golf R MK8', 'Polo 6R', 'Polo 6C', 'Polo AW', 'Passat B6', 'Passat B7', 'Passat B8', 'Passat B9', 'Tiguan 5N', 'Tiguan AD1', 'Tiguan CT1', 'Touareg 7L', 'Touareg 7P', 'Touareg CR', 'T-Roc A1', 'T-Cross C1', 'Taigo CS', 'Arteon 3H', 'Scirocco MK3', 'Caddy 2K', 'Caddy SB', 'Transporter T5', 'Transporter T6', 'Transporter T6.1', 'ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. Buzz'],
+  Porsche: ['911', '718', 'Panthera', 'Cayenne', 'Macan', 'Taycan', 'Boxster', 'Cayman', 'Panth', '918 Spyder'],
+  Ford: ['Fiesta', 'Focus', 'Mondeo', 'Mustang', 'Kuga', 'Explorer', 'F-150', 'Puma', 'Edge', 'Ranger'],
+  Toyota: ['Yaris', 'Corolla', 'Auris', 'Camry', 'Prius', 'RAV4', 'Highlander', 'Land Cruiser', 'C-HR', 'Aygo', 'Supra'],
+  Honda: ['Civic', 'Accord', 'Jazz', 'CR-V', 'HR-V', 'Pilot', 'Type R', 'NSX', 'City', 'FR-V'],
+  Nissan: ['Micra', 'Qashqai', 'Juke', 'Leaf', 'X-Trail', 'GT-R', '350Z', '370Z', 'Altima', 'Primera'],
+  Hyundai: ['i10', 'i20', 'i30', 'Elantra', 'Tucson', 'Santa Fe', 'Ioniq', 'Kona', 'Bayon', 'IONIQ 5'],
+  Kia: ['Picanto', 'Rio', 'Ceed', 'Sportage', 'Sorento', 'EV6', 'EV9', 'Niro', 'Carnival', 'Stinger'],
+  Mazda: ['2', '3', '5', '6', 'CX-3', 'CX-5', 'CX-30', 'MX-5', 'MX-30', 'CX-60'],
+  Subaru: ['Impreza', 'Legacy', 'Outback', 'Forester', 'Crosstrek', 'BRZ', 'WRX', 'Levorg', 'XV', 'Tribeca'],
+  Volvo: ['V40', 'V60', 'V70', 'XC40', 'XC60', 'XC90', 'S60', 'S90', 'V90', 'EX30'],
+  Peugeot: ['208', '308', '508', '2008', '3008', '5008', '508 SW', '208 GTI', 'RCZ', 'Traveller'],
+  Citroen: ['C1', 'C3', 'C4', 'C5', 'C-Elysee', 'Jumper', 'Cactus', 'Berlingo', 'Spacetourer', 'C6'],
+  Opel: ['Corsa', 'Astra', 'Insignia', 'Mokka', 'Crossland', 'Grandland', 'Vectra', 'Zafira', 'Adam', 'Combo'],
+  Renault: ['Clio', 'Megane', 'Kadjar', 'Captur', 'Austral', 'Scenic', 'Twingo', 'Laguna', 'Koleos', 'Zoe'],
+  Seat: ['Ibiza', 'Leon', 'Ateca', 'Tarraco', 'Arona', 'Alhambra', 'Mii', 'Cordoba', 'Exeo'],
+  Skoda: ['Fabia', 'Octavia', 'Superb', 'Karoq', 'Kodiaq', 'Enyaq', 'Rapid', 'Yeti', 'Scala', 'Citigo'],
+  'Land Rover': ['Defender', 'Discovery', 'Range Rover Evoque', 'Range Rover Sport', 'Range Rover Velar', 'Freelander', 'Range Rover', 'Discovery Sport'],
+  Lexus: ['IS', 'ES', 'GS', 'LS', 'UX', 'NX', 'RX', 'LX', 'RC', 'LC'],
+  Maserati: ['Ghibli', 'Quattroporte', 'Levante', 'GranTurismo', 'GranCabrio'],
+  'Alfa Romeo': ['Giulia', 'Stelvio', 'Giulietta', '4C', 'Tonale'],
+  Mini: ['Cooper', 'Countryman', 'Clubman', 'One', 'Paceman'],
+}
+
+const ADDITIONAL_VEHICLE_BRANDS = [
+  'Acura',
+  'Aston Martin',
+  'Bentley',
+  'Bugatti',
+  'Buick',
+  'BYD',
+  'Cadillac',
+  'Chevrolet',
+  'Chrysler',
+  'Cupra',
+  'Dacia',
+  'Dodge',
+  'DS Automobiles',
+  'Ferrari',
+  'Fiat',
+  'Genesis',
+  'GMC',
+  'Infiniti',
+  'Isuzu',
+  'Jaguar',
+  'Jeep',
+  'Lamborghini',
+  'Lincoln',
+  'Lotus',
+  'McLaren',
+  'Mercedes-Benz',
+  'MG',
+  'Mitsubishi',
+  'Polestar',
+  'Ram',
+  'Rivian',
+  'Rolls-Royce',
+  'Saab',
+  'Smart',
+  'Suzuki',
+  'Tesla',
+  'Vauxhall',
+] as const
+
+const VEHICLE_BRAND_OPTIONS = Array.from(
+  new Set([
+    ...Object.keys(VEHICLE_BRAND_MODELS),
+    ...ADDITIONAL_VEHICLE_BRANDS,
+  ]),
+).sort()
 
 const makeCustomerDraft = (): CustomerProfile => ({
   id: `cust-${Math.random().toString(36).slice(2, 8)}`,
@@ -87,9 +178,17 @@ type SearchableSelectProps = {
   options: string[]
   placeholder: string
   emptyText: string
+  allowCustom?: boolean
 }
 
-function SearchableSelect({ value, onSelect, options, placeholder, emptyText }: SearchableSelectProps) {
+function SearchableSelect({
+  value,
+  onSelect,
+  options,
+  placeholder,
+  emptyText,
+  allowCustom = false,
+}: SearchableSelectProps) {
   const [query, setQuery] = useState(value)
   const [open, setOpen] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
@@ -132,6 +231,24 @@ function SearchableSelect({ value, onSelect, options, placeholder, emptyText }: 
     setQuery(option)
     setOpen(false)
     setHighlightedIndex(-1)
+  }
+
+  const commitCustomValue = () => {
+    const trimmedQuery = query.trim()
+
+    if (!allowCustom || !trimmedQuery) {
+      setQuery(value)
+      setOpen(false)
+      return
+    }
+
+    const canonicalOption =
+      options.find(
+        (option) =>
+          option.toLowerCase() === trimmedQuery.toLowerCase(),
+      ) ?? trimmedQuery
+
+    commitSelection(canonicalOption)
   }
 
   const handleInputFocus = () => {
@@ -186,6 +303,7 @@ function SearchableSelect({ value, onSelect, options, placeholder, emptyText }: 
         onClick={() => setOpen(true)}
         onMouseDown={() => setOpen(true)}
         onKeyDown={handleKeyDown}
+        onBlur={commitCustomValue}
         placeholder={placeholder}
       />
       {open && filteredOptions.length ? (
@@ -212,30 +330,93 @@ function SearchableSelect({ value, onSelect, options, placeholder, emptyText }: 
   )
 }
 
+const HOMEPAGE_IMAGE_SLOTS: ReadonlyArray<{
+  slot: HomepageImageSlot
+  label: string
+  description: string
+  fallbackImage: string
+}> = [
+  {
+    slot: 'hero',
+    label: 'Main homepage background',
+    description: 'The large image at the top of the homepage.',
+    fallbackImage: '/images/homepage-ambient-mercedes.png',
+  },
+  {
+    slot: 'ambient-lighting',
+    label: 'Ambient Lighting',
+    description: 'Service-card image for Ambient Lighting.',
+    fallbackImage: '/images/mercedes_glc_w205_coupe.jpg',
+  },
+  {
+    slot: 'custom-steering',
+    label: 'Custom Steering Wheels',
+    description: 'Service-card image for Custom Steering Wheels.',
+    fallbackImage: '/images/custom-steering.webp',
+  },
+  {
+    slot: 'starlight-headliner',
+    label: 'Starlight Headliner',
+    description: 'Service-card image for Starlight Headliner.',
+    fallbackImage: '/images/starlight-headliner.webp',
+  },
+  {
+    slot: 'android-display',
+    label: 'Android Displays',
+    description: 'Service-card image for Android Displays.',
+    fallbackImage: '/images/android-display.webp',
+  },
+  {
+    slot: 'body-kit',
+    label: 'Body Kits',
+    description: 'Service-card image for Body Kits.',
+    fallbackImage: '/images/IMG_2085.JPEG',
+  },
+]
+
 function AdminPage() {
-  const [state, setState] = useState<PortalState>(() => getPortalState())
-  const [websiteContentDraft, setWebsiteContentDraft] = useState<WebsiteContent>(() => deepCloneWebsiteContent(getPortalState().websiteContent ?? DEFAULT_WEBSITE_CONTENT))
-  const [selectedProjectDraftId, setSelectedProjectDraftId] = useState('')
-  const [selectedServiceDraftId, setSelectedServiceDraftId] = useState('')
-  const [selectedBrandDraftName, setSelectedBrandDraftName] = useState('')
-  const [selectedModelDraftName, setSelectedModelDraftName] = useState('')
-  const [newBrandName, setNewBrandName] = useState('')
-  const [newBrandFirstModel, setNewBrandFirstModel] = useState('')
-  const [newModelName, setNewModelName] = useState('')
+  const [state, setState] = useState<PortalState>(() => createInitialPortalState())
+  const [portalHydrated, setPortalHydrated] = useState(false)
   const [search, setSearch] = useState('')
   const navigate = useNavigate()
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
   const [customerDraft, setCustomerDraft] = useState<CustomerProfile>(makeCustomerDraft)
   const [vehicleDraft, setVehicleDraft] = useState<VehicleRecord>(() => makeVehicleDraft())
+  const [, setWarrantyDraft] = useState<WarrantyRecord>(() => makeWarrantyDraft())
   const [galleryDraft, setGalleryDraft] = useState<AdminGalleryItem>(() => makeGalleryDraft())
   const [pendingGalleryImages, setPendingGalleryImages] = useState<string[]>([])
   const [serviceDraft, setServiceDraft] = useState(() => makeServiceDraft())
   const [editingServiceEntryId, setEditingServiceEntryId] = useState<string | null>(null)
   const [copiedCustomerId, setCopiedCustomerId] = useState<string | null>(null)
-
   const isAuthorizedAdmin = hasValidAdminSession()
-
+  const [projects, setProjects] = useState<ProjectRecord[]>([])
+  const [projectDraft, setProjectDraft] = useState<ProjectDraft>({
+    serviceId: 'ambient-lighting',
+    brand: '',
+    model: '',
+    title: '',
+    description: '',
+  })
+  const [projectFiles, setProjectFiles] = useState<File[]>([])
+  const [projectPhotoFiles, setProjectPhotoFiles] = useState<Record<string, File[]>>({})
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
+  const [editingProjectDraft, setEditingProjectDraft] = useState<ProjectDraft | null>(null)
+  const [selectedManagedProjectId, setSelectedManagedProjectId] = useState('')
+  const [projectStatus, setProjectStatus] = useState<string | null>(null)
+  const [projectsLoading, setProjectsLoading] = useState(true)
+  const [managerView, setManagerView] = useState<
+    'projects' | 'homepage'
+  >('projects')
+  const [homepageImages, setHomepageImages] =
+    useState<HomepageImageRecord[]>([])
+  const [homepageImageFiles, setHomepageImageFiles] = useState<
+    Partial<Record<HomepageImageSlot, File>>
+  >({})
+  const [homepageImagesLoading, setHomepageImagesLoading] = useState(true)
+  const [homepageImageStatus, setHomepageImageStatus] =
+    useState<string | null>(null)
+  const [homepageInputVersion, setHomepageInputVersion] = useState(0)
   useEffect(() => {
     if (!isAuthorizedAdmin) {
       navigate({ to: '/portal' })
@@ -243,11 +424,132 @@ function AdminPage() {
   }, [isAuthorizedAdmin, navigate])
 
   useEffect(() => {
-    void hydratePortalStateFromSupabase().then((hydratedState) => {
-      setState(hydratedState)
-      setWebsiteContentDraft(deepCloneWebsiteContent(hydratedState.websiteContent ?? DEFAULT_WEBSITE_CONTENT))
-    })
+    let isActive = true
+
+    void hydratePortalStateFromSupabase(getPortalState())
+      .then((hydratedState) => {
+        if (isActive) {
+          setState(hydratedState)
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load portal data', error)
+      })
+      .finally(() => {
+        if (isActive) {
+          setPortalHydrated(true)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
   }, [])
+  useEffect(() => {
+    if (!isAuthorizedAdmin) {
+      setProjectsLoading(false)
+      return
+    }
+
+    let isActive = true
+
+    fetchProjects()
+      .then((loadedProjects) => {
+        if (isActive) {
+          setProjects(loadedProjects)
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load projects', error)
+        if (isActive) {
+          setProjectStatus('Could not load projects.')
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setProjectsLoading(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [isAuthorizedAdmin])
+  useEffect(() => {
+    if (!isAuthorizedAdmin) {
+      setHomepageImagesLoading(false)
+      return
+    }
+
+    let isActive = true
+
+    fetchHomepageImages()
+      .then((images) => {
+        if (isActive) {
+          setHomepageImages(images)
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load homepage images', error)
+
+        if (isActive) {
+          setHomepageImageStatus('Could not load homepage images.')
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setHomepageImagesLoading(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [isAuthorizedAdmin])
+
+  const saveHomepageImage = async (slot: HomepageImageSlot) => {
+    const file = homepageImageFiles[slot]
+    const slotDetails = HOMEPAGE_IMAGE_SLOTS.find(
+      (item) => item.slot === slot,
+    )
+
+    if (!file || !slotDetails) {
+      setHomepageImageStatus('Choose an image first.')
+      return
+    }
+
+    try {
+      setHomepageImagesLoading(true)
+      setHomepageImageStatus(null)
+
+      const savedImage = await uploadHomepageImage(
+        slot,
+        file,
+        slotDetails.label,
+      )
+
+      setHomepageImages((current) => [
+        ...current.filter((image) => image.slot !== slot),
+        savedImage,
+      ])
+      setHomepageImageFiles((current) => {
+        const nextFiles = { ...current }
+        delete nextFiles[slot]
+        return nextFiles
+      })
+      setHomepageInputVersion((current) => current + 1)
+      setHomepageImageStatus(`${slotDetails.label} updated successfully.`)
+    } catch (error) {
+      console.error('Failed to save homepage image', error)
+      setHomepageImageStatus(
+        error instanceof Error
+          ? error.message
+          : 'Could not save homepage image.',
+      )
+    } finally {
+      setHomepageImagesLoading(false)
+    }
+  }
 
   const filteredCustomers = useMemo(() => {
     const query = search.toLowerCase()
@@ -259,103 +561,8 @@ function AdminPage() {
 
   const selectedVehicleModels = useMemo(() => {
     const make = vehicleDraft.make.trim()
-    return state.websiteContent.vehicleBrandModels[make] ?? []
-  }, [state.websiteContent.vehicleBrandModels, vehicleDraft.make])
-
-  const vehicleBrandOptions = useMemo(
-    () => Object.keys(state.websiteContent.vehicleBrandModels ?? {}).sort(),
-    [state.websiteContent.vehicleBrandModels],
-  )
-  const projectSelectorOptions = useMemo(
-    () => websiteContentDraft.projects.map((project) => ({
-      id: project.id,
-      label: project.title?.trim() ? `${project.title} (${project.id})` : project.id,
-    })),
-    [websiteContentDraft.projects],
-  )
-  const selectedProjectDraft = useMemo(
-    () => websiteContentDraft.projects.find((project) => project.id === selectedProjectDraftId) ?? null,
-    [selectedProjectDraftId, websiteContentDraft.projects],
-  )
-  const selectedProjectSelectorValue = useMemo(
-    () => projectSelectorOptions.find((project) => project.id === selectedProjectDraftId)?.label ?? '',
-    [projectSelectorOptions, selectedProjectDraftId],
-  )
-  const serviceSelectorOptions = useMemo(
-    () => websiteContentDraft.services.map((service) => ({
-      id: service.id,
-      label: `${service.title} (${service.id})`,
-    })),
-    [websiteContentDraft.services],
-  )
-  const selectedServiceDraft = useMemo(
-    () => websiteContentDraft.services.find((service) => service.id === selectedServiceDraftId) ?? null,
-    [selectedServiceDraftId, websiteContentDraft.services],
-  )
-  const selectedServiceSelectorValue = useMemo(
-    () => serviceSelectorOptions.find((service) => service.id === selectedServiceDraftId)?.label ?? '',
-    [selectedServiceDraftId, serviceSelectorOptions],
-  )
-  const brandSelectorOptions = useMemo(
-    () => Object.keys(websiteContentDraft.vehicleBrandModels).sort(),
-    [websiteContentDraft.vehicleBrandModels],
-  )
-  const selectedBrandModels = useMemo(
-    () => websiteContentDraft.vehicleBrandModels[selectedBrandDraftName] ?? [],
-    [selectedBrandDraftName, websiteContentDraft.vehicleBrandModels],
-  )
-
-  useEffect(() => {
-    if (!websiteContentDraft.projects.length) {
-      if (selectedProjectDraftId) {
-        setSelectedProjectDraftId('')
-      }
-      return
-    }
-
-    if (!selectedProjectDraftId || !websiteContentDraft.projects.some((project) => project.id === selectedProjectDraftId)) {
-      setSelectedProjectDraftId(websiteContentDraft.projects[0]?.id ?? '')
-    }
-  }, [selectedProjectDraftId, websiteContentDraft.projects])
-
-  useEffect(() => {
-    if (!websiteContentDraft.services.length) {
-      if (selectedServiceDraftId) {
-        setSelectedServiceDraftId('')
-      }
-      return
-    }
-
-    if (!selectedServiceDraftId || !websiteContentDraft.services.some((service) => service.id === selectedServiceDraftId)) {
-      setSelectedServiceDraftId(websiteContentDraft.services[0]?.id ?? '')
-    }
-  }, [selectedServiceDraftId, websiteContentDraft.services])
-
-  useEffect(() => {
-    if (!brandSelectorOptions.length) {
-      if (selectedBrandDraftName) {
-        setSelectedBrandDraftName('')
-      }
-      return
-    }
-
-    if (!selectedBrandDraftName || !brandSelectorOptions.includes(selectedBrandDraftName)) {
-      setSelectedBrandDraftName(brandSelectorOptions[0] ?? '')
-    }
-  }, [brandSelectorOptions, selectedBrandDraftName])
-
-  useEffect(() => {
-    if (!selectedBrandModels.length) {
-      if (selectedModelDraftName) {
-        setSelectedModelDraftName('')
-      }
-      return
-    }
-
-    if (!selectedModelDraftName || !selectedBrandModels.includes(selectedModelDraftName)) {
-      setSelectedModelDraftName(selectedBrandModels[0] ?? '')
-    }
-  }, [selectedBrandModels, selectedModelDraftName])
+    return VEHICLE_BRAND_MODELS[make] ?? []
+  }, [vehicleDraft.make])
 
   const openCustomerProfile = (customer: CustomerProfile) => {
     navigate({
@@ -383,7 +590,6 @@ function AdminPage() {
 
   const startEditingCustomer = (customer: CustomerProfile) => {
     const existingVehicle = state.vehicles.find((vehicle) => vehicle.customerId === customer.id)
-    const existingWarranty = state.warranties.find((warranty) => warranty.customerId === customer.id)
     setCustomerDraft(customer)
     setVehicleDraft(existingVehicle ?? makeVehicleDraft(customer.id))
     setEditingCustomerId(customer.id)
@@ -394,6 +600,7 @@ function AdminPage() {
     setEditingCustomerId(null)
     setCustomerDraft(makeCustomerDraft())
     setVehicleDraft(makeVehicleDraft())
+    setWarrantyDraft(makeWarrantyDraft())
     setGalleryDraft(makeGalleryDraft())
     setEditingServiceEntryId(null)
     setServiceDraft(makeServiceDraft())
@@ -454,11 +661,17 @@ function AdminPage() {
       warrantyNotes: serviceDraft.warrantyNotes.trim() || undefined,
     }
 
-    setState((current) => editingServiceEntryId
-      ? updatePortalServiceHistoryEntry(serviceEntry as ServiceHistoryEntry, current)
-      : addPortalServiceHistoryEntry(serviceEntry as ServiceHistoryEntry, current))
+    const nextState = editingServiceEntryId
+  ? updatePortalServiceHistoryEntry(
+      serviceEntry as ServiceHistoryEntry,
+      state,
+    )
+  : addPortalServiceHistoryEntry(
+      serviceEntry as ServiceHistoryEntry,
+      state,
+    )
 
-    resetServiceDraft()
+setState(nextState)
   }
 
   const handleRemoveServiceHistory = (entryId: string) => {
@@ -474,8 +687,8 @@ function AdminPage() {
     return state.serviceHistory.filter((entry) => entry.customerId === customerId).slice().sort((a, b) => b.completedOn.localeCompare(a.completedOn))
   }, [editingCustomerId, selectedCustomerId, state.serviceHistory])
 
-  const saveCustomer = () => {
-    if (!customerDraft.name.trim() || !customerDraft.email.trim()) {
+const saveCustomer = async () => {
+      if (!customerDraft.name.trim() || !customerDraft.email.trim()) {
       return
     }
 
@@ -496,11 +709,10 @@ function AdminPage() {
     }
 
     let nextState = editingCustomerId
-      ? updatePortalCustomer({ ...nextCustomer, id: editingCustomerId })
-      : createPortalCustomer(nextCustomer)
-
+  ? updatePortalCustomer({ ...nextCustomer, id: editingCustomerId })
+  : await createPortalCustomer(nextCustomer);
     if (editingCustomerId) {
-      const customerVehicle = {
+            const customerVehicle = {
         ...vehicleDraft,
         customerId: editingCustomerId,
         id: vehicleDraft.id || `veh-${Math.random().toString(36).slice(2, 8)}`,
@@ -509,8 +721,10 @@ function AdminPage() {
     }
 
     setState(nextState)
+    resetServiceDraft()
     setCustomerDraft(makeCustomerDraft())
     setVehicleDraft(makeVehicleDraft())
+    setWarrantyDraft(makeWarrantyDraft())
     setGalleryDraft(makeGalleryDraft())
     setServiceDraft({
       title: '',
@@ -525,230 +739,6 @@ function AdminPage() {
       warrantyNotes: '',
     })
     setEditingCustomerId(null)
-  }
-
-  const updateDraftService = (serviceId: string, updates: Partial<PublicServiceContent>) => {
-    const nextServiceId = updates.id?.trim()
-    setWebsiteContentDraft((current) => ({
-      ...current,
-      services: current.services.map((service) => (service.id === serviceId ? { ...service, ...updates, id: nextServiceId || service.id } : service)),
-    }))
-
-    if (nextServiceId && nextServiceId !== serviceId) {
-      setSelectedServiceDraftId(nextServiceId)
-    }
-  }
-
-  const updateSelectedProjectDraft = (updates: Partial<PublicProjectContent>) => {
-    if (!selectedProjectDraftId) {
-      return
-    }
-
-    const nextProjectId = updates.id?.trim()
-    setWebsiteContentDraft((current) => ({
-      ...current,
-      projects: current.projects.map((project) => (project.id === selectedProjectDraftId ? { ...project, ...updates } : project)),
-    }))
-
-    if (nextProjectId && nextProjectId !== selectedProjectDraftId) {
-      setSelectedProjectDraftId(nextProjectId)
-    }
-  }
-
-  const addWebsiteService = () => {
-    const nextIndex = websiteContentDraft.services.length + 1
-    const id = `service-${Date.now()}`
-    setWebsiteContentDraft((current) => ({
-      ...current,
-      services: [
-        ...current.services,
-        { id, number: String(nextIndex).padStart(2, '0'), title: 'New Service', description: '', image: '/images/ambient-light.webp' },
-      ],
-    }))
-    setSelectedServiceDraftId(id)
-  }
-
-  const removeWebsiteService = (serviceId: string) => {
-    const nextServices = websiteContentDraft.services.filter((service) => service.id !== serviceId)
-    const nextProjects = websiteContentDraft.projects.filter((project) => project.serviceId !== serviceId)
-
-    setWebsiteContentDraft((current) => ({
-      ...current,
-      services: nextServices,
-      projects: nextProjects,
-    }))
-
-    if (selectedServiceDraftId === serviceId) {
-      setSelectedServiceDraftId(nextServices[0]?.id ?? '')
-    }
-  }
-
-  const addWebsiteProject = () => {
-    const firstServiceId = websiteContentDraft.services[0]?.id ?? 'ambient-lighting'
-    const newProjectId = `project-${Date.now()}`
-    setWebsiteContentDraft((current) => ({
-      ...current,
-      projects: [
-        ...current.projects,
-        {
-          id: newProjectId,
-          serviceId: firstServiceId,
-          brand: 'Brand',
-          model: 'Model',
-          title: 'New project title',
-          image: '/images/ambient-light.webp',
-        },
-      ],
-    }))
-    setSelectedProjectDraftId(newProjectId)
-  }
-
-  const removeWebsiteProject = (projectId: string) => {
-    const nextProjects = websiteContentDraft.projects.filter((project) => project.id !== projectId)
-    setWebsiteContentDraft((current) => ({
-      ...current,
-      projects: nextProjects,
-    }))
-    if (selectedProjectDraftId === projectId) {
-      setSelectedProjectDraftId(nextProjects[0]?.id ?? '')
-    }
-  }
-
-  const addWebsiteBrand = () => {
-    const brand = newBrandName.trim()
-    if (!brand) {
-      return
-    }
-
-    setWebsiteContentDraft((current) => ({
-      ...current,
-      vehicleBrandModels: {
-        ...current.vehicleBrandModels,
-        [brand]: newBrandFirstModel.trim() ? [newBrandFirstModel.trim()] : ['Other'],
-      },
-    }))
-    setSelectedBrandDraftName(brand)
-    setSelectedModelDraftName(newBrandFirstModel.trim() || 'Other')
-    setNewBrandName('')
-    setNewBrandFirstModel('')
-  }
-
-  const removeWebsiteBrand = (brand: string) => {
-    setWebsiteContentDraft((current) => {
-      const nextVehicleBrandModels = { ...current.vehicleBrandModels }
-      delete nextVehicleBrandModels[brand]
-      return {
-        ...current,
-        vehicleBrandModels: nextVehicleBrandModels,
-      }
-    })
-  }
-
-  const renameWebsiteBrand = (currentBrand: string, nextBrandValue: string) => {
-    const nextBrand = nextBrandValue.trim()
-    if (!nextBrand || nextBrand === currentBrand) {
-      return
-    }
-
-    setWebsiteContentDraft((current) => ({
-      ...current,
-      projects: current.projects.map((project) => (project.brand === currentBrand ? { ...project, brand: nextBrand } : project)),
-      vehicleBrandModels: Object.fromEntries(
-        Object.entries(current.vehicleBrandModels).map(([brand, models]) => (brand === currentBrand ? [nextBrand, models] : [brand, models])),
-      ),
-    }))
-    setSelectedBrandDraftName(nextBrand)
-  }
-
-  const addBrandModel = () => {
-    const model = newModelName.trim()
-    if (!selectedBrandDraftName || !model) {
-      return
-    }
-
-    setWebsiteContentDraft((current) => {
-      const currentModels = current.vehicleBrandModels[selectedBrandDraftName] ?? []
-      if (currentModels.includes(model)) {
-        return current
-      }
-
-      return {
-        ...current,
-        vehicleBrandModels: {
-          ...current.vehicleBrandModels,
-          [selectedBrandDraftName]: [...currentModels, model],
-        },
-      }
-    })
-    setSelectedModelDraftName(model)
-    setNewModelName('')
-  }
-
-  const renameBrandModel = (brand: string, model: string, nextModelValue: string) => {
-    const nextModel = nextModelValue.trim()
-    if (!nextModel || nextModel === model) {
-      return
-    }
-
-    setWebsiteContentDraft((current) => ({
-      ...current,
-      projects: current.projects.map((project) => (project.brand === brand && project.model === model ? { ...project, model: nextModel } : project)),
-      vehicleBrandModels: {
-        ...current.vehicleBrandModels,
-        [brand]: (current.vehicleBrandModels[brand] ?? []).map((entry) => (entry === model ? nextModel : entry)),
-      },
-    }))
-    setSelectedModelDraftName(nextModel)
-  }
-
-  const removeBrandModel = (brand: string, model: string) => {
-    setWebsiteContentDraft((current) => {
-      const nextModels = (current.vehicleBrandModels[brand] ?? []).filter((entry) => entry !== model)
-      const safeModels = nextModels.length ? nextModels : ['Other']
-      return {
-        ...current,
-        vehicleBrandModels: {
-          ...current.vehicleBrandModels,
-          [brand]: safeModels,
-        },
-      }
-    })
-  }
-
-  const saveWebsiteContent = () => {
-    const sanitized: WebsiteContent = {
-      contentVersion: WEBSITE_CONTENT_VERSION,
-      heroImage: websiteContentDraft.heroImage.trim() || DEFAULT_WEBSITE_CONTENT.heroImage,
-      services: websiteContentDraft.services
-        .map((service, index) => ({
-          ...service,
-          id: service.id.trim() || `service-${index + 1}`,
-          number: service.number.trim() || String(index + 1).padStart(2, '0'),
-          title: service.title.trim() || `Service ${index + 1}`,
-          description: service.description.trim(),
-          image: service.image.trim() || DEFAULT_WEBSITE_CONTENT.heroImage,
-        })),
-      projects: websiteContentDraft.projects
-        .map((project, index) => ({
-          ...project,
-          id: project.id.trim() || `project-${index + 1}`,
-          serviceId: project.serviceId.trim() || websiteContentDraft.services[0]?.id || 'ambient-lighting',
-          brand: project.brand.trim() || 'Brand',
-          model: project.model.trim() || 'Model',
-          title: project.title.trim() || `Project ${index + 1}`,
-          image: project.image.trim() || DEFAULT_WEBSITE_CONTENT.heroImage,
-        })),
-      vehicleBrandModels: Object.fromEntries(
-        Object.entries(websiteContentDraft.vehicleBrandModels).map(([brand, models]) => [
-          brand.trim(),
-          models.map((model) => model.trim()).filter(Boolean),
-        ]).filter(([brand, models]) => Boolean(brand) && models.length),
-      ),
-    }
-
-    const nextState = updatePortalWebsiteContent(sanitized)
-    setState(nextState)
-    setWebsiteContentDraft(deepCloneWebsiteContent(sanitized))
   }
 
   const saveGalleryItem = () => {
@@ -809,6 +799,185 @@ function AdminPage() {
     })
   }
 
+  const saveProject = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = event.currentTarget
+    setProjectStatus(null)
+
+    if (!projectFiles.length) {
+      setProjectStatus('Select at least one project photo.')
+      return
+    }
+
+    try {
+      setProjectsLoading(true)
+      const projectId = await createProject(projectDraft)
+      setSelectedManagedProjectId(projectId)
+      await uploadProjectImages(projectId, projectFiles)
+      setProjects(await fetchProjects())
+
+      setProjectDraft({
+        serviceId: 'ambient-lighting',
+        brand: '',
+        model: '',
+        title: '',
+        description: '',
+      })
+      setProjectFiles([])
+      form.reset()
+      setProjectStatus('Project saved successfully.')
+    } catch (error) {
+      console.error('Failed to save project', error)
+      setProjectStatus(
+        error instanceof Error ? error.message : 'Could not save project.',
+      )
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
+
+  const removeProject = async (project: ProjectRecord) => {
+    if (!window.confirm(`Delete "${project.title}" and all its photos?`)) {
+      return
+    }
+
+    try {
+      setProjectsLoading(true)
+      setProjectStatus(null)
+      await deleteProject(project)
+      setProjects((current) =>
+        current.filter((item) => item.id !== project.id),
+      )
+      setProjectStatus('Project deleted successfully.')
+    } catch (error) {
+      console.error('Failed to delete project', error)
+      setProjectStatus(
+        error instanceof Error ? error.message : 'Could not delete project.',
+      )
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
+  const startEditingProject = (project: ProjectRecord) => {
+    setEditingProjectId(project.id)
+    setEditingProjectDraft({
+      serviceId: project.serviceId,
+      brand: project.brand,
+      model: project.model,
+      title: project.title,
+      description: project.description,
+    })
+    setProjectStatus(null)
+  }
+
+  const cancelEditingProject = () => {
+    setEditingProjectId(null)
+    setEditingProjectDraft(null)
+  }
+
+  const saveEditedProject = async () => {
+    if (!editingProjectId || !editingProjectDraft) {
+      return
+    }
+
+    try {
+      setProjectsLoading(true)
+      setProjectStatus(null)
+      await updateProject(editingProjectId, editingProjectDraft)
+      setProjects(await fetchProjects())
+      setEditingProjectId(null)
+      setEditingProjectDraft(null)
+      setProjectStatus('Project information updated successfully.')
+    } catch (error) {
+      console.error('Failed to update project', error)
+      setProjectStatus(
+        error instanceof Error ? error.message : 'Could not update project.',
+      )
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
+  const uploadMoreProjectPhotos = async (projectId: string) => {
+    const files = projectPhotoFiles[projectId] ?? []
+
+    if (!files.length) {
+      setProjectStatus('Select at least one photo to upload.')
+      return
+    }
+
+    try {
+      setProjectsLoading(true)
+      setProjectStatus(null)
+      await uploadProjectImages(projectId, files, false)
+      setProjects(await fetchProjects())
+      setProjectPhotoFiles((current) => ({
+        ...current,
+        [projectId]: [],
+      }))
+      setProjectStatus('Photos uploaded successfully.')
+    } catch (error) {
+      console.error('Failed to upload project photos', error)
+      setProjectStatus(
+        error instanceof Error ? error.message : 'Could not upload photos.',
+      )
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
+
+  const chooseProjectCover = async (
+    projectId: string,
+    mediaId: string,
+  ) => {
+    try {
+      setProjectsLoading(true)
+      setProjectStatus(null)
+      await setProjectCover(projectId, mediaId)
+      setProjects(await fetchProjects())
+      setProjectStatus('Cover photo updated successfully.')
+    } catch (error) {
+      console.error('Failed to update project cover', error)
+      setProjectStatus(
+        error instanceof Error ? error.message : 'Could not update cover.',
+      )
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
+
+  const removeProjectPhoto = async (media: ProjectMedia) => {
+    if (!window.confirm('Delete this photo permanently?')) {
+      return
+    }
+
+    try {
+      setProjectsLoading(true)
+      setProjectStatus(null)
+      await deleteProjectMedia(media)
+      setProjects(await fetchProjects())
+      setProjectStatus('Photo deleted successfully.')
+    } catch (error) {
+      console.error('Failed to delete project photo', error)
+      setProjectStatus(
+        error instanceof Error ? error.message : 'Could not delete photo.',
+      )
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
+  if (!portalHydrated) {
+    return (
+      <PortalShell
+        active="admin"
+        title="Admin Dashboard"
+        subtitle="Loading your latest portal data..."
+      >
+        <div className="portal-card">
+          <p className="portal-muted">Loading admin data...</p>
+        </div>
+      </PortalShell>
+    )
+  }
   return (
     <PortalShell active="admin" title="Admin Dashboard" subtitle="Operate Glowworks Lab from one premium control center.">
       <div className="portal-grid portal-grid-two">
@@ -835,6 +1004,604 @@ function AdminPage() {
 
       </div>
 
+      <section className="portal-card" style={{ marginBottom: '20px' }}>
+        <div className="portal-card-title-row">
+          <div>
+            <p className="portal-eyebrow">Public projects</p>
+            <h3>Project Manager</h3>
+          </div>
+        <div
+          className="portal-actions"
+          style={{
+            marginTop: '16px',
+            marginBottom: '22px',
+            gap: '10px',
+          }}
+        >
+          <button
+            className={`button ${
+              managerView === 'projects'
+                ? 'button-primary'
+                : 'button-secondary'
+            }`}
+            type="button"
+            onClick={() => setManagerView('projects')}
+          >
+            Manage projects
+          </button>
+
+          <button
+            className={`button ${
+              managerView === 'homepage'
+                ? 'button-primary'
+                : 'button-secondary'
+            }`}
+            type="button"
+            onClick={() => setManagerView('homepage')}
+          >
+            Manage homepage images
+          </button>
+        </div>
+          <div className="portal-chip">
+            {managerView === 'projects'
+              ? projectsLoading
+                ? 'Loading...'
+                : `${projects.length} projects`
+              : homepageImagesLoading
+                ? 'Loading...'
+                : '6 image positions'}
+          </div>
+        </div>
+
+        {managerView === 'projects' ? (
+          <>
+        <form onSubmit={saveProject}>
+          <div className="form-grid">
+            <label>
+              <span>Service category</span>
+              <select
+                value={projectDraft.serviceId}
+                onChange={(event) =>
+                  setProjectDraft((current) => ({
+                    ...current,
+                    serviceId: event.target.value,
+                  }))
+                }
+              >
+                <option value="ambient-lighting">Ambient Lighting</option>
+                <option value="custom-steering-wheels">
+                  Custom Steering Wheels
+                </option>
+                <option value="starlight-headliner">
+                  Starlight Headliner
+                </option>
+                <option value="screens-media">Screens &amp; Media</option>
+                <option value="body-kit">
+                  Body Kits &amp; Exterior Upgrades
+                </option>
+              </select>
+            </label>
+
+            <label>
+              <span>Vehicle brand</span>
+              <SearchableSelect
+                value={projectDraft.brand}
+                options={VEHICLE_BRAND_OPTIONS}
+                placeholder="Search or enter a vehicle brand"
+                emptyText="No matching brand - press Enter to add it"
+                allowCustom
+                onSelect={(brand) =>
+                  setProjectDraft((current) => ({
+                    ...current,
+                    brand,
+                    model: '',
+                  }))
+                }
+              />
+              <small>
+                Select a standardized brand or enter a new manufacturer.
+              </small>
+            </label>
+
+            <label>
+              <span>Vehicle model / chassis</span>
+              <SearchableSelect
+                value={projectDraft.model}
+                options={VEHICLE_BRAND_MODELS[projectDraft.brand] ?? []}
+                placeholder={
+                  projectDraft.brand
+                    ? 'Search or enter a model/chassis'
+                    : 'Choose the vehicle brand first'
+                }
+                emptyText="No matching model - press Enter to add it"
+                allowCustom
+                onSelect={(model) =>
+                  setProjectDraft((current) => ({
+                    ...current,
+                    model,
+                  }))
+                }
+              />
+              <small>
+                Select a known model or enter a completely new model/chassis.
+              </small>
+            </label>
+
+            <label>
+              <span>Project title</span>
+              <input
+                required
+                value={projectDraft.title}
+                onChange={(event) =>
+                  setProjectDraft((current) => ({
+                    ...current,
+                    title: event.target.value,
+                  }))
+                }
+                placeholder="Example: Ambient Lighting - Mercedes W205"
+              />
+            </label>
+
+            <label className="full">
+              <span>Description</span>
+              <textarea
+                value={projectDraft.description}
+                onChange={(event) =>
+                  setProjectDraft((current) => ({
+                    ...current,
+                    description: event.target.value,
+                  }))
+                }
+                placeholder="Describe the work completed on this vehicle."
+              />
+            </label>
+
+            <label className="full">
+              <span>Project photos</span>
+              <input
+                required
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                multiple
+                onChange={(event) =>
+                  setProjectFiles(Array.from(event.target.files ?? []))
+                }
+              />
+              <small>
+                {projectFiles.length
+                  ? `${projectFiles.length} photo(s) selected`
+                  : 'Select one or more photos. Maximum 15 MB each.'}
+              </small>
+            </label>
+          </div>
+
+          <div className="portal-actions" style={{ marginTop: '16px' }}>
+            <button
+              className="button button-primary"
+              type="submit"
+              disabled={projectsLoading}
+            >
+              {projectsLoading ? 'Saving...' : 'Create project'}
+            </button>
+          </div>
+        </form>
+
+        {projectStatus ? (
+          <p className="portal-muted" style={{ marginTop: '12px' }}>
+            {projectStatus}
+          </p>
+        ) : null}
+
+        <div className="portal-list" style={{ marginTop: '20px' }}>
+          {projects.length > 0 ? (
+            <label
+              className="full"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                marginBottom: '18px',
+              }}
+            >
+              <span>Select an existing project</span>
+              <select
+                className="project-existing-select"
+                value={selectedManagedProjectId}
+                onChange={(event) => {
+                  setSelectedManagedProjectId(event.target.value)
+                  setEditingProjectId(null)
+                  setEditingProjectDraft(null)
+                }}
+              >
+                <option value="">Choose a project to manage</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.title} - {project.brand} {project.model}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {projects.length > 0 && !selectedManagedProjectId ? (
+            <p className="portal-muted">
+              Choose an existing project above to view and manage it.
+            </p>
+          ) : null}
+          {!projectsLoading && projects.length === 0 ? (
+            <p className="portal-muted">
+              No Supabase projects have been created yet.
+            </p>
+          ) : null}
+
+          {projects.filter((project) => project.id === selectedManagedProjectId).map((project) => {
+            const cover =
+              project.media.find((item) => item.isCover) ?? project.media[0]
+
+            return (
+              <div
+                className="portal-row portal-row-with-actions"
+                key={project.id}
+              >
+                <div className="portal-row-copy">
+                  {cover ? (
+                    <img
+                      src={cover.publicUrl}
+                      alt={cover.altText || project.title}
+                      style={{
+                        width: '120px',
+                        height: '80px',
+                        objectFit: 'cover',
+                        borderRadius: '12px',
+                        marginBottom: '10px',
+                      }}
+                    />
+                  ) : null}
+                  <strong>{project.title}</strong>
+                  <p>
+                    {project.brand} - {project.model}
+                  </p>
+                  <span className="portal-chip">
+                    {project.serviceId}
+                  </span>
+                  <p>{project.media.length} photo(s)</p>
+                  {editingProjectId === project.id && editingProjectDraft ? (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gap: '12px',
+                        marginTop: '16px',
+                        padding: '14px',
+                        border: '1px solid rgba(66,232,238,0.25)',
+                        borderRadius: '12px',
+                      }}
+                    >
+                      <label className="full">
+                        <span>Service category</span>
+                        <select
+                          value={editingProjectDraft.serviceId}
+                          onChange={(event) =>
+                            setEditingProjectDraft((current) =>
+                              current
+                                ? { ...current, serviceId: event.target.value }
+                                : current,
+                            )
+                          }
+                        >
+                          <option value="ambient-lighting">Ambient Lighting</option>
+                          <option value="custom-steering-wheels">Custom Steering Wheels</option>
+                          <option value="starlight-headliner">Starlight Headliner</option>
+                          <option value="screens-media">Screens & Media</option>
+                          <option value="body-kit">Body Kits & Exterior</option>
+                        </select>
+                      </label>
+
+                      <label className="full">
+                        <span>Vehicle brand</span>
+                        <input
+                          value={editingProjectDraft.brand}
+                          onChange={(event) =>
+                            setEditingProjectDraft((current) =>
+                              current
+                                ? { ...current, brand: event.target.value }
+                                : current,
+                            )
+                          }
+                        />
+                      </label>
+
+                      <label className="full">
+                        <span>Vehicle model</span>
+                        <input
+                          value={editingProjectDraft.model}
+                          onChange={(event) =>
+                            setEditingProjectDraft((current) =>
+                              current
+                                ? { ...current, model: event.target.value }
+                                : current,
+                            )
+                          }
+                        />
+                      </label>
+
+                      <label className="full">
+                        <span>Project title</span>
+                        <input
+                          value={editingProjectDraft.title}
+                          onChange={(event) =>
+                            setEditingProjectDraft((current) =>
+                              current
+                                ? { ...current, title: event.target.value }
+                                : current,
+                            )
+                          }
+                        />
+                      </label>
+
+                      <label className="full">
+                        <span>Description</span>
+                        <textarea
+                          value={editingProjectDraft.description}
+                          onChange={(event) =>
+                            setEditingProjectDraft((current) =>
+                              current
+                                ? { ...current, description: event.target.value }
+                                : current,
+                            )
+                          }
+                        />
+                      </label>
+
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          className="button button-primary portal-inline-button"
+                          type="button"
+                          disabled={projectsLoading}
+                          onClick={() => void saveEditedProject()}
+                        >
+                          Save project changes
+                        </button>
+
+                        <button
+                          className="button button-secondary portal-inline-button"
+                          type="button"
+                          disabled={projectsLoading}
+                          onClick={cancelEditingProject}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                      gap: '12px',
+                      marginTop: '14px',
+                    }}
+                  >
+                    {project.media.map((media) => (
+                      <div
+                        key={media.id}
+                        style={{
+                          padding: '8px',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          borderRadius: '12px',
+                        }}
+                      >
+                        <img
+                          src={media.publicUrl}
+                          alt={media.altText || project.title}
+                          style={{
+                            width: '100%',
+                            height: '90px',
+                            objectFit: 'cover',
+                            borderRadius: '8px',
+                          }}
+                        />
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px',
+                            marginTop: '8px',
+                          }}
+                        >
+                          <button
+                            className="button button-secondary portal-inline-button"
+                            type="button"
+                            disabled={projectsLoading || media.isCover}
+                            onClick={() =>
+                              void chooseProjectCover(project.id, media.id)
+                            }
+                          >
+                            {media.isCover ? 'Cover photo' : 'Set as cover'}
+                          </button>
+
+                          <button
+                            className="button button-secondary portal-inline-button"
+                            type="button"
+                            disabled={projectsLoading}
+                            onClick={() => void removeProjectPhoto(media)}
+                          >
+                            <Trash2 size={13} /> Delete photo
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <label
+                    className="full"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      marginTop: '14px',
+                    }}
+                  >
+                    <span>Add more project photos</span>
+                    <input
+                      key={`${project.id}-${projectPhotoFiles[project.id]?.length ?? 0}`}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/avif"
+                      multiple
+                      onChange={(event) =>
+                        setProjectPhotoFiles((current) => ({
+                          ...current,
+                          [project.id]: Array.from(event.target.files ?? []),
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <button
+                    className="button button-primary portal-inline-button"
+                    type="button"
+                    disabled={
+                      projectsLoading ||
+                      !(projectPhotoFiles[project.id]?.length)
+                    }
+                    onClick={() => void uploadMoreProjectPhotos(project.id)}
+                    style={{ marginTop: '10px' }}
+                  >
+                    Upload selected photos
+                  </button>
+                </div>
+
+                <div className="portal-row-meta">
+                  <button
+                    className="button button-secondary portal-inline-button"
+                    type="button"
+                    disabled={projectsLoading}
+                    onClick={() => startEditingProject(project)}
+                  >
+                    <PencilLine size={14} /> Edit project
+                  </button>
+                  <button
+                    className="button button-secondary portal-inline-button"
+                    type="button"
+                    disabled={projectsLoading}
+                    onClick={() => void removeProject(project)}
+                  >
+                    <Trash2 size={14} /> Delete project
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+          </>
+        ) : (
+          <div>
+            <p className="portal-muted" style={{ marginBottom: '18px' }}>
+              Select an image position and upload its replacement. Changes
+              appear on the public homepage on every device.
+            </p>
+
+            {homepageImageStatus ? (
+              <p className="portal-muted" style={{ marginBottom: '18px' }}>
+                {homepageImageStatus}
+              </p>
+            ) : null}
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns:
+                  'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: '16px',
+              }}
+            >
+              {HOMEPAGE_IMAGE_SLOTS.map((item) => {
+                const savedImage = homepageImages.find(
+                  (image) => image.slot === item.slot,
+                )
+                const selectedFile = homepageImageFiles[item.slot]
+
+                return (
+                  <article
+                    className="portal-row"
+                    key={item.slot}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'stretch',
+                      gap: '12px',
+                    }}
+                  >
+                    <img
+                      src={savedImage?.publicUrl ?? item.fallbackImage}
+                      alt={savedImage?.altText || item.label}
+                      style={{
+                        width: '100%',
+                        height: item.slot === 'hero' ? '180px' : '150px',
+                        objectFit: 'cover',
+                        borderRadius: '12px',
+                      }}
+                    />
+
+                    <div className="portal-row-copy">
+                      <strong>{item.label}</strong>
+                      <p>{item.description}</p>
+                      <small className="portal-muted">
+                        {savedImage
+                          ? 'Current homepage image'
+                          : 'Current local fallback image'}
+                      </small>
+                    </div>
+
+                    <label
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                      }}
+                    >
+                      <span>Choose replacement image</span>
+                      <input
+                        key={`${item.slot}-${homepageInputVersion}`}
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0]
+
+                          setHomepageImageFiles((current) => {
+                            const nextFiles = { ...current }
+
+                            if (file) {
+                              nextFiles[item.slot] = file
+                            } else {
+                              delete nextFiles[item.slot]
+                            }
+
+                            return nextFiles
+                          })
+                        }}
+                      />
+                    </label>
+
+                    <button
+                      className="button button-primary"
+                      type="button"
+                      disabled={!selectedFile || homepageImagesLoading}
+                      onClick={() => void saveHomepageImage(item.slot)}
+                    >
+                      {homepageImagesLoading
+                        ? 'Saving...'
+                        : selectedFile
+                          ? 'Upload selected image'
+                          : 'Choose an image first'}
+                    </button>
+                  </article>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </section>
       <div className="portal-card">
         <div className="portal-card-title-row">
           <h3>Search customers</h3>
@@ -854,10 +1621,15 @@ function AdminPage() {
             }} style={{ cursor: 'pointer' }}>
               <div className="portal-row-copy">
                 <strong>{customer.name}</strong>
-                <p>{customer.email} • {customer.phone}</p>
+                <p>{customer.email} - {customer.phone}</p>
                 <div className="portal-link-inline">
                   <span className="portal-chip">NFC / QR ready</span>
-                  <code className="portal-link-code">{buildCustomerPortalUrl(customer.customerCode, { kind: 'nfc' })}</code>
+                  <div className="portal-link-inline">
+                   <span className="portal-chip">NFC / QR ready</span>
+                   <code className="portal-link-code">
+                    {`/customer/${customer.customerCode}`}
+                    </code>
+                  </div>
                 </div>
               </div>
               <div className="portal-row-meta">
@@ -937,7 +1709,7 @@ function AdminPage() {
                 <SearchableSelect
                   value={vehicleDraft.make}
                   onSelect={(brand) => setVehicleDraft((current) => ({ ...current, make: brand, model: '' }))}
-                  options={vehicleBrandOptions}
+                  options={VEHICLE_BRAND_OPTIONS}
                   placeholder="Mercedes-Benz"
                   emptyText="No matching brand"
                 />
@@ -1027,7 +1799,7 @@ function AdminPage() {
             </label>
             <label className="full">
               <span>Warranty coverage</span>
-              <input value={serviceDraft.warrantyCoverage} onChange={(event) => setServiceDraft((current) => ({ ...current, warrantyCoverage: event.target.value }))} placeholder="2 years · workmanship + support" />
+              <input value={serviceDraft.warrantyCoverage} onChange={(event) => setServiceDraft((current) => ({ ...current, warrantyCoverage: event.target.value }))} placeholder="2 years workmanship + support" />
             </label>
             <label className="full">
               <span>Warranty notes</span>
@@ -1055,7 +1827,7 @@ function AdminPage() {
                     <div className="portal-row portal-row-with-actions" key={entry.id}>
                       <div>
                         <strong>{entry.title}</strong>
-                        <p>{entry.completedOn} • {entry.vehicle || 'Vehicle'}</p>
+                        <p>{entry.completedOn} - {entry.vehicle || 'Vehicle'}</p>
                         {(() => {
                           const serviceWarranty = state.warranties.find((warranty) => warranty.id === entry.warrantyId)
                           if (!serviceWarranty) {
@@ -1064,7 +1836,7 @@ function AdminPage() {
 
                           return (
                             <p style={{ marginTop: '6px', color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem' }}>
-                              Warranty: {serviceWarranty.warrantyNumber ?? 'Service warranty'} • {serviceWarranty.status} • Ends {serviceWarranty.endsOn}
+                              Warranty: {serviceWarranty.warrantyNumber ?? 'Service warranty'} - {serviceWarranty.status} - Ends {serviceWarranty.endsOn}
                             </p>
                           )
                         })()}
@@ -1177,262 +1949,6 @@ function AdminPage() {
               </div>
             </div>
           ))}
-        </div>
-      </div>
-
-      <div className="portal-card" style={{ marginTop: '16px' }}>
-        <div className="portal-card-title-row">
-          <h3>Website content manager</h3>
-          <div className="portal-chip">Admin only</div>
-        </div>
-        <p className="portal-muted" style={{ marginBottom: '12px' }}>
-          Edit homepage images, project gallery entries, and available brand/model options used in booking forms.
-        </p>
-
-        <div className="form-grid">
-          <label className="full">
-            <span>Hero image path</span>
-            <input
-              value={websiteContentDraft.heroImage}
-              onChange={(event) => setWebsiteContentDraft((current) => ({ ...current, heroImage: event.target.value }))}
-              placeholder="/images/ambient-light.webp"
-            />
-          </label>
-        </div>
-
-        <div className="portal-card" style={{ marginTop: '14px', border: '1px solid rgba(76, 211, 209, 0.18)', padding: '14px' }}>
-          <div className="portal-card-title-row" style={{ marginBottom: '10px' }}>
-            <h4 style={{ fontSize: '0.95rem' }}>Services</h4>
-            <button className="button button-secondary" type="button" onClick={addWebsiteService}>Add service</button>
-          </div>
-          {serviceSelectorOptions.length ? (
-            <div className="form-grid">
-              <label className="full">
-                <span>Select service</span>
-                <SearchableSelect
-                  value={selectedServiceSelectorValue}
-                  onSelect={(selectedLabel) => {
-                    const selectedService = serviceSelectorOptions.find((service) => service.label === selectedLabel)
-                    if (selectedService) {
-                      setSelectedServiceDraftId(selectedService.id)
-                    }
-                  }}
-                  options={serviceSelectorOptions.map((service) => service.label)}
-                  placeholder="Ambient Lighting (ambient-lighting)"
-                  emptyText="No matching service"
-                />
-              </label>
-              {selectedServiceDraft ? (
-                <>
-                  <label>
-                    <span>Service ID</span>
-                    <input value={selectedServiceDraft.id} onChange={(event) => updateDraftService(selectedServiceDraft.id, { id: event.target.value })} />
-                  </label>
-                  <label>
-                    <span>Number</span>
-                    <input value={selectedServiceDraft.number} onChange={(event) => updateDraftService(selectedServiceDraft.id, { number: event.target.value })} />
-                  </label>
-                  <label className="full">
-                    <span>Title</span>
-                    <input value={selectedServiceDraft.title} onChange={(event) => updateDraftService(selectedServiceDraft.id, { title: event.target.value })} />
-                  </label>
-                  <label className="full">
-                    <span>Description</span>
-                    <textarea value={selectedServiceDraft.description} onChange={(event) => updateDraftService(selectedServiceDraft.id, { description: event.target.value })} />
-                  </label>
-                  <label className="full">
-                    <span>Image path</span>
-                    <input value={selectedServiceDraft.image} onChange={(event) => updateDraftService(selectedServiceDraft.id, { image: event.target.value })} />
-                  </label>
-                  <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
-                    <button className="portal-ghost-button" type="button" onClick={() => removeWebsiteService(selectedServiceDraft.id)}>
-                      <Trash2 size={14} /> Remove selected service
-                    </button>
-                  </div>
-                </>
-              ) : null}
-            </div>
-          ) : (
-            <p className="portal-muted">No services yet. Click “Add service”.</p>
-          )}
-        </div>
-
-        <div className="portal-card" style={{ marginTop: '14px', border: '1px solid rgba(76, 211, 209, 0.18)', padding: '14px' }}>
-          <div className="portal-card-title-row" style={{ marginBottom: '10px' }}>
-            <h4 style={{ fontSize: '0.95rem' }}>Projects</h4>
-            <button className="button button-secondary" type="button" onClick={addWebsiteProject}>Add project</button>
-          </div>
-          {projectSelectorOptions.length ? (
-            <div className="form-grid">
-              <label className="full">
-                <span>Select project name</span>
-                <SearchableSelect
-                  value={selectedProjectSelectorValue}
-                  onSelect={(selectedLabel) => {
-                    const selectedProject = projectSelectorOptions.find((project) => project.label === selectedLabel)
-                    if (selectedProject) {
-                      setSelectedProjectDraftId(selectedProject.id)
-                    }
-                  }}
-                  options={projectSelectorOptions.map((project) => project.label)}
-                  placeholder="Ambient Lighting • Mercedes A-Class W177"
-                  emptyText="No matching project name"
-                />
-              </label>
-              {selectedProjectDraft ? (
-                <>
-                  <label>
-                    <span>Project ID</span>
-                    <input value={selectedProjectDraft.id} onChange={(event) => updateSelectedProjectDraft({ id: event.target.value })} />
-                  </label>
-                  <label>
-                    <span>Service ID</span>
-                    <SearchableSelect
-                      value={serviceSelectorOptions.find((service) => service.id === selectedProjectDraft.serviceId)?.label ?? selectedProjectDraft.serviceId}
-                      onSelect={(selectedLabel) => {
-                        const selectedService = serviceSelectorOptions.find((service) => service.label === selectedLabel)
-                        if (selectedService) {
-                          updateSelectedProjectDraft({ serviceId: selectedService.id })
-                        }
-                      }}
-                      options={serviceSelectorOptions.map((service) => service.label)}
-                      placeholder="Ambient Light (ambient-lighting)"
-                      emptyText="No matching service"
-                    />
-                  </label>
-                  <label>
-                    <span>Brand</span>
-                    <SearchableSelect
-                      value={selectedProjectDraft.brand}
-                      onSelect={(brand) => updateSelectedProjectDraft({ brand, model: '' })}
-                      options={brandSelectorOptions}
-                      placeholder="Mercedes-Benz"
-                      emptyText="No matching brand"
-                    />
-                  </label>
-                  <label>
-                    <span>Model</span>
-                    <SearchableSelect
-                      value={selectedProjectDraft.model}
-                      onSelect={(model) => updateSelectedProjectDraft({ model })}
-                      options={websiteContentDraft.vehicleBrandModels[selectedProjectDraft.brand] ?? []}
-                      placeholder="A-Class W177"
-                      emptyText="No matching model"
-                    />
-                  </label>
-                  <label className="full">
-                    <span>Title</span>
-                    <input value={selectedProjectDraft.title} onChange={(event) => updateSelectedProjectDraft({ title: event.target.value })} />
-                  </label>
-                  <label className="full">
-                    <span>Image path</span>
-                    <input value={selectedProjectDraft.image} onChange={(event) => updateSelectedProjectDraft({ image: event.target.value })} />
-                  </label>
-                  <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
-                    <button className="portal-ghost-button" type="button" onClick={() => removeWebsiteProject(selectedProjectDraft.id)}>
-                      <Trash2 size={14} /> Remove selected project
-                    </button>
-                  </div>
-                </>
-              ) : null}
-            </div>
-          ) : (
-            <p className="portal-muted">No projects yet. Click “Add project”.</p>
-          )}
-        </div>
-
-        <div className="portal-card" style={{ marginTop: '14px', border: '1px solid rgba(76, 211, 209, 0.18)', padding: '14px' }}>
-          <div className="portal-card-title-row" style={{ marginBottom: '10px' }}>
-            <h4 style={{ fontSize: '0.95rem' }}>Brand / model catalog</h4>
-            <div className="portal-chip">Used in booking dropdowns</div>
-          </div>
-          <div className="form-grid">
-            <label>
-              <span>New brand</span>
-              <input value={newBrandName} onChange={(event) => setNewBrandName(event.target.value)} placeholder="Lamborghini" />
-            </label>
-            <label>
-              <span>First model (optional)</span>
-              <input value={newBrandFirstModel} onChange={(event) => setNewBrandFirstModel(event.target.value)} placeholder="Huracan" />
-            </label>
-            <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
-              <button className="button button-secondary" type="button" onClick={addWebsiteBrand}>Add brand</button>
-            </div>
-          </div>
-          {brandSelectorOptions.length ? (
-            <div className="form-grid" style={{ marginTop: '12px' }}>
-              <label className="full">
-                <span>Select brand</span>
-                <SearchableSelect
-                  value={selectedBrandDraftName}
-                  onSelect={setSelectedBrandDraftName}
-                  options={brandSelectorOptions}
-                  placeholder="Mercedes-Benz"
-                  emptyText="No matching brand"
-                />
-              </label>
-
-              {selectedBrandDraftName ? (
-                <>
-                  <label className="full">
-                    <span>Brand name</span>
-                    <input
-                      value={selectedBrandDraftName}
-                      onChange={(event) => renameWebsiteBrand(selectedBrandDraftName, event.target.value)}
-                    />
-                  </label>
-                  <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
-                    <button className="portal-ghost-button" type="button" onClick={() => removeWebsiteBrand(selectedBrandDraftName)}>
-                      <Trash2 size={14} /> Remove selected brand
-                    </button>
-                  </div>
-
-                  <label className="full">
-                    <span>Select model</span>
-                    <SearchableSelect
-                      value={selectedModelDraftName}
-                      onSelect={setSelectedModelDraftName}
-                      options={selectedBrandModels}
-                      placeholder="A-Class"
-                      emptyText="No matching model"
-                    />
-                  </label>
-                  {selectedModelDraftName ? (
-                    <>
-                      <label className="full">
-                        <span>Model name</span>
-                        <input
-                          value={selectedModelDraftName}
-                          onChange={(event) => renameBrandModel(selectedBrandDraftName, selectedModelDraftName, event.target.value)}
-                        />
-                      </label>
-                      <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
-                        <button className="portal-ghost-button" type="button" onClick={() => removeBrandModel(selectedBrandDraftName, selectedModelDraftName)}>
-                          <Trash2 size={14} /> Remove selected model
-                        </button>
-                      </div>
-                    </>
-                  ) : null}
-
-                  <label className="full">
-                    <span>Add new model</span>
-                    <input value={newModelName} onChange={(event) => setNewModelName(event.target.value)} placeholder="GLC Coupe" />
-                  </label>
-                  <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
-                    <button className="button button-secondary" type="button" onClick={addBrandModel}>Add model</button>
-                  </div>
-                </>
-              ) : null}
-            </div>
-          ) : (
-            <p className="portal-muted" style={{ marginTop: '12px' }}>No brands yet. Add a brand first.</p>
-          )}
-        </div>
-
-        <div className="portal-actions" style={{ marginTop: '12px', justifyContent: 'flex-start' }}>
-          <button className="button button-primary" type="button" onClick={saveWebsiteContent}>
-            Save website content
-          </button>
         </div>
       </div>
 

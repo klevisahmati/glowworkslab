@@ -12,6 +12,7 @@ function DashboardPage() {
     <PortalShell active="dashboard" title="Πίνακας ελέγχου" subtitle="Η επισκόπηση της εγγύησης και της ιδιοκτησίας σου.">
       <div className="portal-grid">
         <div className="portal-card portal-highlight-card">
+
           <p className="portal-eyebrow">Καλώς όρισες ξανά</p>
           <h2>{portalCustomer.name}</h2>
           <p>{portalCustomer.email}</p>

@@ -1,11 +1,24 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, CarFront, Download, FileText, ShieldCheck, Sparkles } from 'lucide-react'
+import {
+  ArrowLeft,
+  CarFront,
+  Download,
+  FileText,
+  Home,
+  Instagram,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { useEffect, useMemo, useState } from 'react'
 import { PortalActionButton } from '../../components/portal/PortalActionButton'
 import { PortalEmptyState, PortalSectionCard } from '../../components/portal/PortalSectionCard'
 import { hasValidAdminSession } from '../../lib/portal-auth'
-import { getPortalState } from '../../lib/portal-session'
+import { fetchCustomerPortalStateByCode, getPortalState } from '../../lib/portal-session'
 import { calculateWarrantyMeta } from '../../lib/warranty'
 import type { CustomerProfile, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyRecord } from '../../types/portal'
 
@@ -83,12 +96,15 @@ function CustomerPortalPage() {
   const { customerCode } = Route.useParams()
   const navigate = useNavigate()
   const initialPortalState = useMemo(() => getPortalState(), [])
-  const initialCustomer = initialPortalState.customers.find((profile) => profile.customerCode === customerCode)
-    ?? initialPortalState.customer
-    ?? initialPortalState.customers[0]
-    ?? null
-  const [portalState, setPortalState] = useState<PortalState>(initialPortalState)
-  const customer = portalState.customers.find((profile) => profile.customerCode === customerCode) ?? portalState.customer ?? portalState.customers[0] ?? makeCustomerDraft()
+  const [portalState, setPortalState] =
+    useState<PortalState>(initialPortalState)
+  const [customerProfileLoading, setCustomerProfileLoading] =
+    useState(true)
+  const matchedCustomer = portalState.customers.find(
+    (profile) => profile.customerCode === customerCode,
+  ) ?? null
+  const customer =
+    matchedCustomer ?? makeCustomerDraft({ customerCode })
   const customerVehicles = portalState.vehicles.filter((vehicle) => vehicle.customerId === customer.id)
   const customerWarranties = portalState.warranties.filter((warranty) => warranty.customerId === customer.id)
   const customerHistory = portalState.serviceHistory.filter((entry) => entry.customerId === customer.id)
@@ -105,34 +121,69 @@ function CustomerPortalPage() {
     nfcTagId: 'Pending',
   }
   const [now, setNow] = useState(new Date())
-  const isAdminViewingCustomer = hasValidAdminSession()
-  const serviceEntriesWithWarranties = useMemo(() => {
-    return customerHistory.slice().sort((a, b) => b.completedOn.localeCompare(a.completedOn)).map((entry) => ({
+
+const [isAdminViewingCustomer, setIsAdminViewingCustomer] = useState(false)
+
+useEffect(() => {
+  setIsAdminViewingCustomer(hasValidAdminSession())
+}, [])
+
+const warrantyHistory = useMemo(() => {
+  return customerHistory
+    .slice()
+    .sort((a, b) => b.completedOn.localeCompare(a.completedOn))
+    .map((entry) => ({
       entry,
-      warranty: portalState.warranties.find((warranty) => warranty.id === entry.warrantyId) ?? null,
-      warrantyMeta: portalState.warranties.find((warranty) => warranty.id === entry.warrantyId)
-        ? calculateWarrantyMeta(portalState.warranties.find((warranty) => warranty.id === entry.warrantyId) as WarrantyRecord, now)
+      warranty: portalState.warranties.find(
+        (warranty) => warranty.id === entry.warrantyId,
+      ) ?? null,
+      warrantyMeta: portalState.warranties.find(
+        (warranty) => warranty.id === entry.warrantyId,
+      )
+        ? calculateWarrantyMeta(
+            portalState.warranties.find(
+              (warranty) => warranty.id === entry.warrantyId,
+            ) as WarrantyRecord,
+            now,
+          )
         : null,
     }))
-  }, [customerHistory, now, portalState.warranties])
-  const activeDiscount = customer.discountEnabled
-    ? (portalState.discounts.find((discount) => discount.active && discount.validTo >= new Date().toISOString().slice(0, 10)) ?? portalState.discounts[0])
-    : null
+}, [customerHistory, now, portalState.warranties])
+
+const activeDiscount = customer.discountEnabled
+  ? (
+      portalState.discounts.find(
+        (discount) =>
+          discount.active &&
+          discount.validTo >= new Date().toISOString().slice(0, 10),
+      ) ?? portalState.discounts[0]
+    )
+  : null
 
   useEffect(() => {
-    const nextState = getPortalState()
-    const selectedCustomer = nextState.customers.find((profile) => profile.customerCode === customerCode)
-      ?? nextState.customer
-      ?? nextState.customers[0]
-      ?? null
+    let isActive = true
 
-    if (!selectedCustomer) {
-      navigate({ to: '/portal' })
-      return
+    setCustomerProfileLoading(true)
+
+    void fetchCustomerPortalStateByCode(customerCode, getPortalState())
+      .then((hydratedState) => {
+        if (isActive) {
+          setPortalState(hydratedState)
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load customer profile', error)
+      })
+      .finally(() => {
+        if (isActive) {
+          setCustomerProfileLoading(false)
+        }
+      })
+
+    return () => {
+      isActive = false
     }
-
-    setPortalState(nextState)
-  }, [customerCode, navigate])
+  }, [customerCode])
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 60_000)
@@ -272,6 +323,39 @@ function CustomerPortalPage() {
     doc.save(`${customer.customerCode}-invoice.pdf`)
   }
 
+  if (customerProfileLoading) {
+    return (
+      <div className="customer-portal-page">
+        <div className="customer-shell">
+          <div className="customer-hero-card">
+            <div className="customer-hero-copy">
+              <p className="customer-eyebrow">Customer portal</p>
+              <h1>Loading customer profile...</h1>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!matchedCustomer) {
+    return (
+      <div className="customer-portal-page">
+        <div className="customer-shell">
+          <div className="customer-hero-card">
+            <div className="customer-hero-copy">
+              <p className="customer-eyebrow">Customer portal</p>
+              <h1>Customer profile not found</h1>
+              <p>
+                This customer link is invalid or the profile is no longer
+                available.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="customer-portal-page">
       <div className="customer-shell">
@@ -314,7 +398,53 @@ function CustomerPortalPage() {
             </div>
           </PortalSectionCard>
         </section>
+<PortalSectionCard
+  eyebrow="Quick actions"
+  title="Contact Glowworks"
+  icon={<Sparkles size={16} />}
+>
+  <div
+    className="customer-card-actions"
+    style={{ justifyContent: 'flex-start', flexWrap: 'wrap' }}
+  >
+    <PortalActionButton
+      href="https://www.instagram.com/glowworks.lab/"
+      target="_blank"
+      rel="noreferrer"
+    >
+      <Instagram size={16} /> Instagram
+    </PortalActionButton>
 
+    <PortalActionButton href="tel:+306937153914">
+      <Phone size={16} /> Call us
+    </PortalActionButton>
+
+    <PortalActionButton href="mailto:klevis.ahmati@icloud.com">
+      <Mail size={16} /> Email
+    </PortalActionButton>
+
+    <PortalActionButton
+      href="https://maps.app.goo.gl/va2psSDWoRwo5FZG9"
+      target="_blank"
+      rel="noreferrer"
+    >
+      <MapPin size={16} /> Location
+    </PortalActionButton>
+
+    <PortalActionButton
+      href="https://wa.me/306937153914"
+      target="_blank"
+      rel="noreferrer"
+      primary
+    >
+      <MessageCircle size={16} /> WhatsApp
+    </PortalActionButton>
+
+    <PortalActionButton href="/">
+      <Home size={16} /> Main website
+    </PortalActionButton>
+  </div>
+</PortalSectionCard>
         <PortalSectionCard eyebrow="Gallery" title="Customer photos" icon={<Sparkles size={16} />}>
           {customerGallery.length ? (
             <div className="customer-gallery">
@@ -334,9 +464,9 @@ function CustomerPortalPage() {
         </PortalSectionCard>
 
         <PortalSectionCard eyebrow="Warranty" title="Job warranties" icon={<ShieldCheck size={16} />}>
-          {serviceEntriesWithWarranties.length ? (
+          {warrantyHistory.length ? (
             <div className="customer-list">
-              {serviceEntriesWithWarranties.map(({ entry, warranty, warrantyMeta }) => (
+              {warrantyHistory.map(({ entry, warranty, warrantyMeta }) => (
                 <div className="customer-detail" key={entry.id} style={{ alignItems: 'flex-start', gap: '10px' }}>
                   <div style={{ flex: 1 }}>
                     <span>{entry.completedOn}</span>

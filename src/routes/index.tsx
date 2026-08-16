@@ -17,14 +17,71 @@ import {
   ShieldCheck,
   Sparkles,
   X,
+  MapPin,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
-import { getPortalState } from '../lib/portal-session'
-import { DEFAULT_WEBSITE_CONTENT, SERVICE_SEARCH_ALIASES, type PublicService, type WebsiteContent } from '../lib/site-content'
+import {
+  fetchHomepageImages,
+  type HomepageImageRecord,
+  type HomepageImageSlot,
+} from '../lib/homepage-images'
 
 export const Route = createFileRoute('/')({
   component: GlowworksPage,
 })
+
+const services = [
+   {
+    number: '01',
+    projectServiceId: 'ambient-lighting',
+    title: 'Ambient Light',
+    description:
+      'OEM-style φωτισμός σε πόρτες, ταμπλό και κονσόλα με χρώματα και δυναμικά προγράμματα.',
+    imageSlot: 'ambient-lighting',
+    image: '/images/mercedes_glc_w205_coupe.jpg',
+    icon: Lightbulb,
+  },
+  {
+    number: '02',
+    projectServiceId: 'custom-steering-wheels',
+    title: 'Custom Τιμόνι',
+    description:
+      'Δέρμα, Alcantara ή carbon look, custom ραφές και σχεδιασμός που ταιριάζει απόλυτα στο αυτοκίνητό σου.',
+    imageSlot: 'custom-steering',
+    image: '/images/custom-steering.webp',
+    icon: LucideCircleGauge,
+  },
+  {
+    number: '03',
+    projectServiceId: 'starlight-headliner',
+    title: 'Αστέρια Οροφής',
+    description:
+      'Πάνω από 600 οπτικές ίνες, shooting stars και ατμόσφαιρα που αλλάζει όλο το εσωτερικό.',
+    imageSlot: 'starlight-headliner',
+    image: '/images/starlight-headliner.webp',
+    icon: Sparkles,
+  },
+  {
+    number: '04',
+    projectServiceId: 'screens-media',
+    title: 'Οθόνες & Media',
+    description:
+      'Οθόνες υψηλής ανάλυσης, σύγχρονο infotainment και καθαρή εργοστασιακή εφαρμογή στο ταμπλό.',
+    imageSlot: 'android-display',
+    image: '/images/android-display.webp',
+    icon: MonitorPlay,
+  },
+  {
+    number: '05',
+    projectServiceId: 'body-kit',
+    title: 'Body Kits & Exterior Upgrades',
+    description:
+      'Premium body kits κορυφαίας σχεδίασης και αεροδυναμικής. Χαρίστε στο αυτοκίνητό σας την απόλυτη πολυτελή σπορ εμφάνιση.',
+    imageSlot: 'body-kit',
+    image: '/images/IMG_2085.JPEG',
+    icon: CarFront,
+  },
+]
 
 const steps = [
   ['01', 'Στείλε αίτημα', 'Μας λες το όχημα και την αναβάθμιση που θέλεις.'],
@@ -33,35 +90,95 @@ const steps = [
   ['04', 'Ζήσε τη διαφορά', 'Παραλαμβάνεις ένα εσωτερικό σχεδιασμένο για σένα.'],
 ]
 
+const vehicleBrands = [
+  'Acura','Alfa Romeo','Aston Martin','Audi','Bentley','BMW','Bugatti','Buick','Cadillac','Chevrolet','Chrysler',
+  'Citroën','Dodge','Ferrari','Fiat','Ford','Genesis','GMC','Honda','Hyundai','Infiniti','Jaguar','Jeep','Kia',
+  'Lamborghini','Land Rover','Lexus','Lincoln','Lotus','Maserati','Mazda','McLaren','Mercedes-Benz','Mini','Mitsubishi',
+  'Nissan','Opel','Peugeot','Porsche','Ram','Renault','Rolls-Royce','Saab','Seat','Skoda','Smart','Subaru','Suzuki',
+  'Tesla','Toyota','Volkswagen','Volvo','Alpine','BYD','MG','Polestar','Rivian','Vauxhall','Other'
+]
+
+const serviceOptions = [
+  'Ambient Light',
+  'Custom Τιμόνι',
+  'Αστέρια Οροφής',
+  'Οθόνες & Media',
+  'Συνδυασμός υπηρεσιών',
+  'Body Kits & Exterior Upgrades',
+]
+
+const vehicleModels: Record<string, string[]> = {
+  Acura: ['ILX', 'MDX', 'NSX', 'RDX', 'TLX', 'Other'],
+  'Alfa Romeo': ['Giulia', 'Stelvio', 'Tonale', 'Other'],
+  'Aston Martin': ['DB11', 'DBX', 'Vantage', 'Other'],
+  Audi: ['A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q3', 'Q5', 'Q7', 'Q8', 'R8', 'RS', 'TT', 'Other'],
+  Bentley: ['Bentayga', 'Continental', 'Flying Spur', 'Other'],
+  BMW: ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', '6 Series', '7 Series', '8 Series', 'i3', 'i4', 'iX', 'M Series', 'X1', 'X3', 'X5', 'X7', 'Z4', 'Other'],
+  Bugatti: ['Chiron', 'Divo', 'Veyron', 'Other'],
+  Buick: ['Enclave', 'Encore', 'Envision', 'LaCrosse', 'Regal', 'Other'],
+  Cadillac: ['ATS', 'CT4', 'CT5', 'CT6', 'Escalade', 'XT4', 'XT5', 'XT6', 'Other'],
+  Chevrolet: ['Camaro', 'Corvette', 'Cruze', 'Equinox', 'Malibu', 'Silverado', 'Spark', 'Suburban', 'Tahoe', 'Traverse', 'Volt', 'Other'],
+  Chrysler: ['300', 'Pacifica', 'Voyager', 'PT Cruiser', 'Other'],
+  Citroën: ['C3', 'C4', 'C5', 'Berlingo', 'Jumpy', 'Other'],
+  Dodge: ['Challenger', 'Charger', 'Durango', 'Journey', 'Viper', 'Other'],
+  Ferrari: ['488', '458', 'California', 'F8', 'Roma', 'SF90', 'Other'],
+  Fiat: ['500', 'Panda', 'Tipo', 'Doblo', 'Other'],
+  Ford: ['Bronco', 'C-Max', 'EcoSport', 'Escape', 'Explorer', 'F-150', 'Fiesta', 'Focus', 'Fusion', 'Kuga', 'Mustang', 'Ranger', 'Transit', 'Other'],
+  Genesis: ['G80', 'G90', 'GV60', 'GV70', 'GV80', 'Other'],
+  GMC: ['Acadia', 'Canyon', 'Sierra', 'Terrain', 'Yukon', 'Other'],
+  Honda: ['Accord', 'Civic', 'CR-V', 'Fit', 'HR-V', 'Insight', 'Jazz', 'Odyssey', 'Pilot', 'Ridgeline', 'S2000', 'Other'],
+  Hyundai: ['Accent', 'Elantra', 'Ioniq', 'Kona', 'Santa Fe', 'Sonata', 'Tucson', 'Veloster', 'Other'],
+  Infiniti: ['Q30', 'Q50', 'Q60', 'Q70', 'QX50', 'QX60', 'QX80', 'Other'],
+  Jaguar: ['E-Pace', 'F-Type', 'I-Pace', 'XE', 'XF', 'XJ', 'Other'],
+  Jeep: ['Cherokee', 'Compass', 'Gladiator', 'Grand Cherokee', 'Renegade', 'Wrangler', 'Other'],
+  Kia: ['Carens', 'Ceed', 'EV6', 'EV9', 'Niro', 'Optima', 'Picanto', 'Rio', 'Sorento', 'Soul', 'Sportage', 'Stinger', 'Other'],
+  Lamborghini: ['Aventador', 'Huracán', 'Urus', 'Other'],
+  'Land Rover': ['Defender', 'Discovery', 'Evoque', 'Freelander', 'Range Rover', 'Other'],
+  Lexus: ['CT', 'ES', 'GS', 'GX', 'IS', 'LC', 'LS', 'LX', 'NX', 'RC', 'RX', 'UX', 'Other'],
+  Lincoln: ['Aviator', 'Corsair', 'Nautilus', 'Navigator', 'Other'],
+  Lotus: ['Elise', 'Evora', 'Exige', 'Other'],
+  Maserati: ['Ghibli', 'GranTurismo', 'Levante', 'MC20', 'Quattroporte', 'Other'],
+  Mazda: ['2', '3', '5', '6', 'CX-3', 'CX-5', 'CX-60', 'MX-5', 'RX-7', 'Other'],
+  McLaren: ['540C', '570S', '600LT', '720S', 'Artura', 'GT', 'Other'],
+  'Mercedes-Benz': ['A-Class', 'C-Class', 'E-Class', 'S-Class', 'CLA', 'CLS', 'GLA', 'GLC', 'GLE', 'GLS', 'G-Class', 'SL', 'SLC', 'V-Class', 'AMG', 'Other'],
+  Mini: ['Clubman', 'Countryman', 'Cooper', 'One', 'Other'],
+  Mitsubishi: ['ASX', 'Eclipse Cross', 'Lancer', 'Outlander', 'Pajero', 'Space Star', 'Other'],
+  Nissan: ['350Z', '370Z', 'Altima', 'GT-R', 'Juke', 'Leaf', 'Micra', 'Murano', 'Note', 'Qashqai', 'X-Trail', 'Other'],
+  Opel: ['Astra', 'Corsa', 'Insignia', 'Mokka', 'Vectra', 'Zafira', 'Other'],
+  Peugeot: ['208', '308', '508', '2008', '3008', '5008', 'Partner', 'Other'],
+  Porsche: ['911', '718', 'Boxster', 'Cayenne', 'Cayman', 'Macan', 'Panth', 'Taycan', 'Other'],
+  Ram: ['1500', '2500', '3500', 'Dakota', 'Other'],
+  Renault: ['Clio', 'Captur', 'Kangoo', 'Megane', 'Scenic', 'Twingo', 'Zoe', 'Other'],
+  'Rolls-Royce': ['Cullinan', 'Ghost', 'Phantom', 'Wraith', 'Other'],
+  Saab: ['9-3', '9-5', 'Other'],
+  Seat: ['Ibiza', 'Leon', 'Ateca', 'Arona', 'Tarraco', 'Other'],
+  Skoda: ['Fabia', 'Octavia', 'Superb', 'Karoq', 'Kodiaq', 'Rapid', 'Other'],
+  Smart: ['ForTwo', 'ForFour', 'Other'],
+  Subaru: ['BRZ', 'Forester', 'Impreza', 'Legacy', 'Outback', 'WRX', 'XV', 'Other'],
+  Suzuki: ['Baleno', 'Celerio', 'Swift', 'Vitara', 'SX4', 'Other'],
+  Tesla: ['Model 3', 'Model S', 'Model X', 'Model Y', 'Roadster', 'Other'],
+  Toyota: ['Auris', 'Avensis', 'Aygo', 'Camry', 'Corolla', 'C-HR', 'Highlander', 'Land Cruiser', 'Prius', 'RAV4', 'Yaris', 'Other'],
+  Volkswagen: ['Beetle', 'Caddy', 'Golf', 'Jetta', 'Passat', 'Polo', 'T-Cross', 'T-Roc', 'Touareg', 'up!', 'Other'],
+  Volvo: ['C40', 'S60', 'S80', 'V40', 'V60', 'V70', 'XC40', 'XC60', 'XC90', 'Other'],
+  Alpine: ['A110', 'Other'],
+  BYD: ['Atto 3', 'Seal', 'Han', 'Tang', 'Other'],
+  MG: ['3', '4', '5', 'ZS', 'Other'],
+  Polestar: ['2', '3', '4', 'Other'],
+  Rivian: ['R1T', 'R1S', 'Other'],
+  Vauxhall: ['Astra', 'Corsa', 'Insignia', 'Mokka', 'Vivaro', 'Other'],
+  Other: ['Other'],
+}
+
 type FormStatus = 'idle' | 'sending' | 'success' | 'error'
 
 function getAssetPath(path: string) {
   const normalizedBase = import.meta.env.BASE_URL.replace(/\/$/, '')
-  return path.startsWith('/') ? `${normalizedBase}${path}` : `${normalizedBase}/${path}`
-}
-
-function resolveServiceId(value: string) {
-  const normalized = value.trim().toLowerCase()
-  return SERVICE_SEARCH_ALIASES[normalized] ?? null
-}
-
-function getServiceIcon(serviceId: string) {
-  switch (serviceId) {
-    case 'ambient-lighting':
-      return Lightbulb
-    case 'carbon-steering-wheels':
-      return LucideCircleGauge
-    case 'starlight-headliner':
-      return Sparkles
-    case 'screens-media':
-      return MonitorPlay
-    default:
-      return CarFront
-  }
+  return path.startsWith('/')
+    ? `${normalizedBase}${path}`
+    : `${normalizedBase}/${path}`
 }
 
 function GlowworksPage() {
-  const [websiteContent, setWebsiteContent] = useState<WebsiteContent>(DEFAULT_WEBSITE_CONTENT)
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [formStatus, setFormStatus] = useState<FormStatus>('idle')
@@ -77,6 +194,38 @@ function GlowworksPage() {
   const [selectedService, setSelectedService] = useState('')
   const [serviceSearch, setServiceSearch] = useState('')
   const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false)
+  const [homepageImages, setHomepageImages] = useState<
+    Partial<Record<HomepageImageSlot, HomepageImageRecord>>
+  >({})
+
+  const getHomepageImage = (
+    slot: HomepageImageSlot,
+    fallbackImage: string,
+  ) => homepageImages[slot]?.publicUrl ?? getAssetPath(fallbackImage)
+
+  useEffect(() => {
+    let isActive = true
+
+    fetchHomepageImages()
+      .then((images) => {
+        if (!isActive) {
+          return
+        }
+
+        setHomepageImages(
+          Object.fromEntries(
+            images.map((image) => [image.slot, image]),
+          ) as Partial<Record<HomepageImageSlot, HomepageImageRecord>>,
+        )
+      })
+      .catch((error) => {
+        console.warn('Failed to load homepage images', error)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -85,18 +234,31 @@ function GlowworksPage() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  useEffect(() => {
-    const loaded = getPortalState().websiteContent
-    if (loaded) {
-      setWebsiteContent(loaded)
-    }
-  }, [])
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setFormStatus('sending')
+  event.preventDefault()
+  setFormStatus('sending')
 
-    const form = event.currentTarget
+  const form = event.currentTarget
+  const formData = new FormData(form)
+  const body = new URLSearchParams()
+
+  formData.forEach((value, key) => {
+    body.append(key, String(value))
+  })
+
+  try {
+    const response = await fetch('/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    })
+
+    if (!response.ok) {
+      throw new Error('Appointment submission failed')
+    }
+
     form.reset()
     setSelectedVehicleBrand('')
     setSelectedVehicleModel('')
@@ -107,14 +269,14 @@ function GlowworksPage() {
     setVehicleYearSearch('')
     setServiceSearch('')
     setFormStatus('success')
+  } catch (error) {
+    console.error('Failed to submit appointment', error)
+    setFormStatus('error')
   }
+}
 
   const closeMenu = () => setMenuOpen(false)
-  const serviceCards = websiteContent.services.length ? websiteContent.services : DEFAULT_WEBSITE_CONTENT.services
-  const vehicleBrandModels = websiteContent.vehicleBrandModels
-  const vehicleBrands = Object.keys(vehicleBrandModels).sort()
-  const serviceOptions = [...new Set([...serviceCards.map((service) => service.title), 'Συνδυασμός υπηρεσιών'])]
-  const heroBackgroundImage = getAssetPath(websiteContent.heroImage || DEFAULT_WEBSITE_CONTENT.heroImage)
+  const heroBackgroundImage = getHomepageImage('hero', '/images/homepage-ambient-mercedes.png')
   const filteredVehicleBrands = vehicleBrands.filter((brand) => {
     const query = vehicleSearch.trim().toLowerCase()
     if (!query) {
@@ -123,7 +285,7 @@ function GlowworksPage() {
     return brand.toLowerCase().includes(query)
   })
 
-  const filteredVehicleModels = (selectedVehicleBrand ? vehicleBrandModels[selectedVehicleBrand] || [] : []).filter((model) => {
+  const filteredVehicleModels = (selectedVehicleBrand ? vehicleModels[selectedVehicleBrand] || [] : []).filter((model) => {
     const query = vehicleModelSearch.trim().toLowerCase()
     if (!query) {
       return true
@@ -147,12 +309,6 @@ function GlowworksPage() {
     }
     return service.toLowerCase().includes(query)
   })
-
-  const selectedOrTypedService = selectedService || serviceSearch
-  const relatedServiceId = resolveServiceId(selectedOrTypedService)
-  const relatedProjectsPath = relatedServiceId
-    ? getAssetPath(`/projects?service=${encodeURIComponent(relatedServiceId)}`)
-    : null
 
   return (
 <main id="top">
@@ -189,7 +345,7 @@ function GlowworksPage() {
         <div className="hero-grid" aria-hidden="true" />
         <div className="shell hero-content">
           <div className="hero-copy reveal">
-            <p className="eyebrow"><span /> automovive lighting & customization <span /></p>
+            <p className="eyebrow"><span /> φωτισμός & custom αναβαθμίσεις αυτοκινήτων</p>
             <h1>
               Άλλαξε την
               <span>ατμόσφαιρα.</span>
@@ -233,20 +389,16 @@ function GlowworksPage() {
       </section>
 
       <section className="work-grid shell" aria-label="Projects Glowworks.lab">
-        {serviceCards.map((service, index) => (
-          <a
-            className={`work-card work-card-${index + 1}`}
-            key={service.title}
-            href={getAssetPath(`/projects?service=${encodeURIComponent(service.id)}`)}
-          >
-            <img src={service.image} alt={service.title} />
+        {services.map((service, index) => (
+          <article className={`work-card work-card-${index + 1}`} key={service.title}>
+            <img src={getHomepageImage(service.imageSlot as HomepageImageSlot, service.image)} alt={service.title} />
             <div className="work-shade" />
             <div className="work-card-content">
               <span>{service.number}</span>
               <h3>{service.title}</h3>
             </div>
             <ArrowUpRight className="work-arrow" size={23} />
-          </a>
+          </article>
         ))}
       </section>
 
@@ -262,14 +414,15 @@ function GlowworksPage() {
           </div>
 
           <div className="service-list">
-            {serviceCards.map((service) => {
-              const Icon = getServiceIcon(service.id)
+            {services.map((service) => {
+              const Icon = service.icon
               return (
                 <a
                   className="service-row"
                   key={service.title}
-                  href={getAssetPath(`/projects?service=${encodeURIComponent(service.id)}`)}
-                >
+                  href={getAssetPath(`/projects?service=${service.projectServiceId}`)}
+                  style={{ color: 'inherit', textDecoration: 'none' }}
+>
                   <span className="service-number">{service.number}</span>
                   <div className="service-icon"><Icon size={23} strokeWidth={1.6} /></div>
                   <h3>{service.title}</h3>
@@ -318,6 +471,7 @@ function GlowworksPage() {
             <div className="contact-list">
               <a href="tel:+306937153914"><Phone size={19} /> <span><small>Κλήση / SMS</small>693 715 3914</span></a>
               <a href="https://www.instagram.com/glowworks.lab/" target="_blank" rel="noreferrer"><Instagram size={19} /> <span><small>Instagram</small>@glowworks.lab</span></a>
+              <a href="https://maps.app.goo.gl/va2psSDWoRwo5FZG9" target="_blank" rel="noreferrer"><MapPin size={19} /> <span><small>Τοποθεσία</small>Glowworks.lab, Ρόδος</span></a>
             </div>
           </div>
 
@@ -502,10 +656,6 @@ function GlowworksPage() {
                                     setSelectedService(service)
                                     setServiceSearch(service)
                                     setIsServiceDropdownOpen(false)
-                                    const matchedServiceId = resolveServiceId(service)
-                                    if (matchedServiceId) {
-                                      window.location.href = getAssetPath(`/projects?service=${encodeURIComponent(matchedServiceId)}`)
-                                    }
                                   }}
                                 >
                                   {service}
@@ -517,11 +667,6 @@ function GlowworksPage() {
                           </div>
                         ) : null}
                       </div>
-                      {relatedProjectsPath ? (
-                        <a className="button button-secondary" href={relatedProjectsPath}>
-                          Δες σχετικά projects <ArrowUpRight size={16} />
-                        </a>
-                      ) : null}
                     </div>
                   </label>
                   <label><CalendarDays size={16} /> Προτιμώμενη ημερομηνία<input name="date" type="date" /></label>

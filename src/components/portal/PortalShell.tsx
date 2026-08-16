@@ -1,6 +1,6 @@
 import { Link, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, ShieldCheck, UserCircle2 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { clearStoredPortalRole, getStoredPortalRole } from '../../lib/portal-session'
 import type { PortalRole } from '../../types/portal'
 
@@ -17,7 +17,11 @@ const navItems = [
 
 export function PortalShell({ children, active, title, subtitle }: PortalShellProps) {
   const router = useRouter()
-  const role = getStoredPortalRole()
+const [role, setRole] = useState<'admin' | 'customer' | null>(null)
+
+useEffect(() => {
+  setRole(getStoredPortalRole())
+}, [])
 
   const handleExit = () => {
     clearStoredPortalRole()

@@ -1,10 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ArrowLeft, ArrowUpRight, BadgeCheck, Camera, CarFront, Sparkles, Star, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { getPortalState } from '../lib/portal-session'
-import { DEFAULT_WEBSITE_CONTENT, SERVICE_SEARCH_ALIASES, type WebsiteContent } from '../lib/site-content'
-
+import { fetchProjects } from '../lib/projects'
+import type { ProjectMedia, ProjectRecord } from '../types/projects'
 export const Route = createFileRoute('/projects')({
+
+
   component: ProjectsPage,
   head: () => ({
     meta: [
@@ -17,72 +18,228 @@ export const Route = createFileRoute('/projects')({
   }),
 })
 
+type ServiceCategory = {
+  id: string
+  title: string
+  description: string
+  icon: typeof Sparkles
+}
+
+type ProjectGalleryItem = {
+  serviceId: string
+  brand: string
+  model: string
+  image: string
+  title: string
+}
+
 function getAssetPath(path: string) {
+  if (/^https?:\/\//i.test(path)) {
+    return path
+  }
+
   const normalizedBase = import.meta.env.BASE_URL.replace(/\/$/, '')
   return path.startsWith('/') ? `${normalizedBase}${path}` : `${normalizedBase}/${path}`
 }
 
+const BRAND_LOGO_PATHS: Record<string, string> = {
+  'alfa romeo': '/images/brands/alfa-romeo.svg',
+  'alfa-romeo': '/images/brands/alfa-romeo.svg',
+  'aston martin': '/images/brands/aston-martin.svg',
+  'aston-martin': '/images/brands/aston-martin.svg',
+  audi: '/images/brands/audi.svg',
+  bentley: '/images/brands/bentley.svg',
+  bmw: '/images/brands/bmw.svg',
+  bugatti: '/images/brands/bugatti.svg',
+  byd: '/images/brands/byd.svg',
+  citroen: '/images/brands/citroen.svg',
+  dodge: '/images/brands/dodge.svg',
+  fiat: '/images/brands/fiat.svg',
+  ford: '/images/brands/ford.svg',
+  honda: '/images/brands/honda.svg',
+  hyundai: '/images/brands/hyundai.svg',
+  jaguar: '/images/brands/jaguar.svg',
+  jeep: '/images/brands/jeep.svg',
+  kia: '/images/brands/kia.svg',
+  lamborghini: '/images/brands/lamborghini.svg',
+  lexus: '/images/brands/lexus.svg',
+  maserati: '/images/brands/maserati.svg',
+  mazda: '/images/brands/mazda.svg',
+  mclaren: '/images/brands/mclaren.svg',
+  mercedes: '/images/brands/mercedes-benz.svg',
+  'mercedes-benz': '/images/brands/mercedes-benz.svg',
+  mini: '/images/brands/mini.svg',
+  mitsubishi: '/images/brands/mitsubishi.svg',
+  nissan: '/images/brands/nissan.svg',
+  opel: '/images/brands/opel.svg',
+  peugeot: '/images/brands/peugeot.svg',
+  porsche: '/images/brands/porsche.svg',
+  renault: '/images/brands/renault.svg',
+  'rolls royce': '/images/brands/rolls-royce.svg',
+  'rolls-royce': '/images/brands/rolls-royce.svg',
+  rollsroyce: '/images/brands/rolls-royce.svg',
+  seat: '/images/brands/seat.svg',
+  skoda: '/images/brands/skoda.svg',
+  smart: '/images/brands/smart.svg',
+  subaru: '/images/brands/subaru.svg',
+  suzuki: '/images/brands/suzuki.svg',
+  tesla: '/images/brands/tesla.svg',
+  toyota: '/images/brands/toyota.svg',
+  volkswagen: '/images/brands/volkswagen.svg',
+  volvo: '/images/brands/volvo.svg',
+  vw: '/images/brands/volkswagen.svg',
+}
+
+function getBrandLogoPath(brand: string) {
+  return BRAND_LOGO_PATHS[brand.trim().toLowerCase()] ?? null
+}
+function normalizeBrandValue(brand: string) {
+  const normalized = normalizeValue(brand)
+
+  if (normalized === 'mercedes' || normalized === 'mercedes-benz') {
+    return 'mercedes-benz'
+  }
+
+  if (normalized === 'vw' || normalized === 'volkswagen') {
+    return 'volkswagen'
+  }
+
+  return normalized
+}
+
+function getBrandDisplayName(brand: string) {
+  switch (normalizeBrandValue(brand)) {
+    case 'audi':
+      return 'Audi'
+    case 'bmw':
+      return 'BMW'
+    case 'mercedes-benz':
+      return 'Mercedes-Benz'
+    case 'volkswagen':
+      return 'Volkswagen'
+    default:
+      return brand.trim()
+  }
+}
 function normalizeValue(value: string) {
   return value.trim().toLowerCase()
 }
 
-function getServiceIcon(serviceId: string) {
-  switch (serviceId) {
-    case 'ambient-lighting':
-      return Sparkles
-    case 'carbon-steering-wheels':
-      return BadgeCheck
-    case 'starlight-headliner':
-      return Star
-    case 'body-kit':
-      return Zap
-    default:
-      return CarFront
+function matchesServiceCategory(
+  projectServiceId: string,
+  selectedServiceId: string,
+) {
+  if (selectedServiceId === 'custom-steering-wheels') {
+    return (
+      projectServiceId === 'carbon-steering-wheels' ||
+      projectServiceId === 'leather-steering-wheel-covers'
+    )
   }
+
+  return normalizeValue(projectServiceId) === normalizeValue(selectedServiceId)
 }
 
+const serviceCategories: ServiceCategory[] = [
+  {
+    id: 'ambient-lighting',
+    title: 'Ambient Lighting',
+    description: 'Atmospheric cabin lighting with tailored illumination.',
+    icon: Sparkles,
+  },
+  {
+    id: 'custom-steering-wheels',
+    title: 'Custom Steering Wheels',
+    description: 'Carbon, leather and Alcantara steering-wheel projects.',
+    icon: BadgeCheck,
+  },
+  {
+    id: 'starlight-headliner',
+    title: 'Starlight Headliner',
+    description: 'A custom star-map ceiling experience for the cabin.',
+    icon: Star,
+  },
+  {
+  id: 'screens-media',
+  title: 'Screens & Media',
+  description: 'Multimedia, infotainment and display upgrade projects.',
+  icon: Camera,
+},
+{
+    id: 'body-kit',
+    title: 'Body Kit',
+    description: 'Front lip, rear diffuser and rear spoiler in one package.',
+    icon: Zap,
+  },
+]
+
 function ProjectsPage() {
-  const [websiteContent, setWebsiteContent] = useState<WebsiteContent>(DEFAULT_WEBSITE_CONTENT)
   const [activeServiceId, setActiveServiceId] = useState<string | null>(null)
   const [activeBrand, setActiveBrand] = useState<string | null>(null)
   const [activeModel, setActiveModel] = useState<string | null>(null)
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState<ProjectGalleryItem | null>(null)
+  const [galleryItems, setGalleryItems] = useState<ProjectGalleryItem[]>([])
+  useEffect(() => {
+    if (!selectedGalleryImage) {
+      return
+    }
+
+    const handleLightboxKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedGalleryImage(null)
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleLightboxKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleLightboxKeyDown)
+    }
+  }, [selectedGalleryImage])
 
   useEffect(() => {
-    const loaded = getPortalState().websiteContent
-    if (loaded) {
-      setWebsiteContent(loaded)
+    let isActive = true
+
+    fetchProjects()
+      .then((projects: ProjectRecord[]) => {
+        const remoteItems: ProjectGalleryItem[] = projects.flatMap((project) =>
+          project.media
+            .filter((media: ProjectMedia) => media.mediaType === 'image')
+            .map((media: ProjectMedia) => ({
+              serviceId: project.serviceId,
+              brand: project.brand,
+              model: project.model,
+              title: project.title,
+              image: media.publicUrl,
+            })),
+        )
+
+        if (isActive) {
+          setGalleryItems(remoteItems)
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to load Supabase projects', error)
+      })
+
+    return () => {
+      isActive = false
     }
   }, [])
+    useEffect(() => {
+    const serviceId = new URLSearchParams(window.location.search).get('service')
 
-  const serviceCategories = useMemo(() => websiteContent.services.map((service) => ({
-    id: service.id,
-    title: service.title,
-    description: service.description,
-    icon: getServiceIcon(service.id),
-  })), [websiteContent.services])
-
-  const projectGallery = useMemo(() => websiteContent.projects, [websiteContent.projects])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
+    if (
+      serviceId &&
+      serviceCategories.some((service) => service.id === serviceId)
+    ) {
+      setActiveServiceId(serviceId)
+      setActiveBrand(null)
+      setActiveModel(null)
     }
-
-    const params = new URLSearchParams(window.location.search)
-    const requestedService = params.get('service')?.trim().toLowerCase()
-    if (!requestedService) {
-      return
-    }
-
-    const resolvedServiceId = SERVICE_SEARCH_ALIASES[requestedService]
-    if (!resolvedServiceId || resolvedServiceId === activeServiceId) {
-      return
-    }
-
-    setActiveServiceId(resolvedServiceId)
-    setActiveBrand(null)
-    setActiveModel(null)
-  }, [activeServiceId])
+  }, [])
 
   const selectedService = useMemo(
     () => serviceCategories.find((service) => service.id === activeServiceId) ?? null,
@@ -96,10 +253,10 @@ function ProjectsPage() {
 
     const selectedServiceKey = normalizeValue(activeServiceId)
 
-    return Array.from(new Set(projectGallery
-      .filter((item) => normalizeValue(item.serviceId) === selectedServiceKey)
-      .map((item) => item.brand.trim())))
-  }, [activeServiceId])
+    return Array.from(new Set(galleryItems
+      .filter((item) => matchesServiceCategory(item.serviceId, selectedServiceKey))
+      .map((item) => getBrandDisplayName(item.brand))))
+  }, [activeServiceId, galleryItems])
 
   const availableModels = useMemo(() => {
     if (!activeServiceId || !activeBrand) {
@@ -107,14 +264,13 @@ function ProjectsPage() {
     }
 
     const selectedServiceKey = normalizeValue(activeServiceId)
-    const selectedBrandKey = normalizeValue(activeBrand)
+    const selectedBrandKey = normalizeBrandValue(activeBrand)
 
     return Array.from(new Set(
-      projectGallery
-        .filter((item) => normalizeValue(item.serviceId) === selectedServiceKey && normalizeValue(item.brand) === selectedBrandKey)
-        .map((item) => item.model.trim()),
+      galleryItems
+        .filter((item) => matchesServiceCategory(item.serviceId, selectedServiceKey) && normalizeBrandValue(item.brand) === selectedBrandKey)        .map((item) => item.model.trim()),
     ))
-  }, [activeServiceId, activeBrand])
+  }, [activeServiceId, activeBrand, galleryItems])
 
   const visibleProjects = useMemo(() => {
     if (!activeServiceId || !activeBrand || !activeModel) {
@@ -122,11 +278,10 @@ function ProjectsPage() {
     }
 
     const selectedServiceKey = normalizeValue(activeServiceId)
-    const selectedBrandKey = normalizeValue(activeBrand)
+    const selectedBrandKey = normalizeBrandValue(activeBrand)
     const selectedModelKey = normalizeValue(activeModel)
 
-    return projectGallery.filter((item) => normalizeValue(item.serviceId) === selectedServiceKey && normalizeValue(item.brand) === selectedBrandKey && normalizeValue(item.model) === selectedModelKey)
-  }, [activeServiceId, activeBrand, activeModel])
+    return galleryItems.filter((item) => matchesServiceCategory(item.serviceId, selectedServiceKey) && normalizeBrandValue(item.brand) === selectedBrandKey && normalizeValue(item.model) === selectedModelKey)  }, [activeServiceId, activeBrand, activeModel, galleryItems])
 
   return (
     <main className="projects-page" id="top">
@@ -153,7 +308,7 @@ function ProjectsPage() {
             </p>
           </div>
           <div className="projects-counter reveal reveal-delay">
-            <strong>{String(projectGallery.length).padStart(2, '0')}</strong>
+            <strong>{String(galleryItems.length).padStart(2, '0')}</strong>
             <span>μοντέλα στο<br />project archive</span>
           </div>
         </div>
@@ -240,7 +395,17 @@ function ProjectsPage() {
                       setActiveModel(null)
                     }}
                   >
-                    <span className="project-choice-icon"><CarFront size={20} /></span>
+                    <span className="project-choice-icon">
+                      {getBrandLogoPath(brand) ? (
+                        <img
+                          className="project-brand-logo"
+                          src={getAssetPath(getBrandLogoPath(brand) as string)}
+                          alt={`${brand} logo`}
+                        />
+                      ) : (
+                        <CarFront size={20} />
+                      )}
+                    </span>
                     <div>
                       <h4>{brand}</h4>
                       <p>Show all models for this manufacturer.</p>
@@ -287,17 +452,25 @@ function ProjectsPage() {
 
               <div className="projects-grid">
                 {visibleProjects.map((project, index) => (
-                  <article className={`project-card project-card-${(index % 5) + 1}`} key={`${project.brand}-${project.model}-${index}`}>
+                  <article
+                    className={`project-card project-card-${(index % 5) + 1}`}
+                    key={`${project.brand}-${project.model}-${index}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${project.title} photo`}
+                    onClick={() => setSelectedGalleryImage(project)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        setSelectedGalleryImage(project)
+                      }
+                    }}
+                  >
                     <img src={getAssetPath(project.image)} alt={project.title} />
                     <div className="project-card-shade" />
                     <div className="project-card-topline">
                       <span>{String(index + 1).padStart(2, '0')}</span>
                       <span className="project-photo-status"><Camera size={14} /> Gallery</span>
-                    </div>
-                    <div className="project-card-copy">
-                      <p>{selectedService?.title}</p>
-                      <h3>{project.model}</h3>
-                      <span>{project.brand}</span>
                     </div>
                   </article>
                 ))}
@@ -307,6 +480,30 @@ function ProjectsPage() {
         </div>
       </section>
 
+      {selectedGalleryImage ? (
+        <div
+          className="project-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Project photo viewer"
+          onClick={() => setSelectedGalleryImage(null)}
+        >
+          <button
+            className="project-lightbox-close"
+            type="button"
+            aria-label="Close photo"
+            onClick={() => setSelectedGalleryImage(null)}
+          >
+            ×
+          </button>
+
+          <img
+            src={getAssetPath(selectedGalleryImage.image)}
+            alt={selectedGalleryImage.title}
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      ) : null}
       <section className="projects-cta">
         <div className="shell projects-cta-layout">
           <div>

@@ -1,29 +1,18 @@
-import { createInitialPortalState } from './portal-data'
+ import { createInitialPortalState } from './portal-data'
 import { generateSecureCustomerPortalSlug } from './customer-links'
 import { createWarrantyRecord } from './warranty'
-import { DEFAULT_WEBSITE_CONTENT, deepCloneWebsiteContent, WEBSITE_CONTENT_VERSION } from './site-content'
-import type { AdminAppointment, AdminDiscount, AdminGalleryItem, AdminService, AdminUploadBundle, CustomerProfile, PortalPreferences, PortalRole, PortalSession, PortalState, ServiceHistoryEntry, WarrantyClaim, WarrantyRecord, WebsiteContent } from '../types/portal'
+import type { AdminAppointment, AdminDiscount, AdminGalleryItem, AdminService, AdminUploadBundle, CustomerProfile, PortalPreferences, PortalRole, PortalSession, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyClaim, WarrantyRecord } from '../types/portal'
 
 const STORAGE_KEY = 'glowworks.portal.role'
 const STATE_STORAGE_KEY = 'glowworks.portal.state'
+const ADMIN_ACCESS_CODE_STORAGE_KEY = 'glowworks.portal.adminCode'
 const ADMIN_AUTH_STORAGE_KEY = 'glowworks.portal.adminAuth'
-const ADMIN_EMAIL_ENV = 'VITE_ADMIN_EMAIL'
-
-function hasStoredPortalState() {
-  if (typeof window === 'undefined') {
-    return false
-  }
-
-  return Boolean(window.localStorage.getItem(STATE_STORAGE_KEY))
-}
+export const OWNER_PORTAL_EMAIL = 'klevis.ahmati@icloud.com'
+export const DEFAULT_ADMIN_ACCESS_CODE = ''
 
 function getEnvValue(name: string, fallback: string) {
   const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
   return env?.[name]?.trim() || fallback
-}
-
-function getConfiguredAdminEmail() {
-  return getEnvValue(ADMIN_EMAIL_ENV, '').trim().toLowerCase()
 }
 
 function hasSupabaseConfig() {
@@ -34,7 +23,7 @@ function hasSupabaseConfig() {
 
 function mapCustomerToRemoteRow(customer: CustomerProfile) {
   return {
-    customer_id: customer.customerCode,
+    costumer_id: customer.customerCode,
     full_name: customer.name,
     email: customer.email,
     phone: customer.phone || null,
@@ -45,11 +34,10 @@ function mapCustomerToRemoteRow(customer: CustomerProfile) {
     updated_at: new Date().toISOString(),
   }
 }
-
 function mapRemoteCustomerRow(row: Record<string, unknown>): CustomerProfile {
   return {
-    id: String(row.customer_id ?? ''),
-    customerCode: String(row.customer_id ?? ''),
+    id: String(row.id ?? ''),
+customerCode: String(row.costumer_id ?? row.id ?? ''),
     name: String(row.full_name ?? ''),
     email: String(row.email ?? ''),
     phone: String(row.phone ?? ''),
@@ -58,6 +46,20 @@ function mapRemoteCustomerRow(row: Record<string, unknown>): CustomerProfile {
     createdAt: String(row.created_at ?? new Date().toISOString()),
     discountEnabled: false,
     discountCode: '',
+  }
+}
+
+function mapRemoteVehicleRow(row: Record<string, unknown>): VehicleRecord {
+  return {
+    id: String(row.id ?? ''),
+    customerId: String(row.costumer_id ?? ''),
+    make: String(row.make ?? ''),
+    model: String(row.model ?? ''),
+    year: Number(row.year ?? 0),
+    vin: String(row.vin ?? ''),
+    plate: String(row.registration ?? ''),
+    purchaseDate: String(row.created_at ?? '').slice(0, 10),
+    nfcTagId: undefined,
   }
 }
 
@@ -77,17 +79,22 @@ async function syncCustomersToSupabase(state: PortalState) {
   }
 
   try {
-    const payload = state.customers.map(mapCustomerToRemoteRow)
-    if (!payload.length) {
-      return true
-    }
-
     const supabase = await getSupabaseClient()
+
     if (!supabase) {
       return false
     }
 
-    const { error } = await supabase.from('customers').upsert(payload, { onConflict: 'customer_id' })
+    const payload = state.customers.map(mapCustomerToRemoteRow)
+
+    if (!payload.length) {
+      return true
+    }
+
+   const { error } = await supabase
+  .from('costumers')
+  .upsert(payload, { onConflict: 'costumer_id' })
+
     if (error) {
       throw error
     }
@@ -98,7 +105,173 @@ async function syncCustomersToSupabase(state: PortalState) {
     return false
   }
 }
+async function syncVehicleToSupabase(vehicle: VehicleRecord) {
+  if (!hasSupabaseConfig()) {
+    return false
+  }
 
+  try {
+    const supabase = await getSupabaseClient()
+
+    if (!supabase) {
+      return false
+    }
+
+    const costumerId = Number(vehicle.customerId)
+
+    if (!Number.isInteger(costumerId) || costumerId <= 0) {
+      console.warn('Vehicle cannot sync without a valid Supabase customer ID')
+      return false
+    }
+
+    const payload = {
+      costumer_id: costumerId,
+      make: vehicle.make || null,
+      model: vehicle.model || null,
+      year: vehicle.year || null,
+      registration: vehicle.plate || null,
+      vin: vehicle.vin || null,
+      created_at: vehicle.purchaseDate || new Date().toISOString(),
+    }
+
+    const hasDatabaseId = /^\d+$/.test(vehicle.id)
+
+    const { error } = hasDatabaseId
+      ? await supabase
+          .from('vehicles')
+          .update(payload)
+          .eq('id', Number(vehicle.id))
+      : await supabase
+          .from('vehicles')
+          .insert(payload)
+
+    if (error) {
+      throw error
+    }
+
+    return true
+  } catch (error) {
+    console.warn('Failed to sync vehicle to Supabase', error)
+    return false
+  }
+}
+async function syncServiceHistoryToSupabase(
+  entry: ServiceHistoryEntry,
+  warranty: WarrantyRecord,
+  state: PortalState,
+) {
+  if (!hasSupabaseConfig()) {
+    return false
+  }
+
+  try {
+    const supabase = await getSupabaseClient()
+
+    if (!supabase) {
+      return false
+    }
+
+    const vehicle = state.vehicles.find(
+      (item) => item.customerId === entry.customerId,
+    )
+
+    const vehicleId = Number(vehicle?.id)
+
+    if (!Number.isInteger(vehicleId) || vehicleId <= 0) {
+      console.warn('Service cannot sync without a valid Supabase vehicle ID')
+      return false
+    }
+
+    const servicePayload = {
+      vehicle_id: vehicleId,
+      services_type: entry.title || null,
+      description: entry.notes || null,
+      service_date: entry.completedOn || null,
+      price: null,
+      note: entry.notes || null,
+    }
+
+    const hasServiceDatabaseId = /^\d+$/.test(entry.id)
+
+    const serviceQuery = hasServiceDatabaseId
+      ? supabase
+          .from('services')
+          .update(servicePayload)
+          .eq('id', Number(entry.id))
+          .select('id')
+          .single()
+      : supabase
+          .from('services')
+          .insert(servicePayload)
+          .select('id')
+          .single()
+
+    const { data: serviceData, error: serviceError } =
+      await serviceQuery
+
+    if (serviceError) {
+      throw serviceError
+    }
+
+    const serviceId = Number(serviceData.id)
+
+    const warrantyPayload = {
+      service_id: serviceId,
+      warranty_type: warranty.product || null,
+      start_date: warranty.startsOn || null,
+      end_date: warranty.endsOn || null,
+      status: warranty.status || null,
+      notes: warranty.notes || null,
+    }
+
+    const hasWarrantyDatabaseId = /^\d+$/.test(warranty.id)
+
+    const { error: warrantyError } = hasWarrantyDatabaseId
+      ? await supabase
+          .from('warranties')
+          .update(warrantyPayload)
+          .eq('id', Number(warranty.id))
+      : await supabase
+          .from('warranties')
+          .insert(warrantyPayload)
+
+    if (warrantyError) {
+      throw warrantyError
+    }
+
+    return true
+  } catch (error) {
+    console.warn('Failed to sync service history to Supabase', error)
+    return false
+  }
+}
+async function deleteServiceHistoryFromSupabase(entryId: string) {
+  if (!hasSupabaseConfig() || !/^\d+$/.test(entryId)) {
+    return false
+  }
+
+  try {
+    const supabase = await getSupabaseClient()
+
+    if (!supabase) {
+      return false
+    }
+
+    const { error } = await supabase
+      .from('services')
+      .delete()
+      .eq('id', Number(entryId))
+
+    if (error) {
+      throw error
+    }
+
+    return true
+  } catch (error) {
+    console.warn('Failed to delete service from Supabase', error)
+    return false
+  }
+}
 async function deleteCustomerFromSupabase(customerCode: string) {
   if (!hasSupabaseConfig()) {
     return false
@@ -110,7 +283,7 @@ async function deleteCustomerFromSupabase(customerCode: string) {
       return false
     }
 
-    const { error } = await supabase.from('customers').delete().eq('customer_id', customerCode)
+    const { error } = await supabase.from('costumers').delete().eq('id', customerCode)
     if (error) {
       throw error
     }
@@ -121,52 +294,281 @@ async function deleteCustomerFromSupabase(customerCode: string) {
   }
 }
 
-export async function hydratePortalStateFromSupabase(baseState: PortalState = getPortalState()) {
+  export async function hydratePortalStateFromSupabase(baseState: PortalState) {
   if (!hasSupabaseConfig()) {
     return baseState
   }
 
-  // Keep local edits as source of truth once a local state snapshot exists.
-  if (hasStoredPortalState()) {
+  try {
+  const supabase = await getSupabaseClient()
+  if (!supabase) {
     return baseState
   }
 
-  try {
-    const supabase = await getSupabaseClient()
-    if (!supabase) {
-      return baseState
-    }
+  const { data: customerData, error: customerError } = await supabase
+    .from('costumers')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-    const { data, error } = await supabase.from('customers').select('*').order('created_at', { ascending: false })
-    if (error) {
-      throw error
-    }
+  if (customerError) {
+    throw customerError
+  }
 
-    const remoteCustomers = (data ?? []).map(mapRemoteCustomerRow)
-    if (!remoteCustomers.length) {
-      return baseState
-    }
+  const { data: vehicleData, error: vehicleError } = await supabase
+    .from('vehicles')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-    const mergedCustomers = Array.from(new Map([...remoteCustomers, ...baseState.customers].map((customer) => [customer.customerCode, customer])).values())
-    const nextState = {
-      ...baseState,
-      customers: mergedCustomers,
-      customer: mergedCustomers[0] ?? baseState.customer,
-    }
+  if (vehicleError) {
+    throw vehicleError
+  }
+const { data: serviceData, error: serviceError } = await supabase
+    .from('services')
+    .select('*')
+    .order('service_date', { ascending: false })
+
+  if (serviceError) {
+    throw serviceError
+  }
+
+  const { data: warrantyData, error: warrantyError } = await supabase
+    .from('warranties')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (warrantyError) {
+    throw warrantyError
+  }
+
+  const remoteCustomers = (customerData ?? []).map(mapRemoteCustomerRow)
+  const remoteVehicles = (vehicleData ?? []).map(mapRemoteVehicleRow)
+
+    const remoteServiceHistory: ServiceHistoryEntry[] = (serviceData ?? []).map(
+    (row) => {
+      const vehicle = remoteVehicles.find(
+        (item) => item.id === String(row.vehicle_id),
+      )
+
+      const warranty = (warrantyData ?? []).find(
+        (item) => String(item.service_id) === String(row.id),
+      )
+
+      return {
+        id: String(row.id),
+        customerId: vehicle?.customerId ?? '',
+        title: String(row.services_type ?? ''),
+        vehicle: vehicle
+          ? `${vehicle.make} ${vehicle.model}`.trim()
+          : '',
+        completedOn: String(row.service_date ?? ''),
+        notes: String(row.note ?? row.description ?? ''),
+        warrantyId: warranty ? String(warranty.id) : undefined,
+        warrantyStartsOn: warranty
+          ? String(warranty.start_date ?? '')
+          : undefined,
+        warrantyEndsOn: warranty
+          ? String(warranty.end_date ?? '')
+          : undefined,
+        warrantyNotes: warranty
+          ? String(warranty.notes ?? '')
+          : undefined,
+      }
+    },
+  )
+
+  const remoteWarranties: WarrantyRecord[] = (warrantyData ?? []).map(
+    (row) => {
+      const service = (serviceData ?? []).find(
+        (item) => String(item.id) === String(row.service_id),
+      )
+
+      const vehicle = remoteVehicles.find(
+        (item) => item.id === String(service?.vehicle_id),
+      )
+
+      return {
+        id: String(row.id),
+        customerId: vehicle?.customerId ?? '',
+        vehicleId: vehicle?.id ?? '',
+        product: String(
+          row.warranty_type ?? service?.services_type ?? '',
+        ),
+        status: String(row.status ?? 'Active') as WarrantyRecord['status'],
+        installedAt: 'Glowworks Rhodes Studio',
+        startsOn: String(row.start_date ?? ''),
+        endsOn: String(row.end_date ?? ''),
+        coverage: String(row.notes ?? ''),
+        notes: String(row.notes ?? ''),
+        installationDate: String(service?.service_date ?? ''),
+      }
+    },
+  )
+
+  const nextState = {
+    ...baseState,
+    customers: remoteCustomers,
+    customer: remoteCustomers[0] ?? baseState.customer,
+    vehicles: remoteVehicles,
+    serviceHistory: remoteServiceHistory,
+    warranties: remoteWarranties,
+  }
+
     savePortalState(nextState)
     return nextState
-  } catch (error) {
+    } catch (error) {
     console.warn('Failed to hydrate portal state from Supabase', error)
     return baseState
   }
 }
 
+export async function fetchCustomerPortalStateByCode(
+  customerCode: string,
+  baseState: PortalState,
+) {
+  if (!hasSupabaseConfig()) {
+    return null
+  }
+
+  const supabase = await getSupabaseClient()
+
+  if (!supabase) {
+    return null
+  }
+
+  const { data, error } = await supabase.rpc(
+    'get_customer_portal_by_code',
+    {
+      p_customer_code: customerCode.trim(),
+    },
+  )
+
+  if (error) {
+    throw error
+  }
+
+  if (!data || typeof data !== 'object') {
+    return null
+  }
+
+  const portalData = data as unknown as {
+    customer?: Record<string, unknown>
+    vehicles?: Record<string, unknown>[]
+    services?: Record<string, unknown>[]
+    warranties?: Record<string, unknown>[]
+  }
+
+  if (!portalData.customer) {
+    return null
+  }
+
+  const customer = mapRemoteCustomerRow(portalData.customer)
+  const remoteVehicles = (portalData.vehicles ?? []).map(
+    mapRemoteVehicleRow,
+  )
+  const serviceRows = portalData.services ?? []
+  const warrantyRows = portalData.warranties ?? []
+
+  const remoteServiceHistory: ServiceHistoryEntry[] =
+    serviceRows.map((row) => {
+      const vehicle = remoteVehicles.find(
+        (item) => item.id === String(row.vehicle_id),
+      )
+
+      const warranty = warrantyRows.find(
+        (item) => String(item.service_id) === String(row.id),
+      )
+
+      return {
+        id: String(row.id),
+        customerId: customer.id,
+        title: String(row.services_type ?? ''),
+        vehicle: vehicle
+          ? `${vehicle.make} ${vehicle.model}`.trim()
+          : '',
+        completedOn: String(row.service_date ?? ''),
+        notes: String(row.note ?? row.description ?? ''),
+        warrantyId: warranty
+          ? String(warranty.id)
+          : undefined,
+        warrantyStartsOn: warranty
+          ? String(warranty.start_date ?? '')
+          : undefined,
+        warrantyEndsOn: warranty
+          ? String(warranty.end_date ?? '')
+          : undefined,
+        warrantyNotes: warranty
+          ? String(warranty.notes ?? '')
+          : undefined,
+      }
+    })
+
+  const remoteWarranties: WarrantyRecord[] =
+    warrantyRows.map((row) => {
+      const service = serviceRows.find(
+        (item) => String(item.id) === String(row.service_id),
+      )
+
+      const vehicle = remoteVehicles.find(
+        (item) => item.id === String(service?.vehicle_id),
+      )
+
+      return {
+        id: String(row.id),
+        customerId: customer.id,
+        vehicleId: vehicle?.id ?? '',
+        product: String(
+          row.warranty_type ?? service?.services_type ?? '',
+        ),
+        status: String(
+          row.status ?? 'Active',
+        ) as WarrantyRecord['status'],
+        installedAt: 'Glowworks Rhodes Studio',
+        startsOn: String(row.start_date ?? ''),
+        endsOn: String(row.end_date ?? ''),
+        coverage: String(row.notes ?? ''),
+        notes: String(row.notes ?? ''),
+        installationDate: String(service?.service_date ?? ''),
+      }
+    })
+
+  return {
+    ...baseState,
+    customers: [customer],
+    customer,
+    vehicles: remoteVehicles,
+    serviceHistory: remoteServiceHistory,
+    warranties: remoteWarranties,
+    gallery: baseState.gallery.filter(
+      (item) => item.customerId === customer.id,
+    ),
+  }
+}
 export async function syncPortalStateToSupabase(state: PortalState) {
   if (!hasSupabaseConfig()) {
     return false
   }
 
   return syncCustomersToSupabase(state)
+}
+
+export function isOwnerPortalEmail(email?: string | null) {
+  return (email ?? '').trim().toLowerCase() === OWNER_PORTAL_EMAIL
+}
+
+export function getAdminAccessCode() {
+  if (typeof window === 'undefined') {
+    return getEnvValue('VITE_ADMIN_ACCESS_CODE', DEFAULT_ADMIN_ACCESS_CODE)
+  }
+
+  const storedCode = window.localStorage.getItem(ADMIN_ACCESS_CODE_STORAGE_KEY)
+  return (storedCode ?? '').trim() || getEnvValue('VITE_ADMIN_ACCESS_CODE', DEFAULT_ADMIN_ACCESS_CODE)
+}
+
+export function setAdminAccessCode(code: string) {
+  if (typeof window !== 'undefined') {
+    const normalizedCode = code.trim()
+    window.localStorage.setItem(ADMIN_ACCESS_CODE_STORAGE_KEY, normalizedCode || DEFAULT_ADMIN_ACCESS_CODE)
+  }
 }
 
 export function getAdminAuthSession() {
@@ -186,6 +588,21 @@ export function getAdminAuthSession() {
   }
 }
 
+export function isOwnerAdminAccess(email?: string | null, enteredCode?: string | null) {
+  if (!isOwnerPortalEmail(email)) {
+    return false
+  }
+
+  const normalizedCode = (enteredCode ?? '').trim().toLowerCase()
+  const configuredCode = getAdminAccessCode().trim().toLowerCase()
+
+  if (!normalizedCode) {
+    return configuredCode === DEFAULT_ADMIN_ACCESS_CODE.toLowerCase()
+  }
+
+  return normalizedCode === configuredCode
+}
+
 export function getPortalSessionSnapshot() {
   if (typeof window === 'undefined') {
     return null
@@ -195,10 +612,12 @@ export function getPortalSessionSnapshot() {
   const rawRole = window.localStorage.getItem(STORAGE_KEY)
   const sessionRole = storedState?.session?.role ?? (rawRole === 'admin' ? 'admin' : rawRole === 'customer' ? 'customer' : null)
   const sessionEmail = storedState?.session?.email ?? storedState?.customer?.email ?? ''
+  const sessionAdminCode = storedState?.session?.adminCode ?? getAdminAccessCode()
 
   return {
     role: sessionRole,
     email: sessionEmail,
+    adminCode: sessionAdminCode,
   }
 }
 
@@ -208,35 +627,7 @@ export function hasValidOwnerAdminSession() {
     return false
   }
 
-  return snapshot.email.trim().toLowerCase() === getConfiguredAdminEmail()
-}
-
-function normalizeWebsiteContent(content: Partial<WebsiteContent> | null | undefined): WebsiteContent {
-  const baseContent = deepCloneWebsiteContent(DEFAULT_WEBSITE_CONTENT)
-
-  if (!content || typeof content !== 'object') {
-    return baseContent
-  }
-
-  const normalizedContent: WebsiteContent = {
-    ...baseContent,
-    ...content,
-    contentVersion: typeof content.contentVersion === 'string' ? content.contentVersion : baseContent.contentVersion,
-    heroImage: typeof content.heroImage === 'string' ? content.heroImage : baseContent.heroImage,
-    services: Array.isArray(content.services)
-      ? content.services.map((service) => ({ ...service }))
-      : baseContent.services,
-    projects: Array.isArray(content.projects)
-      ? content.projects.map((project) => ({ ...project }))
-      : baseContent.projects,
-    vehicleBrandModels: content.vehicleBrandModels && typeof content.vehicleBrandModels === 'object'
-      ? Object.fromEntries(
-          Object.entries(content.vehicleBrandModels).map(([brand, models]) => [brand, Array.isArray(models) ? [...models] : []]),
-        )
-      : baseContent.vehicleBrandModels,
-  }
-
-  return normalizedContent.contentVersion === WEBSITE_CONTENT_VERSION ? normalizedContent : baseContent
+  return isOwnerPortalEmail(snapshot.email) && (snapshot.adminCode === DEFAULT_ADMIN_ACCESS_CODE || isOwnerAdminAccess(snapshot.email, snapshot.adminCode))
 }
 
 function readStoredState(): PortalState | null {
@@ -270,7 +661,6 @@ function readStoredState(): PortalState | null {
       uploads: parsed.uploads ?? baseState.uploads,
       adminSummary: parsed.adminSummary ?? baseState.adminSummary,
       preferences: parsed.preferences ?? baseState.preferences,
-      websiteContent: normalizeWebsiteContent(parsed.websiteContent),
       session: parsed.session ?? null,
     }
   } catch {
@@ -285,7 +675,7 @@ export function getStoredPortalRole(): PortalRole | null {
 
   const storedState = readStoredState()
   const sessionRole = storedState?.session?.role
-  if (sessionRole === 'admin' && storedState?.session?.email?.trim().toLowerCase() !== getConfiguredAdminEmail()) {
+  if (sessionRole === 'admin' && !isOwnerPortalEmail(storedState?.session?.email)) {
     return 'customer'
   }
   if (sessionRole) {
@@ -297,16 +687,20 @@ export function getStoredPortalRole(): PortalRole | null {
 
 function getStoredPortalRoleFromAuth() {
   const role = window.localStorage.getItem(STORAGE_KEY)
-  if (role === 'admin' && getAdminAuthSession()?.email?.trim().toLowerCase() !== getConfiguredAdminEmail()) {
+  if (role === 'admin' && !isOwnerPortalEmail(getAdminAuthSession()?.email)) {
     return 'customer'
   }
   return role === 'customer' || role === 'admin' ? role : null
 }
 
-export function setStoredPortalRole(role: PortalRole, email = '') {
+export function setStoredPortalRole(role: PortalRole, email = OWNER_PORTAL_EMAIL, adminCode?: string) {
   if (typeof window !== 'undefined') {
     const normalizedEmail = email.trim().toLowerCase()
-    const safeRole: PortalRole = role === 'admin' && normalizedEmail !== getConfiguredAdminEmail() ? 'customer' : role
+    const safeRole: PortalRole = role === 'admin' && !isOwnerPortalEmail(normalizedEmail) ? 'customer' : role
+    const normalizedAdminCode = (adminCode ?? '').trim() || getAdminAccessCode()
+    if (safeRole === 'admin') {
+      setAdminAccessCode(normalizedAdminCode)
+    }
     window.localStorage.setItem(STORAGE_KEY, safeRole)
     const state = getPortalState()
     const updatedState: PortalState = {
@@ -315,6 +709,7 @@ export function setStoredPortalRole(role: PortalRole, email = '') {
         role: safeRole,
         email: normalizedEmail,
         signedInAt: new Date().toISOString(),
+        ...(safeRole === 'admin' ? { adminCode: normalizedAdminCode } : {}),
       },
     }
     savePortalState(updatedState)
@@ -347,25 +742,7 @@ export function savePortalState(state: PortalState) {
     session: state.session ?? null,
   }
 
-  try {
-    window.localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(normalizedState))
-  } catch (error) {
-    const compactState: PortalState = {
-      ...normalizedState,
-      gallery: normalizedState.gallery.map((item) => ({
-        ...item,
-        imageUrl: item.imageUrl.startsWith('data:') ? '' : item.imageUrl,
-      })),
-    }
-
-    try {
-      window.localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(compactState))
-      console.warn('Portal state exceeded localStorage limits; large inline gallery images were excluded from persistence.')
-    } catch (fallbackError) {
-      console.error('Failed to persist portal state to localStorage.', fallbackError ?? error)
-    }
-  }
-
+  window.localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(normalizedState))
   if (state.session?.role) {
     window.localStorage.setItem(STORAGE_KEY, state.session.role)
   }
@@ -393,15 +770,6 @@ export function updatePortalPreferences(preferences: PortalPreferences) {
   return nextState
 }
 
-export function updatePortalWebsiteContent(content: WebsiteContent) {
-  const nextState = {
-    ...getPortalState(),
-    websiteContent: normalizeWebsiteContent(content),
-  }
-  savePortalState(nextState)
-  return nextState
-}
-
 export function createPortalClaim(claim: Omit<WarrantyClaim, 'id' | 'submittedAt'>) {
   const nextState = {
     ...getPortalState(),
@@ -417,21 +785,34 @@ export function createPortalClaim(claim: Omit<WarrantyClaim, 'id' | 'submittedAt
   savePortalState(nextState)
   return nextState
 }
-
-export function updatePortalCustomer(customer: CustomerProfile, baseState: PortalState = getPortalState()) {
+export function updatePortalCustomer(
+  customer: CustomerProfile,
+  baseState: PortalState = getPortalState(),
+) {
   const nextCustomer: CustomerProfile = {
     ...customer,
-    customerCode: (customer.customerCode ?? '').trim() || generateSecureCustomerPortalSlug(baseState.customers.map((item) => item.customerCode)),
+    customerCode:
+      (customer.customerCode ?? '').trim() ||
+      generateSecureCustomerPortalSlug(
+        baseState.customers.map((item) => item.customerCode),
+      ),
   }
+
   const nextState = {
     ...baseState,
     customer: nextCustomer,
-    customers: baseState.customers.some((item) => item.id === nextCustomer.id)
-      ? baseState.customers.map((item) => item.id === nextCustomer.id ? nextCustomer : item)
+    customers: baseState.customers.some(
+      (item) => item.id === nextCustomer.id,
+    )
+      ? baseState.customers.map((item) =>
+          item.id === nextCustomer.id ? nextCustomer : item,
+        )
       : [nextCustomer, ...baseState.customers],
   }
+
   savePortalState(nextState)
   void syncPortalStateToSupabase(nextState)
+
   return nextState
 }
 
@@ -439,12 +820,18 @@ export function updatePortalVehicle(vehicle: VehicleRecord) {
   const nextState = {
     ...getPortalState(),
     vehicles: getPortalState().vehicles.some((item) => item.id === vehicle.id)
-      ? getPortalState().vehicles.map((item) => item.id === vehicle.id ? vehicle : item)
+      ? getPortalState().vehicles.map((item) =>
+          item.id === vehicle.id ? vehicle : item,
+        )
       : [vehicle, ...getPortalState().vehicles],
   }
+
   savePortalState(nextState)
+  void syncVehicleToSupabase(vehicle)
+
   return nextState
 }
+
 
 export function updatePortalWarranty(warranty: WarrantyRecord) {
   const nextState = {
@@ -485,8 +872,8 @@ export function deletePortalCustomer(customerId: string) {
     claims: baseState.claims.filter((claim) => claim.customerId !== customerId),
   }
   savePortalState(nextState)
-  if (removedCustomer?.customerCode) {
-    void deleteCustomerFromSupabase(removedCustomer.customerCode)
+  if (removedCustomer?.id) {
+    void deleteCustomerFromSupabase(removedCustomer.id)
   }
   return nextState
 }
@@ -586,7 +973,9 @@ export function addPortalServiceHistoryEntry(entry: ServiceHistoryEntry, baseSta
     serviceHistory: [nextEntry, ...baseState.serviceHistory.filter((item) => item.id !== entry.id)],
   }
   savePortalState(nextState)
-  return nextState
+void syncServiceHistoryToSupabase(nextEntry, warrantyRecord, nextState)
+
+return nextState
 }
 
 export function updatePortalServiceHistoryEntry(entry: ServiceHistoryEntry, baseState: PortalState = getPortalState()) {
@@ -634,7 +1023,9 @@ export function updatePortalServiceHistoryEntry(entry: ServiceHistoryEntry, base
   }
 
   savePortalState(nextState)
-  return nextState
+void syncServiceHistoryToSupabase(nextEntry, warrantyRecord, nextState)
+
+return nextState
 }
 
 export function removePortalServiceHistoryEntry(entryId: string, baseState: PortalState = getPortalState()) {
@@ -645,7 +1036,9 @@ export function removePortalServiceHistoryEntry(entryId: string, baseState: Port
     warranties: baseState.warranties.filter((item) => item.id !== removedEntry?.warrantyId),
   }
   savePortalState(nextState)
-  return nextState
+void deleteServiceHistoryFromSupabase(entryId)
+
+return nextState
 }
 
 export function createPortalWarranty(warranty: WarrantyRecord, baseState: PortalState = getPortalState()) {
