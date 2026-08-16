@@ -10,7 +10,7 @@ export const Route = createRootRoute({
       { name: 'description', content: 'Ambient light, custom τιμόνια, αστέρια οροφής και οθόνες αυτοκινήτου από τη Glowworks.lab στη Ρόδο.' },
       { name: 'theme-color', content: '#09090d' },
     ],
-    links: [{ rel: 'icon', type: 'image/webp', href: '/images/glowworks-logo.webp?v=2' }],
+    links: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg?v=3' }],
   }),
   shellComponent: RootDocument,
 })
