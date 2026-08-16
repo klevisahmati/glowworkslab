@@ -1,43 +1,40 @@
-import { supabase } from './supabase/client'
-
 const STORAGE_KEY = 'glowworks.portal.role'
 const ADMIN_AUTH_STORAGE_KEY = 'glowworks.portal.adminAuth'
+const ADMIN_EMAIL_ENV = 'VITE_ADMIN_EMAIL'
+const ADMIN_PASSWORD_ENV = 'VITE_ADMIN_PASSWORD'
 
-export const OWNER_PORTAL_EMAIL = 'klevis.ahmati@icloud.com'
-export const DEFAULT_ADMIN_EMAIL = OWNER_PORTAL_EMAIL
+function getEnvValue(name: string, fallback: string) {
+  const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
+  return env?.[name]?.trim() || fallback
+}
 
-export async function authenticateAdmin(email: string, password: string) {
+function getConfiguredAdminEmail() {
+  return getEnvValue(ADMIN_EMAIL_ENV, '').toLowerCase()
+}
+
+function getConfiguredAdminPassword() {
+  return getEnvValue(ADMIN_PASSWORD_ENV, '')
+}
+
+export function authenticateAdmin(email: string, password: string) {
   if (typeof window === 'undefined') {
     return false
   }
 
   const normalizedEmail = email.trim().toLowerCase()
+  const normalizedPassword = password.trim()
+  const configuredEmail = getConfiguredAdminEmail()
+  const configuredPassword = getConfiguredAdminPassword()
+  const isValid = Boolean(configuredEmail && configuredPassword) && normalizedEmail === configuredEmail && normalizedPassword === configuredPassword
 
-  if (normalizedEmail !== OWNER_PORTAL_EMAIL.toLowerCase()) {
+  if (!isValid) {
     return false
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({
+  window.localStorage.setItem(ADMIN_AUTH_STORAGE_KEY, JSON.stringify({
     email: normalizedEmail,
-    password,
-  })
-
-  if (error || !data.user) {
-    return false
-  }
-
-  if (data.user.email?.toLowerCase() !== OWNER_PORTAL_EMAIL.toLowerCase()) {
-    await supabase.auth.signOut()
-    return false
-  }
-
-  window.localStorage.setItem(
-    ADMIN_AUTH_STORAGE_KEY,
-    JSON.stringify({
-      email: normalizedEmail,
-      authenticatedAt: new Date().toISOString(),
-    }),
-  )
+    authenticatedAt: new Date().toISOString(),
+  }))
 
   return true
 }
@@ -53,10 +50,7 @@ export function getAdminAuthSession() {
   }
 
   try {
-    return JSON.parse(raw) as {
-      email: string
-      authenticatedAt: string
-    }
+    return JSON.parse(raw) as { email: string; authenticatedAt: string }
   } catch {
     return null
   }
@@ -64,20 +58,13 @@ export function getAdminAuthSession() {
 
 export function hasValidAdminSession() {
   const session = getAdminAuthSession()
-
-  return Boolean(
-    session &&
-      session.email.toLowerCase() === OWNER_PORTAL_EMAIL.toLowerCase(),
-  )
+  return Boolean(session && session.email.toLowerCase() === getConfiguredAdminEmail())
 }
 
 export function logoutAdminSession() {
   if (typeof window !== 'undefined') {
     window.localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY)
-    window.localStorage.removeItem(STORAGE_KEY)
   }
-
-  void supabase.auth.signOut()
 }
 
 export function getStoredPortalRole() {
@@ -86,16 +73,17 @@ export function getStoredPortalRole() {
   }
 
   const role = window.localStorage.getItem(STORAGE_KEY)
-
-  return role === 'admin'
-    ? 'admin'
-    : role === 'customer'
-      ? 'customer'
-      : null
+  return role === 'admin' ? 'admin' : role === 'customer' ? 'customer' : null
 }
 
-export function setStoredPortalRole(role: 'admin' | 'customer') {
+export function setStoredPortalRole(role: 'admin' | 'customer', email = '') {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(STORAGE_KEY, role)
+    if (role === 'admin') {
+      window.localStorage.setItem(ADMIN_AUTH_STORAGE_KEY, JSON.stringify({
+        email: email.trim().toLowerCase(),
+        authenticatedAt: new Date().toISOString(),
+      }))
+    }
   }
 }

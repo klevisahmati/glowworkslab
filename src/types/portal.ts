@@ -29,6 +29,7 @@ export interface PortalState {
   uploads: AdminUploadBundle
   adminSummary: AdminSummary
   preferences: PortalPreferences
+  websiteContent: WebsiteContent
 }
 
 export interface CustomerProfile {
@@ -167,4 +168,29 @@ export interface AdminSummary {
   pendingClaims: number
   expiringWarranties: number
   activeNfcTags: number
+}
+
+export interface PublicServiceContent {
+  id: string
+  number: string
+  title: string
+  description: string
+  image: string
+}
+
+export interface PublicProjectContent {
+  id: string
+  serviceId: string
+  brand: string
+  model: string
+  title: string
+  image: string
+}
+
+export interface WebsiteContent {
+  contentVersion: string
+  heroImage: string
+  services: PublicServiceContent[]
+  projects: PublicProjectContent[]
+  vehicleBrandModels: Record<string, string[]>
 }
