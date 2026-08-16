@@ -1,4 +1,6 @@
-const querystring = require('node:querystring')
+import querystring from 'node:querystring'
+import nodemailer from 'nodemailer'
+import twilio from 'twilio'
 
 function normalizePhone(value) {
   const raw = String(value || '').replace(/\s+/g, '')
@@ -17,8 +19,6 @@ async function sendEmail(data) {
   if (!emailTo || !emailFrom) {
     return { ok: false, reason: 'missing-email-config' }
   }
-
-  const nodemailer = require('nodemailer')
 
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -62,7 +62,6 @@ async function sendWhatsApp(data) {
     return { ok: false, reason: 'missing-whatsapp-config' }
   }
 
-  const twilio = require('twilio')
   const client = twilio(accountSid, authToken)
 
   const message = `Νέο αίτημα Glowworks. Όνομα: ${data.name || '-'} | Τηλέφωνο: ${data.phone || '-'} | Όχημα: ${data.vehicle || '-'} | Υπηρεσία: ${data.service || '-'}`
@@ -76,7 +75,7 @@ async function sendWhatsApp(data) {
   return { ok: true, channel: 'whatsapp' }
 }
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,

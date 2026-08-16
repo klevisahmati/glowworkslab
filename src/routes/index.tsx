@@ -390,7 +390,15 @@ function GlowworksPage() {
 
       <section className="work-grid shell" aria-label="Projects Glowworks.lab">
         {services.map((service, index) => (
-          <article className={`work-card work-card-${index + 1}`} key={service.title}>
+          <a
+            className={`work-card work-card-${index + 1}`}
+            key={service.title}
+            href={getAssetPath(
+              `/projects?service=${encodeURIComponent(service.projectServiceId)}`,
+            )}
+            aria-label={`View ${service.title} projects`}
+            style={{ color: 'inherit', textDecoration: 'none' }}
+          >
             <img src={getHomepageImage(service.imageSlot as HomepageImageSlot, service.image)} alt={service.title} />
             <div className="work-shade" />
             <div className="work-card-content">
@@ -398,7 +406,7 @@ function GlowworksPage() {
               <h3>{service.title}</h3>
             </div>
             <ArrowUpRight className="work-arrow" size={23} />
-          </article>
+          </a>
         ))}
       </section>
 

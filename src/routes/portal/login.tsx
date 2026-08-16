@@ -13,18 +13,26 @@ function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [isSigningIn, setIsSigningIn] = useState(false)
 
-  const submit = () => {
-    if (!authenticateAdmin(email, password)) {
-      setNotice('The admin email or password is incorrect.')
-      return
-    }
-
+  const submit = async () => {
+    setIsSigningIn(true)
     setNotice(null)
-    setStoredPortalRole('admin', email)
-    navigate({ to: '/portal/admin' })
-  }
 
+    try {
+      const isAuthenticated = await authenticateAdmin(email, password)
+
+      if (!isAuthenticated) {
+        setNotice('The admin email or password is incorrect.')
+        return
+      }
+
+      setStoredPortalRole('admin', email)
+      navigate({ to: '/portal/admin' })
+    } finally {
+      setIsSigningIn(false)
+    }
+  }
   return (
     <main className="portal-page">
       <div className="shell portal-landing">
@@ -62,7 +70,14 @@ function AdminLoginPage() {
               </label>
             </div>
             <div className="portal-actions" style={{ marginTop: '16px' }}>
-              <button className="button button-primary" type="button" onClick={submit}>Sign in</button>
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={() => void submit()}
+                disabled={isSigningIn}
+              >
+                {isSigningIn ? 'Signing in...' : 'Sign in'}
+              </button>
             </div>
             {notice ? <p className="portal-muted" style={{ marginTop: '12px' }}>{notice}</p> : null}
           </div>

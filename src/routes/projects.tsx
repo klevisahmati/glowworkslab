@@ -1,9 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ArrowLeft, ArrowUpRight, BadgeCheck, Camera, CarFront, Sparkles, Star, Zap } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, BadgeCheck, Camera, CarFront, ChevronLeft, ChevronRight, Sparkles, Star, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { fetchProjects } from '../lib/projects'
 import type { ProjectMedia, ProjectRecord } from '../types/projects'
 export const Route = createFileRoute('/projects')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    service:
+      typeof search.service === 'string'
+        ? search.service
+        : undefined,
+  }),
 
 
   component: ProjectsPage,
@@ -173,32 +179,20 @@ const serviceCategories: ServiceCategory[] = [
 ]
 
 function ProjectsPage() {
-  const [activeServiceId, setActiveServiceId] = useState<string | null>(null)
+  const { service: requestedServiceId } = Route.useSearch()
+  const [activeServiceId, setActiveServiceId] = useState<string | null>(
+    () =>
+      requestedServiceId &&
+      serviceCategories.some(
+        (service) => service.id === requestedServiceId,
+      )
+        ? requestedServiceId
+        : null,
+  )
   const [activeBrand, setActiveBrand] = useState<string | null>(null)
   const [activeModel, setActiveModel] = useState<string | null>(null)
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<ProjectGalleryItem | null>(null)
   const [galleryItems, setGalleryItems] = useState<ProjectGalleryItem[]>([])
-  useEffect(() => {
-    if (!selectedGalleryImage) {
-      return
-    }
-
-    const handleLightboxKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setSelectedGalleryImage(null)
-      }
-    }
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', handleLightboxKeyDown)
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', handleLightboxKeyDown)
-    }
-  }, [selectedGalleryImage])
-
   useEffect(() => {
     let isActive = true
 
@@ -229,17 +223,17 @@ function ProjectsPage() {
     }
   }, [])
     useEffect(() => {
-    const serviceId = new URLSearchParams(window.location.search).get('service')
-
     if (
-      serviceId &&
-      serviceCategories.some((service) => service.id === serviceId)
+      requestedServiceId &&
+      serviceCategories.some(
+        (service) => service.id === requestedServiceId,
+      )
     ) {
-      setActiveServiceId(serviceId)
+      setActiveServiceId(requestedServiceId)
       setActiveBrand(null)
       setActiveModel(null)
     }
-  }, [])
+  }, [requestedServiceId])
 
   const selectedService = useMemo(
     () => serviceCategories.find((service) => service.id === activeServiceId) ?? null,
@@ -283,6 +277,46 @@ function ProjectsPage() {
 
     return galleryItems.filter((item) => matchesServiceCategory(item.serviceId, selectedServiceKey) && normalizeBrandValue(item.brand) === selectedBrandKey && normalizeValue(item.model) === selectedModelKey)  }, [activeServiceId, activeBrand, activeModel, galleryItems])
 
+  const showAdjacentGalleryImage = (direction: -1 | 1) => {
+    setSelectedGalleryImage((currentImage) => {
+      if (!currentImage || visibleProjects.length < 2) {
+        return currentImage
+      }
+
+      const currentIndex = visibleProjects.indexOf(currentImage)
+      const safeIndex = currentIndex >= 0 ? currentIndex : 0
+      const nextIndex =
+        (safeIndex + direction + visibleProjects.length) %
+        visibleProjects.length
+
+      return visibleProjects[nextIndex]
+    })
+  }
+
+  useEffect(() => {
+    if (!selectedGalleryImage) {
+      return
+    }
+
+    const handleLightboxKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedGalleryImage(null)
+      } else if (event.key === 'ArrowLeft') {
+        showAdjacentGalleryImage(-1)
+      } else if (event.key === 'ArrowRight') {
+        showAdjacentGalleryImage(1)
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleLightboxKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleLightboxKeyDown)
+    }
+  }, [selectedGalleryImage, visibleProjects])
   return (
     <main className="projects-page" id="top">
       <nav className="site-nav project-nav is-scrolled">
@@ -496,6 +530,34 @@ function ProjectsPage() {
           >
             ×
           </button>
+
+          {visibleProjects.length > 1 ? (
+            <>
+              <button
+                className="project-lightbox-nav project-lightbox-prev"
+                type="button"
+                aria-label="Previous photo"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  showAdjacentGalleryImage(-1)
+                }}
+              >
+                <ChevronLeft size={32} />
+              </button>
+
+              <button
+                className="project-lightbox-nav project-lightbox-next"
+                type="button"
+                aria-label="Next photo"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  showAdjacentGalleryImage(1)
+                }}
+              >
+                <ChevronRight size={32} />
+              </button>
+            </>
+          ) : null}
 
           <img
             src={getAssetPath(selectedGalleryImage.image)}
