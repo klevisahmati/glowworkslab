@@ -1064,11 +1064,63 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
   outline: none;
 }
 
+.project-lightbox-nav {
+  position: fixed;
+  top: 50%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  color: #fff;
+  background: rgba(9, 9, 13, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 50%;
+  backdrop-filter: blur(12px);
+  transform: translateY(-50%);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.project-lightbox-prev {
+  left: 28px;
+}
+
+.project-lightbox-next {
+  right: 28px;
+}
+
+.project-lightbox-nav:hover,
+.project-lightbox-nav:focus-visible {
+  color: #42e8ee;
+  border-color: #42e8ee;
+  background: rgba(9, 9, 13, 0.92);
+  outline: none;
+}
 @media (max-width: 640px) {
   .project-lightbox {
     padding: 16px;
   }
 
+  .project-lightbox-nav {
+    top: auto;
+    bottom: 18px;
+    width: 50px;
+    height: 50px;
+    transform: none;
+  }
+
+  .project-lightbox-prev {
+    left: calc(50% - 62px);
+  }
+
+  .project-lightbox-next {
+    right: calc(50% - 62px);
+  }
   .project-lightbox-close {
     top: 14px;
     right: 14px;
