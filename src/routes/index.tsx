@@ -20,48 +20,64 @@ import {
   MapPin,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
+import {
+  fetchHomepageImages,
+  type HomepageImageRecord,
+  type HomepageImageSlot,
+} from '../lib/homepage-images'
 
 export const Route = createFileRoute('/')({
   component: GlowworksPage,
 })
 
 const services = [
-  {
+   {
     number: '01',
+    projectServiceId: 'ambient-lighting',
     title: 'Ambient Light',
     description:
       'OEM-style φωτισμός σε πόρτες, ταμπλό και κονσόλα με χρώματα και δυναμικά προγράμματα.',
+    imageSlot: 'ambient-lighting',
     image: '/images/mercedes_glc_w205_coupe.jpg',
     icon: Lightbulb,
   },
   {
     number: '02',
+    projectServiceId: 'custom-steering-wheels',
     title: 'Custom Τιμόνι',
     description:
       'Δέρμα, Alcantara ή carbon look, custom ραφές και σχεδιασμός που ταιριάζει απόλυτα στο αυτοκίνητό σου.',
+    imageSlot: 'custom-steering',
     image: '/images/custom-steering.webp',
     icon: LucideCircleGauge,
   },
   {
     number: '03',
+    projectServiceId: 'starlight-headliner',
     title: 'Αστέρια Οροφής',
     description:
       'Πάνω από 600 οπτικές ίνες, shooting stars και ατμόσφαιρα που αλλάζει όλο το εσωτερικό.',
+    imageSlot: 'starlight-headliner',
     image: '/images/starlight-headliner.webp',
     icon: Sparkles,
   },
   {
     number: '04',
+    projectServiceId: 'screens-media',
     title: 'Οθόνες & Media',
     description:
       'Οθόνες υψηλής ανάλυσης, σύγχρονο infotainment και καθαρή εργοστασιακή εφαρμογή στο ταμπλό.',
+    imageSlot: 'android-display',
     image: '/images/android-display.webp',
     icon: MonitorPlay,
-  },{
+  },
+  {
     number: '05',
-    title: 'body kits & exterior upgrades',
+    projectServiceId: 'body-kit',
+    title: 'Body Kits & Exterior Upgrades',
     description:
       'Premium body kits κορυφαίας σχεδίασης και αεροδυναμικής. Χαρίστε στο αυτοκίνητό σας την απόλυτη πολυτελή σπορ εμφάνιση.',
+    imageSlot: 'body-kit',
     image: '/images/IMG_2085.JPEG',
     icon: CarFront,
   },
@@ -178,6 +194,38 @@ function GlowworksPage() {
   const [selectedService, setSelectedService] = useState('')
   const [serviceSearch, setServiceSearch] = useState('')
   const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false)
+  const [homepageImages, setHomepageImages] = useState<
+    Partial<Record<HomepageImageSlot, HomepageImageRecord>>
+  >({})
+
+  const getHomepageImage = (
+    slot: HomepageImageSlot,
+    fallbackImage: string,
+  ) => homepageImages[slot]?.publicUrl ?? getAssetPath(fallbackImage)
+
+  useEffect(() => {
+    let isActive = true
+
+    fetchHomepageImages()
+      .then((images) => {
+        if (!isActive) {
+          return
+        }
+
+        setHomepageImages(
+          Object.fromEntries(
+            images.map((image) => [image.slot, image]),
+          ) as Partial<Record<HomepageImageSlot, HomepageImageRecord>>,
+        )
+      })
+      .catch((error) => {
+        console.warn('Failed to load homepage images', error)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -228,7 +276,7 @@ function GlowworksPage() {
 }
 
   const closeMenu = () => setMenuOpen(false)
-  const heroBackgroundImage = '/images/homepage-ambient-mercedes.png'
+  const heroBackgroundImage = getHomepageImage('hero', '/images/homepage-ambient-mercedes.png')
   const filteredVehicleBrands = vehicleBrands.filter((brand) => {
     const query = vehicleSearch.trim().toLowerCase()
     if (!query) {
@@ -343,7 +391,7 @@ function GlowworksPage() {
       <section className="work-grid shell" aria-label="Projects Glowworks.lab">
         {services.map((service, index) => (
           <article className={`work-card work-card-${index + 1}`} key={service.title}>
-            <img src={service.image} alt={service.title} />
+            <img src={getHomepageImage(service.imageSlot as HomepageImageSlot, service.image)} alt={service.title} />
             <div className="work-shade" />
             <div className="work-card-content">
               <span>{service.number}</span>
@@ -369,13 +417,18 @@ function GlowworksPage() {
             {services.map((service) => {
               const Icon = service.icon
               return (
-                <article className="service-row" key={service.title}>
+                <a
+                  className="service-row"
+                  key={service.title}
+                  href={getAssetPath(`/projects?service=${service.projectServiceId}`)}
+                  style={{ color: 'inherit', textDecoration: 'none' }}
+>
                   <span className="service-number">{service.number}</span>
                   <div className="service-icon"><Icon size={23} strokeWidth={1.6} /></div>
                   <h3>{service.title}</h3>
                   <p>{service.description}</p>
                   <ChevronRight className="service-arrow" size={22} />
-                </article>
+                </a>
               )
             })}
           </div>

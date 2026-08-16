@@ -421,6 +421,128 @@ const { data: serviceData, error: serviceError } = await supabase
   }
 }
 
+export async function fetchCustomerPortalStateByCode(
+  customerCode: string,
+  baseState: PortalState,
+) {
+  if (!hasSupabaseConfig()) {
+    return null
+  }
+
+  const supabase = await getSupabaseClient()
+
+  if (!supabase) {
+    return null
+  }
+
+  const { data, error } = await supabase.rpc(
+    'get_customer_portal_by_code',
+    {
+      p_customer_code: customerCode.trim(),
+    },
+  )
+
+  if (error) {
+    throw error
+  }
+
+  if (!data || typeof data !== 'object') {
+    return null
+  }
+
+  const portalData = data as unknown as {
+    customer?: Record<string, unknown>
+    vehicles?: Record<string, unknown>[]
+    services?: Record<string, unknown>[]
+    warranties?: Record<string, unknown>[]
+  }
+
+  if (!portalData.customer) {
+    return null
+  }
+
+  const customer = mapRemoteCustomerRow(portalData.customer)
+  const remoteVehicles = (portalData.vehicles ?? []).map(
+    mapRemoteVehicleRow,
+  )
+  const serviceRows = portalData.services ?? []
+  const warrantyRows = portalData.warranties ?? []
+
+  const remoteServiceHistory: ServiceHistoryEntry[] =
+    serviceRows.map((row) => {
+      const vehicle = remoteVehicles.find(
+        (item) => item.id === String(row.vehicle_id),
+      )
+
+      const warranty = warrantyRows.find(
+        (item) => String(item.service_id) === String(row.id),
+      )
+
+      return {
+        id: String(row.id),
+        customerId: customer.id,
+        title: String(row.services_type ?? ''),
+        vehicle: vehicle
+          ? `${vehicle.make} ${vehicle.model}`.trim()
+          : '',
+        completedOn: String(row.service_date ?? ''),
+        notes: String(row.note ?? row.description ?? ''),
+        warrantyId: warranty
+          ? String(warranty.id)
+          : undefined,
+        warrantyStartsOn: warranty
+          ? String(warranty.start_date ?? '')
+          : undefined,
+        warrantyEndsOn: warranty
+          ? String(warranty.end_date ?? '')
+          : undefined,
+        warrantyNotes: warranty
+          ? String(warranty.notes ?? '')
+          : undefined,
+      }
+    })
+
+  const remoteWarranties: WarrantyRecord[] =
+    warrantyRows.map((row) => {
+      const service = serviceRows.find(
+        (item) => String(item.id) === String(row.service_id),
+      )
+
+      const vehicle = remoteVehicles.find(
+        (item) => item.id === String(service?.vehicle_id),
+      )
+
+      return {
+        id: String(row.id),
+        customerId: customer.id,
+        vehicleId: vehicle?.id ?? '',
+        product: String(
+          row.warranty_type ?? service?.services_type ?? '',
+        ),
+        status: String(
+          row.status ?? 'Active',
+        ) as WarrantyRecord['status'],
+        installedAt: 'Glowworks Rhodes Studio',
+        startsOn: String(row.start_date ?? ''),
+        endsOn: String(row.end_date ?? ''),
+        coverage: String(row.notes ?? ''),
+        notes: String(row.notes ?? ''),
+        installationDate: String(service?.service_date ?? ''),
+      }
+    })
+
+  return {
+    ...baseState,
+    customers: [customer],
+    customer,
+    vehicles: remoteVehicles,
+    serviceHistory: remoteServiceHistory,
+    warranties: remoteWarranties,
+    gallery: baseState.gallery.filter(
+      (item) => item.customerId === customer.id,
+    ),
+  }
+}
 export async function syncPortalStateToSupabase(state: PortalState) {
   if (!hasSupabaseConfig()) {
     return false

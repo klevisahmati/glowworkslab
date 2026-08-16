@@ -18,7 +18,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { PortalActionButton } from '../../components/portal/PortalActionButton'
 import { PortalEmptyState, PortalSectionCard } from '../../components/portal/PortalSectionCard'
 import { hasValidAdminSession } from '../../lib/portal-auth'
-import { getPortalState } from '../../lib/portal-session'
+import { fetchCustomerPortalStateByCode, getPortalState } from '../../lib/portal-session'
 import { calculateWarrantyMeta } from '../../lib/warranty'
 import type { CustomerProfile, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyRecord } from '../../types/portal'
 
@@ -96,12 +96,15 @@ function CustomerPortalPage() {
   const { customerCode } = Route.useParams()
   const navigate = useNavigate()
   const initialPortalState = useMemo(() => getPortalState(), [])
-  const initialCustomer = initialPortalState.customers.find((profile) => profile.customerCode === customerCode)
-    ?? initialPortalState.customer
-    ?? initialPortalState.customers[0]
-    ?? null
-  const [portalState, setPortalState] = useState<PortalState>(initialPortalState)
-  const customer = portalState.customers.find((profile) => profile.customerCode === customerCode) ?? portalState.customer ?? portalState.customers[0] ?? makeCustomerDraft()
+  const [portalState, setPortalState] =
+    useState<PortalState>(initialPortalState)
+  const [customerProfileLoading, setCustomerProfileLoading] =
+    useState(true)
+  const matchedCustomer = portalState.customers.find(
+    (profile) => profile.customerCode === customerCode,
+  ) ?? null
+  const customer =
+    matchedCustomer ?? makeCustomerDraft({ customerCode })
   const customerVehicles = portalState.vehicles.filter((vehicle) => vehicle.customerId === customer.id)
   const customerWarranties = portalState.warranties.filter((warranty) => warranty.customerId === customer.id)
   const customerHistory = portalState.serviceHistory.filter((entry) => entry.customerId === customer.id)
@@ -158,19 +161,29 @@ const activeDiscount = customer.discountEnabled
   : null
 
   useEffect(() => {
-    const nextState = getPortalState()
-    const selectedCustomer = nextState.customers.find((profile) => profile.customerCode === customerCode)
-      ?? nextState.customer
-      ?? nextState.customers[0]
-      ?? null
+    let isActive = true
 
-    if (!selectedCustomer) {
-      navigate({ to: '/portal' })
-      return
+    setCustomerProfileLoading(true)
+
+    void fetchCustomerPortalStateByCode(customerCode, getPortalState())
+      .then((hydratedState) => {
+        if (isActive) {
+          setPortalState(hydratedState)
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load customer profile', error)
+      })
+      .finally(() => {
+        if (isActive) {
+          setCustomerProfileLoading(false)
+        }
+      })
+
+    return () => {
+      isActive = false
     }
-
-    setPortalState(nextState)
-  }, [customerCode, navigate])
+  }, [customerCode])
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 60_000)
@@ -310,6 +323,39 @@ const activeDiscount = customer.discountEnabled
     doc.save(`${customer.customerCode}-invoice.pdf`)
   }
 
+  if (customerProfileLoading) {
+    return (
+      <div className="customer-portal-page">
+        <div className="customer-shell">
+          <div className="customer-hero-card">
+            <div className="customer-hero-copy">
+              <p className="customer-eyebrow">Customer portal</p>
+              <h1>Loading customer profile...</h1>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!matchedCustomer) {
+    return (
+      <div className="customer-portal-page">
+        <div className="customer-shell">
+          <div className="customer-hero-card">
+            <div className="customer-hero-copy">
+              <p className="customer-eyebrow">Customer portal</p>
+              <h1>Customer profile not found</h1>
+              <p>
+                This customer link is invalid or the profile is no longer
+                available.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="customer-portal-page">
       <div className="customer-shell">
