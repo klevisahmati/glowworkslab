@@ -8,8 +8,8 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { fetchProjectBySlug } from '../../lib/projects'
-import type { ProjectMedia } from '../../types/projects'
+import { fetchProjectBySlug, fetchProjects } from '../../lib/projects'
+import type { ProjectMedia, ProjectRecord } from '../../types/projects'
 
 function getAssetPath(path: string) {
   if (/^https?:\/\//i.test(path)) {
@@ -75,6 +75,7 @@ export const Route = createFileRoute('/project/$projectSlug')({
 function IndividualProjectPage() {
   const project = Route.useLoaderData()
   const [activeMedia, setActiveMedia] = useState<ProjectMedia | null>(null)
+  const [relatedProjects, setRelatedProjects] = useState<ProjectRecord[]>([])
 
   const imageMedia = useMemo(
     () =>
@@ -86,6 +87,17 @@ function IndividualProjectPage() {
     imageMedia.find((media) => media.isCover) ??
     imageMedia[0] ??
     null
+  const bookingUrl = project
+    ? getAssetPath(
+        `/?project=${encodeURIComponent(project.title)}` +
+          `&service=${encodeURIComponent(
+            getServiceLabel(project.serviceId),
+          )}` +
+          `&brand=${encodeURIComponent(project.brand)}` +
+          `&model=${encodeURIComponent(project.model)}` +
+          '#booking',
+      )
+    : getAssetPath('/#booking')
 
   const showAdjacentImage = (direction: -1 | 1) => {
     setActiveMedia((current) => {
@@ -105,6 +117,44 @@ function IndividualProjectPage() {
     })
   }
 
+  useEffect(() => {
+    if (!project) {
+      setRelatedProjects([])
+      return
+    }
+
+    let isActive = true
+
+    fetchProjects()
+      .then((projects) => {
+        const rankedProjects = projects
+          .filter((candidate) => candidate.id !== project.id)
+          .map((candidate) => ({
+            project: candidate,
+            score:
+              (candidate.serviceId === project.serviceId ? 2 : 0) +
+              (candidate.brand.trim().toLowerCase() ===
+              project.brand.trim().toLowerCase()
+                ? 1
+                : 0),
+          }))
+          .filter((candidate) => candidate.score > 0)
+          .sort((first, second) => second.score - first.score)
+          .slice(0, 3)
+          .map((candidate) => candidate.project)
+
+        if (isActive) {
+          setRelatedProjects(rankedProjects)
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to load related projects', error)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [project])
   useEffect(() => {
     if (!activeMedia) {
       return
@@ -176,7 +226,7 @@ function IndividualProjectPage() {
           </a>
           <a
             className="project-detail-book"
-            href={getAssetPath('/#booking')}
+            href={bookingUrl}
           >
             Κλείσε ραντεβού <ArrowUpRight size={16} />
           </a>
@@ -269,6 +319,59 @@ function IndividualProjectPage() {
         </section>
       ) : null}
 
+      {relatedProjects.length ? (
+        <section className="project-detail-related">
+          <div className="project-detail-section-title">
+            <p className="eyebrow"><span /> Continue exploring</p>
+            <strong>Related projects</strong>
+          </div>
+
+          <div className="project-detail-related-grid">
+            {relatedProjects.map((relatedProject) => {
+              const relatedCover =
+                relatedProject.media.find((media) => media.isCover) ??
+                relatedProject.media.find(
+                  (media) => media.mediaType === 'image',
+                ) ??
+                null
+
+              return (
+                <a
+                  className="project-detail-related-card"
+                  href={getAssetPath(
+                    `/project/${relatedProject.slug}`,
+                  )}
+                  key={relatedProject.id}
+                >
+                  {relatedCover ? (
+                    <img
+                      src={relatedCover.publicUrl}
+                      alt={
+                        relatedCover.altText ||
+                        relatedProject.title
+                      }
+                    />
+                  ) : (
+                    <div className="project-detail-related-placeholder" />
+                  )}
+
+                  <div className="project-detail-related-overlay" />
+
+                  <div className="project-detail-related-copy">
+                    <span>
+                      {relatedProject.brand} / {relatedProject.model}
+                    </span>
+                    <h3>{relatedProject.title}</h3>
+                    <strong>
+                      View project <ArrowUpRight size={16} />
+                    </strong>
+                  </div>
+                </a>
+              )
+            })}
+          </div>
+        </section>
+      ) : null}
       <section className="project-detail-cta">
         <div>
           <p className="eyebrow"><span /> Your vehicle, next</p>
@@ -281,7 +384,7 @@ function IndividualProjectPage() {
 
         <a
           className="button button-primary"
-          href={getAssetPath('/#booking')}
+          href={bookingUrl}
         >
           Κλείσε ραντεβού <ArrowUpRight size={17} />
         </a>
