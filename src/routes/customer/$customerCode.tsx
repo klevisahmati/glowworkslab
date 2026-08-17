@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
   ArrowLeft,
+  BadgePercent,
   CarFront,
   Download,
   FileText,
@@ -150,15 +151,43 @@ const warrantyHistory = useMemo(() => {
     }))
 }, [customerHistory, now, portalState.warranties])
 
+const today = new Date().toISOString().slice(0, 10)
+
 const activeDiscount = customer.discountEnabled
   ? (
       portalState.discounts.find(
         (discount) =>
           discount.active &&
-          discount.validTo >= new Date().toISOString().slice(0, 10),
-      ) ?? portalState.discounts[0]
+          discount.validFrom <= today &&
+          discount.validTo >= today &&
+          (
+            discount.code === customer.discountCode ||
+            discount.tier === customer.loyaltyTier
+          ),
+      ) ??
+      portalState.discounts.find(
+        (discount) =>
+          discount.active &&
+          discount.validFrom <= today &&
+          discount.validTo >= today,
+      )
     )
   : null
+
+const memberDiscountCode = (
+  customer.discountCode?.trim() ||
+  activeDiscount?.code ||
+  'GLOW10'
+).toUpperCase()
+
+const percentageFromCode = Number(
+  memberDiscountCode.match(/\d+(?:\.\d+)?/)?.[0],
+)
+
+const memberDiscountPercentage =
+  Number.isFinite(percentageFromCode) && percentageFromCode > 0
+    ? Math.min(percentageFromCode, 100)
+    : activeDiscount?.percentage ?? 10
 
   useEffect(() => {
     let isActive = true
@@ -398,7 +427,83 @@ const activeDiscount = customer.discountEnabled
             </div>
           </PortalSectionCard>
         </section>
+        <section className="customer-member-grid">
+          <PortalSectionCard
+            eyebrow="Glowworks member benefit"
+            title="Το προσωπικό σου προνόμιο"
+            icon={<BadgePercent size={17} />}
+            className="customer-member-benefit"
+          >
+            {customer.discountEnabled ? (
+              <div className="customer-member-content">
+                <p className="customer-member-kicker">MEMBER BENEFIT ACTIVE</p>
+                <strong className="customer-member-value">
+                  {memberDiscountPercentage}% OFF
+                </strong>
+                <p>
+                  Η έκπτωσή σου ισχύει στην επόμενη αναβάθμιση του
+                  οχήματός σου.
+                </p>
+                <div className="customer-member-code">
+                  <span>MEMBER CODE</span>
+                  <strong>{memberDiscountCode}</strong>
+                </div>
+                {activeDiscount?.validTo ? (
+                  <small>
+                    Ισχύει έως {formatDate(activeDiscount.validTo)}
+                  </small>
+                ) : (
+                  <small>
+                    Επικοινώνησε μαζί μας για τους όρους και τη διαθεσιμότητα.
+                  </small>
+                )}
+              </div>
+            ) : (
+              <div className="customer-member-content">
+                <p className="customer-member-kicker">MEMBER BENEFIT</p>
+                <strong className="customer-member-value">
+                  Coming soon
+                </strong>
+                <p>
+                  Το προσωπικό σου προνόμιο θα εμφανιστεί εδώ μόλις
+                  ενεργοποιηθεί από τη Glowworks.lab.
+                </p>
+              </div>
+            )}
+          </PortalSectionCard>
+
+          <PortalSectionCard
+            eyebrow="Your experience"
+            title="Η εμπειρία σου μετράει"
+            icon={<Sparkles size={17} />}
+            className="customer-review-card"
+          >
+            <div className="customer-member-content">
+              <p>
+                Μοιράσου την ειλικρινή εμπειρία σου και βοήθησε άλλους
+                οδηγούς να γνωρίσουν τη δουλειά μας.
+              </p>
+
+              <div className="customer-card-actions">
+                <PortalActionButton
+                  href="https://maps.app.goo.gl/va2psSDWoRwo5FZG9"
+                  target="_blank"
+                  rel="noreferrer"
+                  primary
+                >
+                  Αξιολόγησέ μας στο Google
+                </PortalActionButton>
+              </div>
+
+              <small>
+                Η αξιολόγηση είναι προαιρετική και δεν συνδέεται με το
+                προνόμιο μέλους.
+              </small>
+            </div>
+          </PortalSectionCard>
+        </section>
 <PortalSectionCard
+  className="customer-quick-actions-card"
   eyebrow="Quick actions"
   title="Contact Glowworks"
   icon={<Sparkles size={16} />}

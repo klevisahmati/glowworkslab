@@ -29,6 +29,8 @@ function mapCustomerToRemoteRow(customer: CustomerProfile) {
     phone: customer.phone || null,
     address: customer.address || null,
     loyalty_tier: customer.loyaltyTier || 'standard',
+    discount_enabled: customer.discountEnabled ?? false,
+    discount_code: customer.discountCode?.trim() ?? '',
     status: 'active',
     created_at: customer.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -44,8 +46,8 @@ customerCode: String(row.costumer_id ?? row.id ?? ''),
     address: String(row.address ?? ''),
     loyaltyTier: String(row.loyalty_tier ?? 'standard'),
     createdAt: String(row.created_at ?? new Date().toISOString()),
-    discountEnabled: false,
-    discountCode: '',
+    discountEnabled: Boolean(row.discount_enabled ?? false),
+    discountCode: String(row.discount_code ?? ''),
   }
 }
 
