@@ -32,6 +32,7 @@ type ServiceCategory = {
 }
 
 type ProjectGalleryItem = {
+  slug: string
   serviceId: string
   brand: string
   model: string
@@ -202,6 +203,7 @@ function ProjectsPage() {
           project.media
             .filter((media: ProjectMedia) => media.mediaType === 'image')
             .map((media: ProjectMedia) => ({
+              slug: project.slug,
               serviceId: project.serviceId,
               brand: project.brand,
               model: project.model,
@@ -488,15 +490,21 @@ function ProjectsPage() {
                 {visibleProjects.map((project, index) => (
                   <article
                     className={`project-card project-card-${(index % 5) + 1}`}
-                    key={`${project.brand}-${project.model}-${index}`}
-                    role="button"
+                    key={`${project.slug}-${index}`}
+                    role="link"
                     tabIndex={0}
-                    aria-label={`Open ${project.title} photo`}
-                    onClick={() => setSelectedGalleryImage(project)}
+                    aria-label={`View the complete ${project.title} project`}
+                    onClick={() => {
+                      window.location.assign(
+                        getAssetPath(`/project/${project.slug}`),
+                      )
+                    }}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault()
-                        setSelectedGalleryImage(project)
+                        window.location.assign(
+                          getAssetPath(`/project/${project.slug}`),
+                        )
                       }
                     }}
                   >
@@ -504,7 +512,7 @@ function ProjectsPage() {
                     <div className="project-card-shade" />
                     <div className="project-card-topline">
                       <span>{String(index + 1).padStart(2, '0')}</span>
-                      <span className="project-photo-status"><Camera size={14} /> Gallery</span>
+                      <span className="project-photo-status"><ArrowUpRight size={14} /> View project</span>
                     </div>
                   </article>
                 ))}

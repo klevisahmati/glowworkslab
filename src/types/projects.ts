@@ -14,6 +14,7 @@ export interface ProjectMedia {
 
 export interface ProjectRecord {
   id: string
+  slug: string
   serviceId: string
   brand: string
   model: string
@@ -25,6 +26,7 @@ export interface ProjectRecord {
 }
 
 export interface ProjectDraft {
+  slug?: string
   serviceId: string
   brand: string
   model: string

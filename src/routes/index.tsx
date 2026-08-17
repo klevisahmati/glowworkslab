@@ -345,7 +345,7 @@ function GlowworksPage() {
         <div className="hero-grid" aria-hidden="true" />
         <div className="shell hero-content">
           <div className="hero-copy reveal">
-            <p className="eyebrow"><span /> φωτισμός & custom αναβαθμίσεις αυτοκινήτων</p>
+            <p className="eyebrow"><span /> AUTOMOTIVE LIGHTING & CUSTOMIZATION</p>
             <h1>
               Άλλαξε την
               <span>ατμόσφαιρα.</span>

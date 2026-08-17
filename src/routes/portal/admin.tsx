@@ -861,6 +861,7 @@ const saveCustomer = async () => {
   const startEditingProject = (project: ProjectRecord) => {
     setEditingProjectId(project.id)
     setEditingProjectDraft({
+      slug: project.slug,
       serviceId: project.serviceId,
       brand: project.brand,
       model: project.model,
