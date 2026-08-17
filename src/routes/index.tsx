@@ -192,6 +192,7 @@ function GlowworksPage() {
   const [isVehicleModelDropdownOpen, setIsVehicleModelDropdownOpen] = useState(false)
   const [isVehicleYearDropdownOpen, setIsVehicleYearDropdownOpen] = useState(false)
   const [selectedService, setSelectedService] = useState('')
+  const [appointmentMessage, setAppointmentMessage] = useState('')
   const [serviceSearch, setServiceSearch] = useState('')
   const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false)
   const [homepageImages, setHomepageImages] = useState<
@@ -227,6 +228,34 @@ function GlowworksPage() {
     }
   }, [])
 
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search)
+    const projectTitle = search.get('project')
+    const requestedService = search.get('service')
+    const requestedBrand = search.get('brand')
+    const requestedModel = search.get('model')
+
+    if (requestedService) {
+      setSelectedService(requestedService)
+      setServiceSearch(requestedService)
+    }
+
+    if (requestedBrand) {
+      setSelectedVehicleBrand(requestedBrand)
+      setVehicleSearch(requestedBrand)
+    }
+
+    if (requestedModel) {
+      setSelectedVehicleModel(requestedModel)
+      setVehicleModelSearch(requestedModel)
+    }
+
+    if (projectTitle) {
+      setAppointmentMessage(
+        `Ενδιαφέρομαι για ένα project όπως: ${projectTitle}`,
+      )
+    }
+  }, [])
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
     onScroll()
@@ -268,6 +297,7 @@ function GlowworksPage() {
     setVehicleModelSearch('')
     setVehicleYearSearch('')
     setServiceSearch('')
+    setAppointmentMessage('')
     setFormStatus('success')
   } catch (error) {
     console.error('Failed to submit appointment', error)
@@ -683,7 +713,15 @@ function GlowworksPage() {
                       <option>Οποιαδήποτε</option><option>09:00–12:00</option><option>12:00–15:00</option><option>15:00–18:00</option>
                     </select>
                   </label>
-                  <label className="full">Σχόλια<textarea name="message" rows={4} placeholder="Πες μας περισσότερα για αυτό που έχεις στο μυαλό σου…" /></label>
+                  <label className="full">Σχόλια<textarea
+                    name="message"
+                    rows={4}
+                    value={appointmentMessage}
+                    onChange={(event) =>
+                      setAppointmentMessage(event.target.value)
+                    }
+                    placeholder="Πες μας περισσότερα για την αναβάθμιση που έχεις στο μυαλό σου..."
+                  /></label>
                 </div>
 
                 {formStatus === 'error' && <p className="form-error" role="alert">Κάτι πήγε στραβά. Δοκίμασε ξανά ή κάλεσέ μας απευθείας.</p>}

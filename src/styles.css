@@ -1655,3 +1655,124 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
     right: calc(50% - 62px);
   }
 }
+.project-detail-related {
+  width: min(100% - 64px, 1320px);
+  margin: 0 auto;
+  padding: 30px 0 110px;
+}
+
+.project-detail-related-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 34px;
+}
+
+.project-detail-related-card {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  color: #fff;
+  background: #111118;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  text-decoration: none;
+}
+
+.project-detail-related-card img,
+.project-detail-related-placeholder,
+.project-detail-related-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.project-detail-related-card img {
+  object-fit: cover;
+  transition: transform 0.55s ease;
+}
+
+.project-detail-related-card:hover img {
+  transform: scale(1.045);
+}
+
+.project-detail-related-placeholder {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(66, 232, 238, 0.12),
+      transparent
+    ),
+    #111118;
+}
+
+.project-detail-related-overlay {
+  background:
+    linear-gradient(
+      180deg,
+      transparent 25%,
+      rgba(5, 6, 10, 0.94)
+    ),
+    linear-gradient(
+      90deg,
+      rgba(5, 6, 10, 0.42),
+      transparent
+    );
+}
+
+.project-detail-related-copy {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  padding: 28px;
+}
+
+.project-detail-related-copy > span {
+  color: #42e8ee;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.project-detail-related-copy h3 {
+  max-width: 380px;
+  margin: 12px 0 24px;
+  font-size: clamp(1.45rem, 2.2vw, 2.35rem);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.project-detail-related-copy strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+  .project-detail-related-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .project-detail-related {
+    width: calc(100% - 32px);
+    padding: 10px 0 76px;
+  }
+
+  .project-detail-related-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-detail-related-card {
+    min-height: 360px;
+  }
+
+  .project-detail-related-copy {
+    padding: 22px;
+  }
+}
