@@ -21,6 +21,7 @@ import { Route as PortalNfcRouteImport } from './routes/portal/nfc'
 import { Route as PortalProfileRouteImport } from './routes/portal/profile'
 import { Route as PortalVehiclesRouteImport } from './routes/portal/vehicles'
 import { Route as PortalWarrantiesRouteImport } from './routes/portal/warranties'
+import { Route as ProjectProjectSlugRouteImport } from './routes/project/$projectSlug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -82,6 +83,11 @@ const PortalWarrantiesRoute = PortalWarrantiesRouteImport.update({
   path: '/warranties',
   getParentRoute: () => PortalRoute,
 } as any)
+const ProjectProjectSlugRoute = ProjectProjectSlugRouteImport.update({
+  id: '/project/$projectSlug',
+  path: '/project/$projectSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/portal/profile': typeof PortalProfileRoute
   '/portal/vehicles': typeof PortalVehiclesRoute
   '/portal/warranties': typeof PortalWarrantiesRoute
+  '/project/$projectSlug': typeof ProjectProjectSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/portal/profile': typeof PortalProfileRoute
   '/portal/vehicles': typeof PortalVehiclesRoute
   '/portal/warranties': typeof PortalWarrantiesRoute
+  '/project/$projectSlug': typeof ProjectProjectSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/portal/profile': typeof PortalProfileRoute
   '/portal/vehicles': typeof PortalVehiclesRoute
   '/portal/warranties': typeof PortalWarrantiesRoute
+  '/project/$projectSlug': typeof ProjectProjectSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/portal/profile'
     | '/portal/vehicles'
     | '/portal/warranties'
+    | '/project/$projectSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/portal/profile'
     | '/portal/vehicles'
     | '/portal/warranties'
+    | '/project/$projectSlug'
   id:
     | '__root__'
     | '/'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/portal/profile'
     | '/portal/vehicles'
     | '/portal/warranties'
+    | '/project/$projectSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -176,6 +188,7 @@ export interface RootRouteChildren {
   PortalRoute: typeof PortalRouteWithChildren
   ProjectsRoute: typeof ProjectsRoute
   CustomerCustomerCodeRoute: typeof CustomerCustomerCodeRoute
+  ProjectProjectSlugRoute: typeof ProjectProjectSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalWarrantiesRouteImport
       parentRoute: typeof PortalRoute
     }
+    '/project/$projectSlug': {
+      id: '/project/$projectSlug'
+      path: '/project/$projectSlug'
+      fullPath: '/project/$projectSlug'
+      preLoaderRoute: typeof ProjectProjectSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -297,6 +317,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortalRoute: PortalRouteWithChildren,
   ProjectsRoute: ProjectsRoute,
   CustomerCustomerCodeRoute: CustomerCustomerCodeRoute,
+  ProjectProjectSlugRoute: ProjectProjectSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

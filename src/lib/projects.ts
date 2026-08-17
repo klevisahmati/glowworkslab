@@ -21,6 +21,7 @@ type ProjectMediaRow = {
 
 type ProjectRow = {
   id: string
+  slug: string
   service_id: string
   brand: string
   model: string
@@ -64,6 +65,7 @@ function mapProject(row: ProjectRow): ProjectRecord {
 
   return {
     id: row.id,
+    slug: row.slug,
     serviceId: row.service_id,
     brand: row.brand,
     model: row.model,
@@ -75,11 +77,21 @@ function mapProject(row: ProjectRow): ProjectRecord {
   }
 }
 
+export function createProjectSlug(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
 export async function fetchProjects() {
   const { data, error } = await supabase
     .from('projects')
     .select(`
       id,
+      slug,
       service_id,
       brand,
       model,
@@ -107,8 +119,48 @@ export async function fetchProjects() {
   return ((data ?? []) as ProjectRow[]).map(mapProject)
 }
 
+export async function fetchProjectBySlug(slug: string) {
+  const normalizedSlug = createProjectSlug(slug)
+
+  if (!normalizedSlug) {
+    return null
+  }
+
+  const { data, error } = await supabase
+    .from('projects')
+    .select(`
+      id,
+      slug,
+      service_id,
+      brand,
+      model,
+      title,
+      description,
+      created_at,
+      updated_at,
+      project_media (
+        id,
+        project_id,
+        media_type,
+        storage_path,
+        alt_text,
+        sort_order,
+        is_cover,
+        created_at
+      )
+    `)
+    .eq('slug', normalizedSlug)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return data ? mapProject(data as ProjectRow) : null
+}
 export async function createProject(draft: ProjectDraft) {
   const payload = {
+    slug: createProjectSlug(draft.slug || draft.title),
     service_id: draft.serviceId.trim(),
     brand: draft.brand.trim(),
     model: draft.model.trim(),
@@ -117,12 +169,13 @@ export async function createProject(draft: ProjectDraft) {
   }
 
   if (
+    !payload.slug ||
     !payload.service_id ||
     !payload.brand ||
     !payload.model ||
     !payload.title
   ) {
-    throw new Error('Service, brand, model and title are required.')
+    throw new Error('Slug, service, brand, model and title are required.')
   }
 
   const { data, error } = await supabase
@@ -143,6 +196,7 @@ export async function updateProject(
   draft: ProjectDraft,
 ) {
   const payload = {
+    slug: createProjectSlug(draft.slug || draft.title),
     service_id: draft.serviceId.trim(),
     brand: draft.brand.trim(),
     model: draft.model.trim(),
@@ -151,12 +205,13 @@ export async function updateProject(
   }
 
   if (
+    !payload.slug ||
     !payload.service_id ||
     !payload.brand ||
     !payload.model ||
     !payload.title
   ) {
-    throw new Error('Service, brand, model and title are required.')
+    throw new Error('Slug, service, brand, model and title are required.')
   }
 
   const { error } = await supabase
