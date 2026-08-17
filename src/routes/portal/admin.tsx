@@ -116,8 +116,8 @@ const makeCustomerDraft = (): CustomerProfile => ({
   address: '',
   loyaltyTier: 'Standard',
   createdAt: new Date().toISOString().slice(0, 10),
-  discountEnabled: false,
-  discountCode: '',
+  discountEnabled: true,
+  discountCode: 'GLOW10',
 })
 
 const makeVehicleDraft = (customerId = ''): VehicleRecord => ({

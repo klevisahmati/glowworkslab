@@ -824,7 +824,8 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.customer-action-button.primary {
+.customer-action-button.primary,
+.customer-quick-actions-card .customer-action-button {
   border-color: rgba(220, 55, 111, 0.24);
   background: linear-gradient(135deg, rgba(220, 55, 111, 0.2), rgba(76, 211, 209, 0.12));
 }
@@ -1774,5 +1775,168 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
 
   .project-detail-related-copy {
     padding: 22px;
+  }
+}
+/* Glowworks NFC member benefit */
+.customer-member-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: 18px;
+  margin: 18px 0;
+}
+
+.customer-member-grid .customer-card {
+  min-width: 0;
+  height: 100%;
+}
+
+.customer-member-benefit,
+.customer-review-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.customer-member-benefit {
+  border-color: rgba(66, 232, 238, 0.3);
+  background:
+    radial-gradient(
+      circle at 92% 8%,
+      rgba(66, 232, 238, 0.16),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 8% 100%,
+      rgba(255, 55, 125, 0.13),
+      transparent 40%
+    ),
+    linear-gradient(145deg, rgba(18, 20, 27, 0.98), rgba(8, 9, 14, 0.98));
+}
+
+.customer-member-benefit::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: '';
+  pointer-events: none;
+  background:
+    linear-gradient(
+      115deg,
+      transparent 0 55%,
+      rgba(255, 255, 255, 0.025) 55% 56%,
+      transparent 56% 100%
+    );
+}
+
+.customer-review-card {
+  border-color: rgba(255, 55, 125, 0.22);
+  background:
+    radial-gradient(
+      circle at 100% 0,
+      rgba(255, 55, 125, 0.12),
+      transparent 38%
+    ),
+    rgba(13, 14, 20, 0.96);
+}
+
+.customer-member-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.customer-member-content > p:not(.customer-member-kicker) {
+  max-width: 580px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.94rem;
+  line-height: 1.7;
+}
+
+.customer-member-kicker {
+  margin: 0;
+  color: #42e8ee;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.customer-member-value {
+  color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(3.4rem, 7vw, 6.4rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.82;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 30px rgba(66, 232, 238, 0.12),
+    0 0 45px rgba(255, 55, 125, 0.08);
+}
+
+.customer-member-code {
+  display: flex;
+  width: 100%;
+  max-width: 360px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 16px;
+  border: 1px solid rgba(66, 232, 238, 0.25);
+  background: rgba(4, 6, 10, 0.58);
+}
+
+.customer-member-code span {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+.customer-member-code strong {
+  color: #42e8ee;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.13em;
+}
+
+.customer-member-content small {
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.customer-review-card .customer-card-actions {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.customer-review-card .customer-action-button {
+  justify-content: center;
+}
+
+@media (max-width: 820px) {
+  .customer-member-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-member-value {
+    font-size: clamp(3.3rem, 16vw, 5.3rem);
+  }
+}
+
+@media (max-width: 520px) {
+  .customer-member-grid {
+    gap: 14px;
+    margin: 14px 0;
+  }
+
+  .customer-member-code {
+    max-width: none;
+  }
+
+  .customer-review-card .customer-action-button {
+    width: 100%;
   }
 }
