@@ -35,7 +35,42 @@ export const Route = createFileRoute('/portal/admin')({
 
 const DEFAULT_WARRANTY_TERMS = `Η εγγύηση καλύπτει την εγκατάσταση και τη λειτουργία του προϊόντος για τη συμφωνημένη διάρκεια. Η κάλυψη περιλαμβάνει επισκευή ή αντικατάσταση σε περίπτωση βλάβης που οφείλεται σε ελαττωματικό υλικό ή εργασία. Δεν καλύπτονται φθορές από κακή χρήση, μηχανική βλάβη, μη εξουσιοδοτημένες τροποποιήσεις ή ζημιές από φυσική καταστροφή.`
 
-const SERVICE_PRESET_OPTIONS = ['Ambient Lighting', 'Starlight Headliner', 'Alcantara Interior', 'Carbon Trim', 'Premium Audio', 'Sunroof', 'Seat Upgrade', 'Interior Mood Lighting', 'Custom Trim', 'Other']
+const SERVICE_PRESET_OPTIONS = [
+  'Ambient Lighting',
+  'OEM Ambient Lighting',
+  'Starlight Headliner',
+  'Custom Steering Wheel',
+  'Leather Steering Wheel',
+  'Alcantara Steering Wheel',
+  'Carbon Steering Wheel',
+  'Leather Interior',
+  'Alcantara Interior',
+  'Carbon Interior Trim',
+  'Multimedia Screen',
+  'Apple CarPlay / Android Auto',
+  'Reverse Camera',
+  'Parking Sensors',
+  'Premium Audio',
+  'Speaker Upgrade',
+  'Subwoofer / Amplifier',
+  'Sound Deadening',
+  'LED Lighting Upgrade',
+  'Coding / Programming',
+  'Front Lip',
+  'Rear Diffuser',
+  'Spoiler',
+  'Side Skirts',
+  'Body Kit',
+  'PPF Protection',
+  'Headlight PPF',
+  'Window Tint',
+  'Interior Detailing',
+  'Exterior Detailing',
+  'Full Detailing',
+  'Ceramic Coating',
+  'Custom Installation',
+  'Other / Custom Service',
+]
 
 const VEHICLE_BRAND_MODELS: Record<string, string[]> = {
   'Audi': ['A1 8X', 'A1 GB', 'A3 8L', 'A3 8P', 'A3 8V', 'A3 8Y', 'A4 B6', 'A4 B7', 'A4 B8', 'A4 B9', 'A5 8T', 'A5 F5', 'A6 C6', 'A6 C7', 'A6 C8', 'A7 4G', 'A7 4K', 'A8 D3', 'A8 D4', 'A8 D5', 'Q2 GA', 'Q3 8U', 'Q3 F3', 'Q4 e-tron F4', 'Q5 8R', 'Q5 FY', 'Q7 4L', 'Q7 4M', 'Q8 4M8', 'TT 8J', 'TT 8S', 'R8 Type 42', 'R8 Type 4S', 'S3 8V', 'S3 8Y', 'S4 B9', 'S5 F5', 'RS3 8V', 'RS3 8Y', 'RS4 B9', 'RS5 F5', 'RS6 C7', 'RS6 C8', 'RS7 4K', 'e-tron GE', 'e-tron GT FW'],
@@ -416,7 +451,27 @@ function AdminPage() {
   const [serviceDraft, setServiceDraft] = useState(() => makeServiceDraft())
   const [editingServiceEntryId, setEditingServiceEntryId] = useState<string | null>(null)
   const [copiedCustomerId, setCopiedCustomerId] = useState<string | null>(null)
-  const isAuthorizedAdmin = hasValidAdminSession()
+  const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let isActive = true
+
+    void hasValidAdminSession().then((isValid) => {
+      if (!isActive) {
+        return
+      }
+
+      setIsAuthorizedAdmin(isValid)
+
+      if (!isValid) {
+        navigate({ to: '/studio-access' })
+      }
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [navigate])
   const [projects, setProjects] = useState<ProjectRecord[]>([])
   const [projectDraft, setProjectDraft] = useState<ProjectDraft>({
     serviceId: 'ambient-lighting',
@@ -444,11 +499,6 @@ function AdminPage() {
   const [homepageImageStatus, setHomepageImageStatus] =
     useState<string | null>(null)
   const [homepageInputVersion, setHomepageInputVersion] = useState(0)
-  useEffect(() => {
-    if (!isAuthorizedAdmin) {
-      navigate({ to: '/portal' })
-    }
-  }, [isAuthorizedAdmin, navigate])
 
   useEffect(() => {
     let isActive = true
@@ -586,7 +636,7 @@ function AdminPage() {
     })
   }, [search, state.customers])
 
-  const CUSTOMERS_PER_PAGE = 5
+  const CUSTOMERS_PER_PAGE = 1
   const [customerPage, setCustomerPage] = useState(1)
 
   const customerPageCount = Math.max(
@@ -1934,10 +1984,6 @@ const saveCustomer = async () => {
                 <input value={vehicleDraft.vin} onChange={(event) => setVehicleDraft((current) => ({ ...current, vin: event.target.value }))} placeholder="WDB123..." />
               </label>
               <label>
-                <span>NFC tag</span>
-                <input value={vehicleDraft.nfcTagId ?? ''} onChange={(event) => setVehicleDraft((current) => ({ ...current, nfcTagId: event.target.value }))} placeholder="NFC-001" />
-              </label>
-              <label>
                 <span>Purchase date</span>
                 <input type="date" value={vehicleDraft.purchaseDate} onChange={(event) => setVehicleDraft((current) => ({ ...current, purchaseDate: event.target.value }))} />
               </label>
@@ -1983,20 +2029,12 @@ const saveCustomer = async () => {
               <textarea value={serviceDraft.notes} onChange={(event) => setServiceDraft((current) => ({ ...current, notes: event.target.value }))} placeholder="Installation completed in studio" />
             </label>
             <label>
-              <span>Warranty number</span>
-              <input value={serviceDraft.warrantyNumber} onChange={(event) => setServiceDraft((current) => ({ ...current, warrantyNumber: event.target.value }))} placeholder="W-SVC-001" />
-            </label>
-            <label>
               <span>Warranty starts</span>
               <input type="date" value={serviceDraft.warrantyStartsOn} onChange={(event) => setServiceDraft((current) => ({ ...current, warrantyStartsOn: event.target.value }))} />
             </label>
             <label>
               <span>Warranty ends</span>
               <input type="date" value={serviceDraft.warrantyEndsOn} onChange={(event) => setServiceDraft((current) => ({ ...current, warrantyEndsOn: event.target.value }))} />
-            </label>
-            <label className="full">
-              <span>Warranty coverage</span>
-              <input value={serviceDraft.warrantyCoverage} onChange={(event) => setServiceDraft((current) => ({ ...current, warrantyCoverage: event.target.value }))} placeholder="2 years workmanship + support" />
             </label>
             <label className="full">
               <span>Warranty notes</span>
@@ -2062,10 +2100,6 @@ const saveCustomer = async () => {
             <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} />
             <p className="portal-muted" style={{ marginTop: '6px' }}>You can select several images at once and save them as separate gallery items.</p>
           </label>
-          <label className="full">
-            <span>Image URL or data URL</span>
-            <textarea value={galleryDraft.imageUrl} onChange={(event) => setGalleryDraft((current) => ({ ...current, imageUrl: event.target.value }))} placeholder="/images/your-photo.jpg or a data URL" />
-          </label>
           {pendingGalleryImages.length ? (
             <div className="full" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
               {pendingGalleryImages.map((imageUrl, index) => (
@@ -2117,45 +2151,8 @@ const saveCustomer = async () => {
           )}
         </div>
 
-        <div className="portal-list" style={{ marginTop: '16px' }}>
-          {state.customers.map((customer) => (
-            <div
-              className={`portal-row${selectedCustomerId === customer.id ? ' active' : ''}`}
-              key={customer.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => setSelectedCustomerId(customer.id)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  setSelectedCustomerId(customer.id)
-                }
-              }}
-            >
-              <div>
-                <strong>{customer.name}</strong>
-                <p>{customer.customerCode}</p>
-              </div>
-              <div className="portal-row-meta">
-                <button className="portal-ghost-button" type="button" onClick={() => startEditingCustomer(customer)}>
-                  <PencilLine size={14} /> Edit
-                </button>
-                <button className="portal-ghost-button" type="button" onClick={() => removeCustomer(customer.id)}>
-                  <Trash2 size={14} /> Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
-      <div className="portal-card" style={{ marginTop: '16px' }}>
-        <div className="portal-card-title-row">
-          <h3>Selected customer workspace</h3>
-          <div className="portal-chip"><UserPlus size={15} /> Profile</div>
-        </div>
-        <p className="portal-muted">Choose a customer from the list above. Once the profile is open, you can add photos and adjust discount settings directly from that customer profile screen.</p>
-      </div>
     </PortalShell>
   )
 }

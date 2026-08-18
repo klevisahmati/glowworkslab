@@ -1,5 +1,5 @@
 import { Link, useRouter } from '@tanstack/react-router'
-import { ArrowLeft, ShieldCheck, UserCircle2 } from 'lucide-react'
+import { ArrowLeft, ShieldCheck } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { clearStoredPortalRole, getStoredPortalRole } from '../../lib/portal-session'
 import type { PortalRole } from '../../types/portal'
@@ -34,7 +34,7 @@ useEffect(() => {
         <nav className="portal-shell-nav">
           <Link className="portal-brand" to="/">
             <img className="portal-brand-logo" src="/images/glowworks-logo.webp" alt="Glowworks logo" />
-            <span>Glowworks Portal</span>
+            <span>GLOWWORKS.LAB&nbsp;&nbsp;PORTAL</span>
           </Link>
           <div className="portal-main-nav">
             {navItems.map((item) => {
@@ -48,21 +48,13 @@ useEffect(() => {
               )
             })}
           </div>
-          <button className="portal-ghost-button" type="button" onClick={handleExit}>
-            <ArrowLeft size={15} /> Έξοδος
-          </button>
         </nav>
 
         <section className="portal-body-card">
           <header className="portal-header">
             <div>
-              <p className="eyebrow"><span /> Πόρταλ πελάτη</p>
               <h1>{title}</h1>
               {subtitle ? <p className="portal-subtitle">{subtitle}</p> : null}
-            </div>
-            <div className="portal-profile-pill">
-              <UserCircle2 size={18} />
-              <span>{role === 'admin' ? 'Πρόσβαση διαχειριστή' : 'Πρόσβαση πελάτη'}</span>
             </div>
           </header>
           {children}

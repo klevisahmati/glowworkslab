@@ -1,21 +1,16 @@
-import { supabase } from './supabase/client'
+﻿import { supabase } from './supabase/client'
 
 const STORAGE_KEY = 'glowworks.portal.role'
-const ADMIN_AUTH_STORAGE_KEY = 'glowworks.portal.adminAuth.v2'
 const ADMIN_EMAIL = 'klevis.ahmati@icloud.com'
 
 function getConfiguredAdminEmail() {
-  return ADMIN_EMAIL
+  return ADMIN_EMAIL.trim().toLowerCase()
 }
 
 export async function authenticateAdmin(
   email: string,
   password: string,
 ) {
-  if (typeof window === 'undefined') {
-    return false
-  }
-
   const normalizedEmail = email.trim().toLowerCase()
   const configuredEmail = getConfiguredAdminEmail()
 
@@ -32,55 +27,42 @@ export async function authenticateAdmin(
     return false
   }
 
-  window.localStorage.setItem(
-    ADMIN_AUTH_STORAGE_KEY,
-    JSON.stringify({
-      email: normalizedEmail,
-      authenticatedAt: new Date().toISOString(),
-    }),
-  )
+  if (data.user.email?.toLowerCase() !== configuredEmail) {
+    await supabase.auth.signOut()
+    return false
+  }
+
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(STORAGE_KEY, 'admin')
+  }
 
   return true
 }
 
-export function getAdminAuthSession() {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
-  const raw = window.localStorage.getItem(ADMIN_AUTH_STORAGE_KEY)
-
-  if (!raw) {
-    return null
-  }
-
-  try {
-    return JSON.parse(raw) as {
-      email: string
-      authenticatedAt: string
-    }
-  } catch {
-    return null
-  }
-}
-
-export function hasValidAdminSession() {
-  const session = getAdminAuthSession()
+export async function hasValidAdminSession() {
   const configuredEmail = getConfiguredAdminEmail()
 
-  return Boolean(
-    configuredEmail &&
-    session?.email.toLowerCase() === configuredEmail,
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession()
+
+  if (error || !session?.user) {
+    return false
+  }
+
+  return (
+    Boolean(configuredEmail) &&
+    session.user.email?.toLowerCase() === configuredEmail
   )
 }
 
-export function logoutAdminSession() {
+export async function logoutAdminSession() {
   if (typeof window !== 'undefined') {
-    window.localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY)
     window.localStorage.removeItem(STORAGE_KEY)
   }
 
-  void supabase.auth.signOut()
+  await supabase.auth.signOut()
 }
 
 export function getStoredPortalRole() {
@@ -99,21 +81,11 @@ export function getStoredPortalRole() {
 
 export function setStoredPortalRole(
   role: 'admin' | 'customer',
-  email = '',
+  _email = '',
 ) {
   if (typeof window === 'undefined') {
     return
   }
 
   window.localStorage.setItem(STORAGE_KEY, role)
-
-  if (role === 'admin') {
-    window.localStorage.setItem(
-      ADMIN_AUTH_STORAGE_KEY,
-      JSON.stringify({
-        email: email.trim().toLowerCase(),
-        authenticatedAt: new Date().toISOString(),
-      }),
-    )
-  }
 }

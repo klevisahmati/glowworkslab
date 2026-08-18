@@ -262,7 +262,76 @@ function GlowworksPage() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+  useEffect(() => {
+    const rows = Array.from(
+      document.querySelectorAll<HTMLElement>('.mobile-service-reveal'),
+    )
 
+    if (!rows.length) {
+      return
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      rows.forEach((row) => row.classList.add('is-visible'))
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible')
+          } else {
+            entry.target.classList.remove('is-visible')
+          }
+        })
+      },
+      {
+        threshold: 0.22,
+        rootMargin: '0px 0px -8% 0px',
+      },
+    )
+
+    rows.forEach((row) => observer.observe(row))
+
+    return () => observer.disconnect()
+  }, [])
+
+
+  useEffect(() => {
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>('.project-scroll-reveal'),
+    )
+
+    if (!cards.length) {
+      return
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      cards.forEach((card) => card.classList.add('is-visible'))
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible')
+          } else {
+            entry.target.classList.remove('is-visible')
+          }
+        })
+      },
+      {
+        threshold: 0.18,
+        rootMargin: '0px 0px -7% 0px',
+      },
+    )
+
+    cards.forEach((card) => observer.observe(card))
+
+    return () => observer.disconnect()
+  }, [])
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
   event.preventDefault()
   setFormStatus('sending')
@@ -342,14 +411,21 @@ function GlowworksPage() {
 
   return (
 <main id="top">
-      <nav className={scrolled ? 'site-nav is-scrolled' : 'site-nav'}>
+      <nav
+        className={[
+          'site-nav',
+          scrolled ? 'is-scrolled' : '',
+          menuOpen ? 'menu-open' : '',
+        ].filter(Boolean).join(' ')}
+      >
         <div className="nav-shell">
           <a className="brand" href="#top" aria-label="Glowworks.lab αρχική" onClick={closeMenu}>
             <img src={getAssetPath('/images/glowworks-logo.webp')} alt="Glowworks.lab" />
+            <span className="brand-name">GLOWWORKS.LAB</span>
           </a>
 
           <div className={menuOpen ? 'nav-links is-open' : 'nav-links'}>
-            <a href={getAssetPath('/portal/login')} onClick={closeMenu}>Portal</a>
+
             <a href={getAssetPath('/projects')} onClick={closeMenu}>Projects</a>
             <a href="#services" onClick={closeMenu}>Υπηρεσίες</a>
             <a href="#process" onClick={closeMenu}>Διαδικασία</a>
@@ -392,11 +468,9 @@ function GlowworksPage() {
           </div>
 
           <div className="hero-card reveal reveal-delay">
-            <span className="hero-card-label">Glowworks.lab</span>
-            <div className="hero-card-mark"><Sparkles size={29} /></div>
             <p>Σχεδιασμένο γύρω από το δικό σου ταξίδι.</p>
             <div className="hero-card-meta">
-              <span>Custom εσωτερικά</span>
+              <span>GLOWWORKS SIGNATURE</span>
               <span>Βάση τη Ρόδο</span>
             </div>
           </div>
@@ -414,14 +488,14 @@ function GlowworksPage() {
           <h2>Η λεπτομέρεια δεν είναι επιπλέον. Είναι η βάση.</h2>
         </div>
         <p className="intro-note">
-          Κάθε εγκατάσταση σχεδιάζεται για το συγκεκριμένο όχημα, με καθαρό φινίρισμα και αισθητική που δείχνει εργοστασιακή.
+          Κάθε εγκατάσταση σχεδιάζεται για το συγκεκριμένο όχημα, με καθαρό φινίρισμα και εργοστασιακό αποτέλεσμα.
         </p>
       </section>
 
       <section className="work-grid shell" aria-label="Projects Glowworks.lab">
         {services.map((service, index) => (
           <a
-            className={`work-card work-card-${index + 1}`}
+            className={`work-card work-card-${index + 1} project-scroll-reveal`}
             key={service.title}
             href={getAssetPath(
               `/projects?service=${encodeURIComponent(service.projectServiceId)}`,
@@ -456,7 +530,7 @@ function GlowworksPage() {
               const Icon = service.icon
               return (
                 <a
-                  className="service-row"
+                  className="service-row mobile-service-reveal"
                   key={service.title}
                   href={getAssetPath(`/projects?service=${service.projectServiceId}`)}
                   style={{ color: 'inherit', textDecoration: 'none' }}

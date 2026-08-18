@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate, useRouter } from '@tanstack/react-router'
 import { ShieldCheck, Sparkles } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { authenticateAdmin, getStoredPortalRole, hasValidAdminSession, setStoredPortalRole } from '../lib/portal-auth'
 
 export const Route = createFileRoute('/portal')({
@@ -26,20 +26,39 @@ function PortalLandingPage() {
   const [adminPassword, setAdminPassword] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
 
-  const isAdminSessionActive = useMemo(() => hasValidAdminSession(), [role])
+  const [isAdminSessionActive, setIsAdminSessionActive] = useState(false)
 
   useEffect(() => {
+    let isActive = true
+
     setRole(getStoredPortalRole())
 
-    if (isAdminSessionActive) {
-      navigate({ to: '/portal/admin' })
-    }
-  }, [isAdminSessionActive, navigate])
+    void hasValidAdminSession().then((isValid) => {
+      if (!isActive) {
+        return
+      }
 
-  const continueAsAdmin = () => {
+      setIsAdminSessionActive(isValid)
+
+      if (isValid) {
+        navigate({ to: '/portal/admin' })
+      }
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [navigate])
+
+  const continueAsAdmin = async () => {
     const normalizedEmail = adminEmail.trim().toLowerCase()
 
-    if (!authenticateAdmin(adminEmail, adminPassword)) {
+    const authenticated = await authenticateAdmin(
+      adminEmail,
+      adminPassword,
+    )
+
+    if (!authenticated) {
       setNotice('The admin email or password is incorrect.')
       return
     }
@@ -47,9 +66,9 @@ function PortalLandingPage() {
     setNotice(null)
     setStoredPortalRole('admin', normalizedEmail)
     setRole('admin')
+    setIsAdminSessionActive(true)
     router.navigate({ to: '/portal/admin' })
   }
-
   return (
     <main className="portal-page">
       <div className="shell portal-landing">

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as StudioAccessRouteImport } from './routes/studio-access'
 import { Route as CustomerCustomerCodeRouteImport } from './routes/customer/$customerCode'
 import { Route as PortalAdminRouteImport } from './routes/portal/admin'
 import { Route as PortalClaimsRouteImport } from './routes/portal/claims'
@@ -36,6 +37,11 @@ const PortalRoute = PortalRouteImport.update({
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudioAccessRoute = StudioAccessRouteImport.update({
+  id: '/studio-access',
+  path: '/studio-access',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomerCustomerCodeRoute = CustomerCustomerCodeRouteImport.update({
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
+  '/studio-access': typeof StudioAccessRoute
   '/customer/$customerCode': typeof CustomerCustomerCodeRoute
   '/portal/admin': typeof PortalAdminRoute
   '/portal/claims': typeof PortalClaimsRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
+  '/studio-access': typeof StudioAccessRoute
   '/customer/$customerCode': typeof CustomerCustomerCodeRoute
   '/portal/admin': typeof PortalAdminRoute
   '/portal/claims': typeof PortalClaimsRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
+  '/studio-access': typeof StudioAccessRoute
   '/customer/$customerCode': typeof CustomerCustomerCodeRoute
   '/portal/admin': typeof PortalAdminRoute
   '/portal/claims': typeof PortalClaimsRoute
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/'
     | '/portal'
     | '/projects'
+    | '/studio-access'
     | '/customer/$customerCode'
     | '/portal/admin'
     | '/portal/claims'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/portal'
     | '/projects'
+    | '/studio-access'
     | '/customer/$customerCode'
     | '/portal/admin'
     | '/portal/claims'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/'
     | '/portal'
     | '/projects'
+    | '/studio-access'
     | '/customer/$customerCode'
     | '/portal/admin'
     | '/portal/claims'
@@ -187,6 +199,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PortalRoute: typeof PortalRouteWithChildren
   ProjectsRoute: typeof ProjectsRoute
+  StudioAccessRoute: typeof StudioAccessRoute
   CustomerCustomerCodeRoute: typeof CustomerCustomerCodeRoute
   ProjectProjectSlugRoute: typeof ProjectProjectSlugRoute
 }
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/studio-access': {
+      id: '/studio-access'
+      path: '/studio-access'
+      fullPath: '/studio-access'
+      preLoaderRoute: typeof StudioAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/customer/$customerCode': {
@@ -316,6 +336,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PortalRoute: PortalRouteWithChildren,
   ProjectsRoute: ProjectsRoute,
+  StudioAccessRoute: StudioAccessRoute,
   CustomerCustomerCodeRoute: CustomerCustomerCodeRoute,
   ProjectProjectSlugRoute: ProjectProjectSlugRoute,
 }
