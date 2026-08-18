@@ -1940,3 +1940,963 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
     width: 100%;
   }
 }
+/* Compact project pages on mobile */
+@media (max-width: 720px) {
+  .projects-hero {
+    min-height: 360px;
+    padding-top: 70px;
+  }
+
+  .projects-hero-layout {
+    min-height: 290px;
+    align-items: center;
+  }
+
+  .projects-hero-orbit {
+    top: 90px;
+    right: -130px;
+    width: 280px;
+    height: 280px;
+    opacity: 0.45;
+  }
+
+  .projects-hero-copy h1 {
+    margin-top: 14px;
+    font-size: clamp(2.9rem, 14vw, 4.15rem);
+    line-height: 0.79;
+  }
+
+  .projects-hero-copy h1 em {
+    padding-left: 0.08em;
+  }
+
+  .projects-hero-copy > p:last-child {
+    max-width: 340px;
+    margin-top: 20px;
+    font-size: 0.8rem;
+    line-height: 1.55;
+  }
+
+  .projects-archive {
+    padding: 46px 0 64px;
+  }
+
+  .projects-toolbar {
+    gap: 10px;
+  }
+
+  .projects-toolbar h2 {
+    margin-top: 12px;
+    font-size: clamp(2.25rem, 11vw, 3.25rem);
+    line-height: 0.88;
+  }
+
+  .projects-result-count {
+    font-size: 0.62rem;
+  }
+
+  .project-stepper {
+    gap: 7px;
+    margin-top: 24px;
+  }
+
+  .project-step {
+    padding: 8px 10px;
+    font-size: 0.56rem;
+    letter-spacing: 0.12em;
+  }
+
+  .project-step-intro {
+    margin-top: 20px;
+  }
+
+  .project-step-intro h3 {
+    margin-top: 9px;
+    font-size: 1.3rem;
+    line-height: 1.3;
+  }
+
+  .project-choice-grid {
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .project-choice-card {
+    gap: 13px;
+    padding: 17px;
+  }
+
+  .project-choice-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .project-choice-card p {
+    margin-top: 5px;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+
+  .project-detail-story {
+    gap: 26px;
+    padding: 52px 0;
+  }
+
+  .project-detail-story h2 {
+    margin-top: 11px;
+    font-size: clamp(2.15rem, 10vw, 3.15rem);
+    line-height: 0.94;
+  }
+
+  .project-detail-story-copy > p {
+    font-size: 0.94rem;
+    line-height: 1.65;
+  }
+
+  .project-detail-features {
+    gap: 11px;
+  }
+
+  .project-detail-gallery {
+    padding-bottom: 64px;
+  }
+}
+/* Full-width administrator login on mobile */
+@media (max-width: 720px) {
+  .portal-admin-login {
+    display: grid;
+    min-height: 100svh;
+    place-items: center;
+    padding: 20px 0;
+  }
+
+  .portal-admin-login .portal-landing {
+    width: min(100% - 24px, 560px);
+  }
+
+  .portal-admin-login .portal-landing-card {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .portal-admin-login .portal-card {
+    width: 100%;
+    max-width: none !important;
+    margin: 0 !important;
+    gap: 14px;
+    padding: 22px 18px;
+    border-radius: 17px;
+  }
+
+  .portal-admin-login .portal-card h1 {
+    font-size: clamp(1.75rem, 8vw, 2.35rem);
+    line-height: 1;
+  }
+
+  .portal-admin-login .portal-muted {
+    max-width: 330px;
+    font-size: 0.87rem;
+    line-height: 1.6;
+  }
+
+  .portal-admin-login .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 17px;
+  }
+
+  .portal-admin-login .form-grid label.full {
+    grid-column: auto;
+    width: 100%;
+  }
+
+  .portal-admin-login .form-grid label.full > div {
+    width: 100%;
+  }
+
+  .portal-admin-login .form-grid label.full > div input {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .portal-admin-login .form-grid input {
+    min-height: 48px;
+  }
+
+  .portal-admin-login .portal-actions {
+    width: 100%;
+  }
+
+  .portal-admin-login .portal-actions .button-primary {
+    width: 100%;
+    min-height: 50px;
+    justify-content: center;
+  }
+}
+/* Prevent administrator dashboard overflow on mobile */
+@media (max-width: 720px) {
+  .portal-grid,
+  .portal-grid-two {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portal-grid > *,
+  .portal-card,
+  .portal-body-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .admin-operations-card {
+    padding: 18px 14px;
+  }
+
+  .admin-operations-card .portal-card-title-row {
+    align-items: flex-start;
+  }
+
+  .admin-operations-card .portal-stat-row {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .admin-operations-card .portal-stat {
+    min-width: 0;
+    align-content: start;
+    justify-items: center;
+    gap: 5px;
+    padding: 11px 5px;
+    text-align: center;
+  }
+
+  .admin-operations-card .portal-stat strong {
+    font-size: 1.2rem;
+  }
+
+  .admin-operations-card .portal-stat span {
+    width: 100%;
+    font-size: 0.56rem;
+    line-height: 1.35;
+    letter-spacing: 0.06em;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-project-manager-card {
+    width: 100%;
+    min-width: 0;
+    padding: 18px 14px;
+    overflow: hidden;
+  }
+
+  .admin-project-manager-card > .portal-card-title-row {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+  }
+
+  .admin-project-manager-card .portal-actions {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0 !important;
+  }
+
+  .admin-project-manager-card .portal-actions .button {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .admin-project-manager-card .portal-chip {
+    max-width: 100%;
+    justify-self: start;
+  }
+}
+/* Stack administrator customer rows on mobile */
+@media (max-width: 720px) {
+  .admin-customer-row {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 16px;
+    padding: 18px 0;
+    overflow: hidden;
+  }
+
+  .admin-customer-row .portal-row-copy,
+  .admin-customer-row .portal-row-meta {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .admin-customer-row .portal-row-meta {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .admin-customer-row .portal-link-inline {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    justify-items: start;
+    gap: 9px;
+  }
+
+  .admin-customer-row .portal-link-code {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-customer-row .portal-chip {
+    max-width: 100%;
+    justify-self: start;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-customer-row .portal-inline-button {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .admin-customer-row p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* 60-day member benefit countdown */
+.customer-discount-countdown {
+  display: grid;
+  width: 100%;
+  max-width: 560px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.customer-discount-countdown > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 14px 8px 12px;
+  border: 1px solid rgba(66, 232, 238, 0.2);
+  background: linear-gradient(145deg, rgba(66, 232, 238, 0.08), rgba(255, 55, 125, 0.045));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.customer-discount-countdown strong {
+  color: #fff;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(1.65rem, 4vw, 2.35rem);
+  line-height: 1;
+}
+
+.customer-discount-countdown span {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.customer-member-expired .customer-member-kicker,
+.customer-member-expired .customer-member-code strong {
+  color: #ff5a91;
+}
+
+.customer-member-expired .customer-member-value {
+  color: rgba(255, 255, 255, 0.68);
+  text-shadow: 0 0 34px rgba(255, 55, 125, 0.12);
+}
+
+.portal-benefit-status {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(66, 232, 238, 0.2);
+  background: rgba(66, 232, 238, 0.055);
+}
+
+.portal-benefit-status > span,
+.portal-benefit-status > small {
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.portal-benefit-status > strong {
+  color: #42e8ee;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 520px) {
+  .customer-discount-countdown {
+    gap: 5px;
+  }
+
+  .customer-discount-countdown > div {
+    padding: 12px 4px 10px;
+  }
+
+  .customer-discount-countdown span {
+    font-size: 0.5rem;
+    letter-spacing: 0.07em;
+  }
+}
+/* Center Glowworks admin portal correctly on mobile */
+@media (max-width: 720px) {
+  .portal-page {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .portal-page .portal-shell {
+    width: calc(100% - 24px);
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .portal-page .portal-body-card {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 20px 14px;
+    overflow: hidden;
+  }
+
+  .portal-page .portal-body-card > *,
+  .portal-page .portal-grid,
+  .portal-page .portal-grid > *,
+  .portal-page .portal-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .portal-page .portal-header {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Premium admin customer search */
+.admin-customer-search {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.admin-customer-search-field {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 17px;
+  border: 1px solid rgba(76, 211, 209, 0.7);
+  border-radius: 17px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(76, 211, 209, 0.08),
+      rgba(255, 255, 255, 0.025)
+    );
+  box-shadow:
+    0 0 0 1px rgba(76, 211, 209, 0.06),
+    0 8px 28px rgba(0, 0, 0, 0.2);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.admin-customer-search-field:focus-within {
+  border-color: var(--cyan);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(76, 211, 209, 0.12),
+      rgba(255, 255, 255, 0.035)
+    );
+  box-shadow:
+    0 0 0 3px rgba(76, 211, 209, 0.08),
+    0 12px 34px rgba(0, 0, 0, 0.28);
+}
+
+.admin-customer-search-field svg {
+  flex: 0 0 auto;
+  color: var(--cyan);
+}
+
+.admin-customer-search-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.admin-customer-search-field input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.admin-customer-search-examples {
+  display: grid;
+  gap: 10px;
+  padding: 14px 15px;
+  border: 1px solid rgba(76, 211, 209, 0.16);
+  border-radius: 16px;
+  background: rgba(76, 211, 209, 0.035);
+}
+
+.admin-customer-search-examples > span {
+  color: var(--cyan);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.admin-customer-search-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-customer-search-chips button {
+  min-height: 36px;
+  padding: 7px 13px;
+  border: 1px solid rgba(76, 211, 209, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.admin-customer-search-chips button:hover {
+  border-color: rgba(76, 211, 209, 0.7);
+  background: rgba(76, 211, 209, 0.1);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 720px) {
+  .admin-customer-search-field {
+    padding: 14px;
+    border-radius: 15px;
+  }
+
+  .admin-customer-search-field input {
+    font-size: 0.88rem;
+  }
+
+  .admin-customer-search-examples {
+    padding: 12px;
+  }
+
+  .admin-customer-search-chips {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-customer-search-chips button {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 7px;
+  }
+}
+
+/* Premium admin customer cards */
+.admin-customer-premium-card {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 20px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.015)
+  );
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.admin-customer-premium-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-customer-premium-name {
+  display: block;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.admin-customer-premium-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 7px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.78rem;
+}
+
+.admin-customer-premium-status {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border: 1px solid rgba(76, 211, 209, 0.32);
+  border-radius: 999px;
+  background: rgba(76, 211, 209, 0.07);
+  color: var(--cyan);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.admin-customer-premium-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-customer-premium-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr);
+  gap: 18px;
+}
+
+.admin-customer-premium-meta > div {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.admin-customer-premium-label {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.admin-customer-premium-meta code {
+  max-width: 100%;
+  color: var(--cyan);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-customer-premium-code {
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 10px;
+  border: 1px solid rgba(76, 211, 209, 0.25);
+  border-radius: 10px;
+  background: rgba(76, 211, 209, 0.045);
+  color: var(--cyan);
+  font-size: 0.76rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.admin-customer-premium-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.admin-customer-premium-actions .button {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+}
+
+.admin-customer-premium-address {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .admin-customer-premium-card {
+    padding: 16px;
+    border-radius: 17px;
+  }
+
+  .admin-customer-premium-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .admin-customer-premium-status {
+    justify-self: start;
+  }
+
+  .admin-customer-premium-meta {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .admin-customer-premium-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Compact portal spacing on mobile */
+@media (max-width: 720px) {
+  .portal-page {
+    padding-top: 24px;
+    padding-bottom: 40px;
+  }
+
+  .portal-shell {
+    gap: 16px;
+  }
+
+  .portal-body-card {
+    padding-top: 22px;
+  }
+
+  .admin-customer-search {
+    margin-top: 8px;
+  }
+}
+
+/* Glowworks premium customer card — visual upgrade */
+.admin-customer-premium-card {
+  position: relative;
+  gap: 18px;
+  padding: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(76, 211, 209, 0.16);
+  border-radius: 22px;
+  background:
+    radial-gradient(
+      circle at 0% 0%,
+      rgba(220, 55, 111, 0.08),
+      transparent 230px
+    ),
+    radial-gradient(
+      circle at 100% 100%,
+      rgba(76, 211, 209, 0.07),
+      transparent 240px
+    ),
+    linear-gradient(
+      145deg,
+      rgba(18, 20, 26, 0.97),
+      rgba(8, 10, 14, 0.98)
+    );
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.32),
+    inset 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.admin-customer-premium-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(220, 55, 111, 0.8),
+    rgba(76, 211, 209, 0.75)
+  );
+  opacity: 0.75;
+}
+
+.admin-customer-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 13px;
+}
+
+.admin-customer-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: #fff;
+  background:
+    linear-gradient(#101218, #101218) padding-box,
+    linear-gradient(
+      135deg,
+      var(--pink),
+      var(--cyan)
+    ) border-box;
+  box-shadow:
+    0 0 24px rgba(76, 211, 209, 0.10),
+    0 0 20px rgba(220, 55, 111, 0.08);
+}
+
+.admin-customer-identity-copy {
+  min-width: 0;
+}
+
+.admin-customer-premium-name {
+  font-size: 1.08rem;
+  letter-spacing: 0.01em;
+}
+
+.admin-customer-premium-contact {
+  display: grid;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.admin-customer-premium-contact span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.62);
+  overflow-wrap: anywhere;
+}
+
+.admin-customer-premium-contact svg {
+  flex: 0 0 auto;
+  color: rgba(76, 211, 209, 0.72);
+}
+
+.admin-customer-premium-status {
+  padding: 8px 11px;
+  border-color: rgba(76, 211, 209, 0.42);
+  background: rgba(76, 211, 209, 0.075);
+  box-shadow: inset 0 0 18px rgba(76, 211, 209, 0.04);
+}
+
+.admin-customer-premium-divider {
+  background: linear-gradient(
+    90deg,
+    rgba(76, 211, 209, 0.2),
+    rgba(255, 255, 255, 0.08),
+    rgba(220, 55, 111, 0.12)
+  );
+}
+
+.admin-customer-link-value {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-customer-link-value svg {
+  flex: 0 0 auto;
+  color: var(--cyan);
+}
+
+.admin-customer-link-value code {
+  min-width: 0;
+  color: rgba(123, 236, 233, 0.95);
+  overflow-wrap: anywhere;
+}
+
+.admin-customer-premium-code {
+  border-color: rgba(76, 211, 209, 0.34);
+  background: rgba(76, 211, 209, 0.055);
+  box-shadow: inset 0 0 14px rgba(76, 211, 209, 0.025);
+}
+
+.admin-customer-premium-actions .button {
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+.admin-customer-premium-actions .button-secondary {
+  border-color: rgba(76, 211, 209, 0.27);
+  background: rgba(76, 211, 209, 0.035);
+}
+
+.admin-customer-premium-actions .button-secondary:hover {
+  border-color: rgba(76, 211, 209, 0.65);
+  background: rgba(76, 211, 209, 0.08);
+}
+
+.admin-customer-premium-actions .button-primary {
+  box-shadow:
+    0 7px 22px rgba(220, 55, 111, 0.15);
+}
+
+.admin-customer-premium-address {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-customer-premium-address svg {
+  flex: 0 0 auto;
+  color: var(--pink);
+}
+
+@media (max-width: 720px) {
+  .admin-customer-premium-card {
+    gap: 15px;
+    padding: 17px;
+  }
+
+  .admin-customer-premium-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 13px;
+  }
+
+  .admin-customer-premium-status {
+    justify-self: start;
+  }
+
+  .admin-customer-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .admin-customer-premium-name {
+    font-size: 1rem;
+  }
+
+  .admin-customer-premium-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-customer-premium-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

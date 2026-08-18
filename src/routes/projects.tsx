@@ -467,7 +467,24 @@ function ProjectsPage() {
                     className="project-choice-card"
                     key={model}
                     type="button"
-                    onClick={() => setActiveModel(model)}
+                    onClick={() => {
+                      const matchingProject = galleryItems.find(
+                        (project) =>
+                          project.serviceId === activeServiceId &&
+                          project.brand === activeBrand &&
+                          project.model === model &&
+                          project.slug,
+                      )
+
+                      if (matchingProject) {
+                        window.location.assign(
+                          getAssetPath(`/project/${matchingProject.slug}`),
+                        )
+                        return
+                      }
+
+                      setActiveModel(model)
+                    }}
                   >
                     <span className="project-choice-icon"><BadgeCheck size={20} /></span>
                     <div>

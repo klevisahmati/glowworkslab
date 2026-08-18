@@ -25,12 +25,13 @@ function mapCustomerToRemoteRow(customer: CustomerProfile) {
   return {
     costumer_id: customer.customerCode,
     full_name: customer.name,
-    email: customer.email,
+    email: customer.email.trim() || null,
     phone: customer.phone || null,
     address: customer.address || null,
     loyalty_tier: customer.loyaltyTier || 'standard',
     discount_enabled: customer.discountEnabled ?? false,
     discount_code: customer.discountCode?.trim() ?? '',
+    discount_expires_at: customer.discountExpiresAt || null,
     status: 'active',
     created_at: customer.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -48,6 +49,7 @@ customerCode: String(row.costumer_id ?? row.id ?? ''),
     createdAt: String(row.created_at ?? new Date().toISOString()),
     discountEnabled: Boolean(row.discount_enabled ?? false),
     discountCode: String(row.discount_code ?? ''),
+    discountExpiresAt: row.discount_expires_at ? String(row.discount_expires_at) : undefined,
   }
 }
 
@@ -342,6 +344,29 @@ const { data: serviceData, error: serviceError } = await supabase
     throw warrantyError
   }
 
+  const { data: galleryData, error: galleryError } = await supabase
+    .from('customer_gallery')
+    .select(
+      'id, customer_id, title, description, image_url, category, featured, created_at',
+    )
+    .order('created_at', { ascending: false })
+
+  if (galleryError) {
+    throw galleryError
+  }
+
+  const remoteGallery: AdminGalleryItem[] = (galleryData ?? []).map(
+    (row) => ({
+      id: String(row.id),
+      customerId: String(row.customer_id),
+      title: String(row.title ?? ''),
+      description: String(row.description ?? ''),
+      imageUrl: String(row.image_url ?? ''),
+      category: String(row.category ?? 'customer'),
+      featured: Boolean(row.featured),
+    }),
+  )
+
   const remoteCustomers = (customerData ?? []).map(mapRemoteCustomerRow)
   const remoteVehicles = (vehicleData ?? []).map(mapRemoteVehicleRow)
 
@@ -413,6 +438,7 @@ const { data: serviceData, error: serviceError } = await supabase
     vehicles: remoteVehicles,
     serviceHistory: remoteServiceHistory,
     warranties: remoteWarranties,
+    gallery: remoteGallery,
   }
 
     savePortalState(nextState)
@@ -533,6 +559,30 @@ export async function fetchCustomerPortalStateByCode(
       }
     })
 
+  const { data: customerGalleryData, error: customerGalleryError } =
+    await supabase
+      .from('customer_gallery')
+      .select(
+        'id, customer_id, title, description, image_url, category, featured, created_at',
+      )
+      .eq('customer_id', customer.id)
+      .order('created_at', { ascending: false })
+
+  if (customerGalleryError) {
+    throw customerGalleryError
+  }
+
+  const customerGallery: AdminGalleryItem[] =
+    (customerGalleryData ?? []).map((row) => ({
+      id: String(row.id),
+      customerId: String(row.customer_id),
+      title: String(row.title ?? ''),
+      description: String(row.description ?? ''),
+      imageUrl: String(row.image_url ?? ''),
+      category: String(row.category ?? 'customer'),
+      featured: Boolean(row.featured),
+    }))
+
   return {
     ...baseState,
     customers: [customer],
@@ -540,9 +590,7 @@ export async function fetchCustomerPortalStateByCode(
     vehicles: remoteVehicles,
     serviceHistory: remoteServiceHistory,
     warranties: remoteWarranties,
-    gallery: baseState.gallery.filter(
-      (item) => item.customerId === customer.id,
-    ),
+    gallery: customerGallery,
   }
 }
 export async function syncPortalStateToSupabase(state: PortalState) {
@@ -969,15 +1017,26 @@ export function addPortalServiceHistoryEntry(entry: ServiceHistoryEntry, baseSta
     ...entry,
     warrantyId: entry.warrantyId ?? warrantyRecord.id,
   }
+  const discountExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
+  const customers = baseState.customers.map((customer) =>
+    customer.id === entry.customerId
+      ? { ...customer, discountExpiresAt }
+      : customer,
+  )
   const nextState = {
     ...baseState,
+    customer: baseState.customer.id === entry.customerId
+      ? { ...baseState.customer, discountExpiresAt }
+      : baseState.customer,
+    customers,
     warranties: [warrantyRecord, ...baseState.warranties.filter((item) => item.id !== warrantyRecord.id)],
     serviceHistory: [nextEntry, ...baseState.serviceHistory.filter((item) => item.id !== entry.id)],
   }
   savePortalState(nextState)
-void syncServiceHistoryToSupabase(nextEntry, warrantyRecord, nextState)
+  void syncCustomersToSupabase(nextState)
+  void syncServiceHistoryToSupabase(nextEntry, warrantyRecord, nextState)
 
-return nextState
+  return nextState
 }
 
 export function updatePortalServiceHistoryEntry(entry: ServiceHistoryEntry, baseState: PortalState = getPortalState()) {

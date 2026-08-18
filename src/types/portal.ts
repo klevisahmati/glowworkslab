@@ -43,6 +43,7 @@ export interface CustomerProfile {
   createdAt: string
   discountEnabled?: boolean
   discountCode?: string
+  discountExpiresAt?: string
 }
 
 export interface VehicleRecord {

@@ -1,9 +1,14 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Copy, PencilLine, Search, ShieldCheck, Trash2, UserPlus } from 'lucide-react'
+import { Copy, ExternalLink, Link2, Mail, MapPin, PencilLine, Phone, Search, ShieldCheck, Trash2, UserPlus, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PortalShell } from '../../components/portal/PortalShell'
 import { buildCustomerPortalUrl, generateSecureCustomerPortalSlug } from '../../lib/customer-links'
 import { hasValidAdminSession } from '../../lib/portal-auth'
+import {
+  deleteCustomerGalleryItem,
+  fetchCustomerGallery,
+  saveCustomerGalleryItem,
+} from '../../lib/customer-gallery'
 import {
   createProject,
   deleteProject,
@@ -374,6 +379,28 @@ const HOMEPAGE_IMAGE_SLOTS: ReadonlyArray<{
   },
 ]
 
+function getCustomerBenefitStatus(customer: CustomerProfile, now = new Date()) {
+  const expiresAt = customer.discountExpiresAt ? new Date(customer.discountExpiresAt) : null
+  const expiresAtTime = expiresAt?.getTime() ?? Number.NaN
+
+  if (!customer.discountEnabled) {
+    return { label: 'Disabled', detail: 'Enable the discount to make an active benefit visible.' }
+  }
+
+  if (!expiresAt || !Number.isFinite(expiresAtTime)) {
+    return { label: 'Not active', detail: 'Starts when a new completed service is added.' }
+  }
+
+  if (expiresAtTime <= now.getTime()) {
+    return { label: 'EXPIRED', detail: `Expired ${expiresAt.toLocaleDateString('en-GB')}` }
+  }
+
+  const daysRemaining = Math.max(1, Math.ceil((expiresAtTime - now.getTime()) / 86_400_000))
+  return {
+    label: 'ACTIVE',
+    detail: `${daysRemaining} days remaining Â· expires ${expiresAt.toLocaleDateString('en-GB')}`,
+  }
+}
 function AdminPage() {
   const [state, setState] = useState<PortalState>(() => createInitialPortalState())
   const [portalHydrated, setPortalHydrated] = useState(false)
@@ -559,6 +586,29 @@ function AdminPage() {
     })
   }, [search, state.customers])
 
+  const CUSTOMERS_PER_PAGE = 5
+  const [customerPage, setCustomerPage] = useState(1)
+
+  const customerPageCount = Math.max(
+    1,
+    Math.ceil(filteredCustomers.length / CUSTOMERS_PER_PAGE),
+  )
+
+  const paginatedCustomers = useMemo(() => {
+    const start = (customerPage - 1) * CUSTOMERS_PER_PAGE
+    return filteredCustomers.slice(start, start + CUSTOMERS_PER_PAGE)
+  }, [customerPage, filteredCustomers])
+
+  useEffect(() => {
+    setCustomerPage(1)
+  }, [search])
+
+  useEffect(() => {
+    if (customerPage > customerPageCount) {
+      setCustomerPage(customerPageCount)
+    }
+  }, [customerPage, customerPageCount])
+
   const selectedVehicleModels = useMemo(() => {
     const make = vehicleDraft.make.trim()
     return VEHICLE_BRAND_MODELS[make] ?? []
@@ -688,7 +738,7 @@ setState(nextState)
   }, [editingCustomerId, selectedCustomerId, state.serviceHistory])
 
 const saveCustomer = async () => {
-      if (!customerDraft.name.trim() || !customerDraft.email.trim()) {
+      if (!customerDraft.name.trim()) {
       return
     }
 
@@ -741,40 +791,74 @@ const saveCustomer = async () => {
     setEditingCustomerId(null)
   }
 
-  const saveGalleryItem = () => {
+  const saveGalleryItem = async () => {
     const trimmedTitle = galleryDraft.title.trim()
     const trimmedDescription = galleryDraft.description.trim()
-    const selectedImages = pendingGalleryImages.length ? pendingGalleryImages : (galleryDraft.imageUrl.trim() ? [galleryDraft.imageUrl.trim()] : [])
+    const selectedImages = pendingGalleryImages.length
+      ? pendingGalleryImages
+      : galleryDraft.imageUrl.trim()
+        ? [galleryDraft.imageUrl.trim()]
+        : []
 
     if (!selectedImages.length) {
       return
     }
 
-    const fallbackTitle = trimmedTitle || `Customer photo ${new Date().toISOString().slice(0, 10)}`
+    const customerId = editingCustomerId ?? galleryDraft.customerId
 
-    let nextState = state
-    selectedImages.forEach((imageUrl, index) => {
-      nextState = updatePortalGallery({
-        ...galleryDraft,
-        id: `${galleryDraft.id}-${Date.now()}-${index}`,
-        title: fallbackTitle,
-        description: trimmedDescription || 'Customer photo',
-        imageUrl,
-        category: galleryDraft.category || 'customer',
-        featured: galleryDraft.featured ?? false,
-        customerId: editingCustomerId ?? galleryDraft.customerId,
-      }, nextState)
-    })
+    if (!customerId) {
+      console.error('Cannot save gallery photo without a customer ID.')
+      return
+    }
 
-    setState(nextState)
-    setPendingGalleryImages([])
-    setGalleryDraft(makeGalleryDraft(editingCustomerId ?? undefined))
+    const fallbackTitle =
+      trimmedTitle ||
+      `Customer photo ${new Date().toISOString().slice(0, 10)}`
+
+    try {
+      let nextState = state
+
+      for (const [index, imageUrl] of selectedImages.entries()) {
+        const savedItem = await saveCustomerGalleryItem({
+          ...galleryDraft,
+          id: `${galleryDraft.id}-${Date.now()}-${index}`,
+          title: fallbackTitle,
+          description: trimmedDescription || 'Customer photo',
+          imageUrl,
+          category: galleryDraft.category || 'customer',
+          featured: galleryDraft.featured ?? false,
+          customerId,
+        })
+
+        nextState = updatePortalGallery(savedItem, nextState)
+      }
+
+      setState(nextState)
+      setPendingGalleryImages([])
+      setGalleryDraft(makeGalleryDraft(customerId))
+    } catch (error) {
+      console.error('Failed to save customer gallery photo', error)
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Could not save customer photo.',
+      )
+    }
   }
 
-  const removeGalleryItem = (itemId: string) => {
-    setState((current) => removePortalGalleryItem(itemId, current))
+  const removeGalleryItem = async (itemId: string) => {
+    try {
+      await deleteCustomerGalleryItem(itemId)
+      setState((current) => removePortalGalleryItem(itemId, current))
+    } catch (error) {
+      console.error('Failed to delete customer gallery photo', error)
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Could not delete customer photo.',
+      )
+    }
   }
-
   const removeCustomer = (customerId: string) => {
     const nextState = deletePortalCustomer(customerId)
     setState(nextState)
@@ -982,7 +1066,7 @@ const saveCustomer = async () => {
   return (
     <PortalShell active="admin" title="Admin Dashboard" subtitle="Operate Glowworks Lab from one premium control center.">
       <div className="portal-grid portal-grid-two">
-        <div className="portal-card">
+        <div className="portal-card admin-operations-card">
           <div className="portal-card-title-row">
             <h3>Operations overview</h3>
             <div className="portal-chip"><ShieldCheck size={15} /> Secure</div>
@@ -1005,7 +1089,10 @@ const saveCustomer = async () => {
 
       </div>
 
-      <section className="portal-card" style={{ marginBottom: '20px' }}>
+      <section
+        className="portal-card admin-project-manager-card"
+        style={{ marginBottom: '20px' }}
+      >
         <div className="portal-card-title-row">
           <div>
             <p className="portal-eyebrow">Public projects</p>
@@ -1608,56 +1695,161 @@ const saveCustomer = async () => {
           <h3>Search customers</h3>
           <div className="portal-chip"><Search size={15} /> Live</div>
         </div>
-        <label className="full" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <span>Search by customer name, phone, plate, customer ID or vehicle</span>
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Try Nikos, RO-4821, GWL-000001" />
-        </label>
+        <div className="admin-customer-search">
+          <div className="admin-customer-search-field">
+            <Search size={21} />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search customer name, phone, plate or ID"
+            />
+          </div>
+        </div>
         <div className="portal-list" style={{ marginTop: '16px' }}>
-          {filteredCustomers.map((customer) => (
-            <div className="portal-row portal-row-with-actions" key={customer.id} role="button" tabIndex={0} onClick={() => openCustomerProfile(customer)} onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                openCustomerProfile(customer)
-              }
-            }} style={{ cursor: 'pointer' }}>
-              <div className="portal-row-copy">
-                <strong>{customer.name}</strong>
-                <p>{customer.email} - {customer.phone}</p>
-                <div className="portal-link-inline">
-                  <span className="portal-chip">NFC / QR ready</span>
-                  <div className="portal-link-inline">
-                   <span className="portal-chip">NFC / QR ready</span>
-                   <code className="portal-link-code">
-                    {`/customer/${customer.customerCode}`}
+          {paginatedCustomers.map((customer) => (
+            <article
+              className="admin-customer-premium-card"
+              key={customer.id}
+            >
+              <div className="admin-customer-premium-top">
+                <div className="admin-customer-identity">
+                  <div className="admin-customer-avatar">
+                    <UserRound size={22} />
+                  </div>
+
+                  <div className="admin-customer-identity-copy">
+                    <strong className="admin-customer-premium-name">
+                      {customer.name}
+                    </strong>
+
+                    <div className="admin-customer-premium-contact">
+                      {customer.email ? (
+                        <span>
+                          <Mail size={13} />
+                          {customer.email}
+                        </span>
+                      ) : null}
+
+                      {customer.phone ? (
+                        <span>
+                          <Phone size={13} />
+                          {customer.phone}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                <span className="admin-customer-premium-status">
+                  NFC / QR READY
+                </span>
+              </div>
+
+              <div className="admin-customer-premium-divider" />
+
+              <div className="admin-customer-premium-meta">
+                <div>
+                  <span className="admin-customer-premium-label">
+                    CUSTOMER LINK
+                  </span>
+
+                  <div className="admin-customer-link-value">
+                    <Link2 size={14} />
+                    <code>
+                      {`/customer/${customer.customerCode}`}
                     </code>
                   </div>
                 </div>
+
+                <div>
+                  <span className="admin-customer-premium-label">
+                    CUSTOMER ID
+                  </span>
+
+                  <span className="admin-customer-premium-code">
+                    {customer.customerCode}
+                  </span>
+                </div>
               </div>
-              <div className="portal-row-meta">
-                <div className="portal-chip">{customer.customerCode}</div>
-                <button className="button button-secondary portal-inline-button" type="button" onClick={(event) => {
-                  event.stopPropagation()
-                  void copyCustomerPortalLink(customer)
-                }}>
-                  <Copy size={14} /> {copiedCustomerId === customer.id ? 'Copied' : 'Copy NFC URL'}
+
+              <div className="admin-customer-premium-actions">
+                <button
+                  className="button button-secondary"
+                  type="button"
+                  onClick={() => void copyCustomerPortalLink(customer)}
+                >
+                  <Copy size={15} />
+                  {copiedCustomerId === customer.id
+                    ? 'Copied'
+                    : 'Copy NFC URL'}
                 </button>
-                <button className="button button-secondary portal-inline-button" type="button" onClick={(event) => {
-                  event.stopPropagation()
-                  openCustomerProfile(customer)
-                }}>
+
+                <button
+                  className="button button-secondary"
+                  type="button"
+                  onClick={() => openCustomerProfile(customer)}
+                >
+                  <ExternalLink size={15} />
                   Open profile
                 </button>
-                <button className="button button-primary portal-inline-button" type="button" onClick={(event) => {
-                  event.stopPropagation()
-                  startEditingCustomer(customer)
-                }}>
+
+                <button
+                  className="button button-primary"
+                  type="button"
+                  onClick={() => startEditingCustomer(customer)}
+                >
+                  <PencilLine size={15} />
                   Edit
                 </button>
-                <p>{customer.address}</p>
               </div>
-            </div>
+
+              {customer.address ? (
+                <div className="admin-customer-premium-address">
+                  <MapPin size={15} />
+                  <span>{customer.address}</span>
+                </div>
+              ) : null}
+            </article>
           ))}
         </div>
+
+        {filteredCustomers.length > CUSTOMERS_PER_PAGE ? (
+          <div
+            className="portal-actions"
+            style={{
+              marginTop: '16px',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '10px',
+            }}
+          >
+            <button
+              className="button button-secondary portal-inline-button"
+              type="button"
+              disabled={customerPage === 1}
+              onClick={() => setCustomerPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            </button>
+
+            <span className="portal-muted">
+              Page {customerPage} of {customerPageCount}
+            </span>
+
+            <button
+              className="button button-secondary portal-inline-button"
+              type="button"
+              disabled={customerPage === customerPageCount}
+              onClick={() =>
+                setCustomerPage((current) =>
+                  Math.min(customerPageCount, current + 1),
+                )
+              }
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="portal-card">
@@ -1674,15 +1866,15 @@ const saveCustomer = async () => {
                 <input value={customerDraft.name} onChange={(event) => setCustomerDraft((current) => ({ ...current, name: event.target.value }))} placeholder="Customer name" />
               </label>
               <label>
-                <span>Email</span>
+                <span>Email (optional)</span>
                 <input value={customerDraft.email} onChange={(event) => setCustomerDraft((current) => ({ ...current, email: event.target.value }))} placeholder="email@example.com" />
               </label>
               <label>
-                <span>Phone</span>
+                <span>Phone (optional)</span>
                 <input value={customerDraft.phone} onChange={(event) => setCustomerDraft((current) => ({ ...current, phone: event.target.value }))} placeholder="Phone" />
               </label>
               <label className="full">
-                <span>Address</span>
+                <span>Address (optional)</span>
                 <input value={customerDraft.address} onChange={(event) => setCustomerDraft((current) => ({ ...current, address: event.target.value }))} placeholder="Address" />
               </label>
               <label>
@@ -1695,7 +1887,11 @@ const saveCustomer = async () => {
               <label className="full">
                 <span>Discount code</span>
                 <input value={customerDraft.discountCode ?? ''} onChange={(event) => setCustomerDraft((current) => ({ ...current, discountCode: event.target.value }))} placeholder="GLOW10" />
-              </label>
+              </label>              <div className="full portal-benefit-status">
+                <span>60-day benefit status</span>
+                <strong>{getCustomerBenefitStatus(customerDraft).label}</strong>
+                <small>{getCustomerBenefitStatus(customerDraft).detail}</small>
+              </div>
               <div className="portal-actions" style={{ justifyContent: 'flex-start', gap: '12px' }}>
                 <button className="button button-primary" type="button" onClick={saveCustomer}>{editingCustomerId ? 'Save customer' : 'Create customer'}</button>
                 {editingCustomerId ? <button className="button button-secondary" type="button" onClick={cancelCustomerEdit}>Cancel</button> : null}
@@ -1730,11 +1926,11 @@ const saveCustomer = async () => {
                 <input type="number" value={vehicleDraft.year} onChange={(event) => setVehicleDraft((current) => ({ ...current, year: Number(event.target.value) }))} />
               </label>
               <label>
-                <span>Plate</span>
+                <span>Plate (optional)</span>
                 <input value={vehicleDraft.plate} onChange={(event) => setVehicleDraft((current) => ({ ...current, plate: event.target.value }))} placeholder="RO-4821" />
               </label>
               <label>
-                <span>VIN</span>
+                <span>VIN (optional)</span>
                 <input value={vehicleDraft.vin} onChange={(event) => setVehicleDraft((current) => ({ ...current, vin: event.target.value }))} placeholder="WDB123..." />
               </label>
               <label>

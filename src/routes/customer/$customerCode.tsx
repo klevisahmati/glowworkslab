@@ -57,6 +57,7 @@ function makeCustomerDraft(customer?: Partial<CustomerProfile>): CustomerProfile
     createdAt: customer?.createdAt ?? new Date().toISOString().slice(0, 10),
     discountEnabled: customer?.discountEnabled ?? false,
     discountCode: customer?.discountCode ?? '',
+    discountExpiresAt: customer?.discountExpiresAt,
   }
 }
 
@@ -123,6 +124,11 @@ function CustomerPortalPage() {
   }
   const [now, setNow] = useState(new Date())
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
 const [isAdminViewingCustomer, setIsAdminViewingCustomer] = useState(false)
 
 useEffect(() => {
@@ -151,34 +157,7 @@ const warrantyHistory = useMemo(() => {
     }))
 }, [customerHistory, now, portalState.warranties])
 
-const today = new Date().toISOString().slice(0, 10)
-
-const activeDiscount = customer.discountEnabled
-  ? (
-      portalState.discounts.find(
-        (discount) =>
-          discount.active &&
-          discount.validFrom <= today &&
-          discount.validTo >= today &&
-          (
-            discount.code === customer.discountCode ||
-            discount.tier === customer.loyaltyTier
-          ),
-      ) ??
-      portalState.discounts.find(
-        (discount) =>
-          discount.active &&
-          discount.validFrom <= today &&
-          discount.validTo >= today,
-      )
-    )
-  : null
-
-const memberDiscountCode = (
-  customer.discountCode?.trim() ||
-  activeDiscount?.code ||
-  'GLOW10'
-).toUpperCase()
+const memberDiscountCode = (customer.discountCode?.trim() || 'GLOW10').toUpperCase()
 
 const percentageFromCode = Number(
   memberDiscountCode.match(/\d+(?:\.\d+)?/)?.[0],
@@ -187,7 +166,26 @@ const percentageFromCode = Number(
 const memberDiscountPercentage =
   Number.isFinite(percentageFromCode) && percentageFromCode > 0
     ? Math.min(percentageFromCode, 100)
-    : activeDiscount?.percentage ?? 10
+    : 10
+
+const discountExpiryTime = customer.discountExpiresAt
+  ? new Date(customer.discountExpiresAt).getTime()
+  : Number.NaN
+const discountRemainingMs = Number.isFinite(discountExpiryTime)
+  ? Math.max(0, discountExpiryTime - now.getTime())
+  : 0
+const discountIsActive = Boolean(
+  customer.discountEnabled &&
+  customer.discountExpiresAt &&
+  discountRemainingMs > 0,
+)
+const discountIsExpired = Boolean(
+  customer.discountExpiresAt && discountRemainingMs <= 0,
+)
+const countdownDays = Math.floor(discountRemainingMs / 86_400_000)
+const countdownHours = Math.floor((discountRemainingMs / 3_600_000) % 24)
+const countdownMinutes = Math.floor((discountRemainingMs / 60_000) % 60)
+const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
 
   useEffect(() => {
     let isActive = true
@@ -434,40 +432,39 @@ const memberDiscountPercentage =
             icon={<BadgePercent size={17} />}
             className="customer-member-benefit"
           >
-            {customer.discountEnabled ? (
+                        {discountIsActive ? (
               <div className="customer-member-content">
                 <p className="customer-member-kicker">MEMBER BENEFIT ACTIVE</p>
-                <strong className="customer-member-value">
-                  {memberDiscountPercentage}% OFF
-                </strong>
-                <p>
-                  Η έκπτωσή σου ισχύει στην επόμενη αναβάθμιση του
-                  οχήματός σου.
-                </p>
+                <strong className="customer-member-value">{memberDiscountPercentage}% OFF</strong>
+                <div className="customer-discount-countdown" aria-label="Discount time remaining">
+                  <div><strong>{countdownDays}</strong><span>Days</span></div>
+                  <div><strong>{String(countdownHours).padStart(2, '0')}</strong><span>Hours</span></div>
+                  <div><strong>{String(countdownMinutes).padStart(2, '0')}</strong><span>Minutes</span></div>
+                  <div><strong>{String(countdownSeconds).padStart(2, '0')}</strong><span>Seconds</span></div>
+                </div>
+                <p>Your personal benefit is available for your next Glowworks.lab upgrade.</p>
                 <div className="customer-member-code">
                   <span>MEMBER CODE</span>
                   <strong>{memberDiscountCode}</strong>
                 </div>
-                {activeDiscount?.validTo ? (
-                  <small>
-                    Ισχύει έως {formatDate(activeDiscount.validTo)}
-                  </small>
-                ) : (
-                  <small>
-                    Επικοινώνησε μαζί μας για τους όρους και τη διαθεσιμότητα.
-                  </small>
-                )}
+                <small>Expires on {formatDate(customer.discountExpiresAt as string)}</small>
+              </div>
+            ) : discountIsExpired ? (
+              <div className="customer-member-content customer-member-expired">
+                <p className="customer-member-kicker">MEMBER BENEFIT</p>
+                <strong className="customer-member-value">EXPIRED</strong>
+                <p>This benefit has ended. It will restart only after Glowworks.lab adds a new completed service.</p>
+                <div className="customer-member-code">
+                  <span>MEMBER CODE</span>
+                  <strong>{memberDiscountCode}</strong>
+                </div>
+                <small>Expired on {formatDate(customer.discountExpiresAt as string)}</small>
               </div>
             ) : (
               <div className="customer-member-content">
                 <p className="customer-member-kicker">MEMBER BENEFIT</p>
-                <strong className="customer-member-value">
-                  Coming soon
-                </strong>
-                <p>
-                  Το προσωπικό σου προνόμιο θα εμφανιστεί εδώ μόλις
-                  ενεργοποιηθεί από τη Glowworks.lab.
-                </p>
+                <strong className="customer-member-value">NOT ACTIVE</strong>
+                <p>Your 60-day benefit starts automatically when Glowworks.lab adds a new completed service.</p>
               </div>
             )}
           </PortalSectionCard>

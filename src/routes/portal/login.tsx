@@ -34,7 +34,7 @@ function AdminLoginPage() {
     }
   }
   return (
-    <main className="portal-page">
+    <main className="portal-page portal-admin-login">
       <div className="shell portal-landing">
         <section className="portal-body-card portal-landing-card">
           <div className="portal-card" style={{ maxWidth: '460px', margin: '0 auto' }}>
