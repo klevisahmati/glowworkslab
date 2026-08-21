@@ -461,38 +461,53 @@ function ProjectsPage() {
                 <ArrowLeft size={15} /> Back to brands
               </button>
 
-              <div className="project-choice-grid" role="list">
-                {availableModels.map((model) => (
-                  <button
-                    className="project-choice-card"
-                    key={model}
-                    type="button"
-                    onClick={() => {
-                      const matchingProject = galleryItems.find(
-                        (project) =>
-                          project.serviceId === activeServiceId &&
-                          project.brand === activeBrand &&
-                          project.model === model &&
-                          project.slug,
-                      )
+              <div className="project-choice-grid project-model-grid" role="list">
+                {availableModels.map((model) => {
+                  const matchingProject = galleryItems.find(
+                    (project) =>
+                      project.serviceId === activeServiceId &&
+                      project.brand === activeBrand &&
+                      project.model === model &&
+                      project.slug,
+                  )
 
-                      if (matchingProject) {
-                        window.location.assign(
-                          getAssetPath(`/project/${matchingProject.slug}`),
-                        )
-                        return
-                      }
+                  return (
+                    <button
+                      className={`project-choice-card project-model-card${matchingProject?.image ? ' has-cover' : ''}`}
+                      key={model}
+                      type="button"
+                      onClick={() => {
+                        if (matchingProject) {
+                          window.location.assign(
+                            getAssetPath(`/project/${matchingProject.slug}`),
+                          )
+                          return
+                        }
 
-                      setActiveModel(model)
-                    }}
-                  >
-                    <span className="project-choice-icon"><BadgeCheck size={20} /></span>
-                    <div>
-                      <h4>{model}</h4>
-                      <p>Open the gallery for this exact model.</p>
-                    </div>
-                  </button>
-                ))}
+                        setActiveModel(model)
+                      }}
+                    >
+                      {matchingProject?.image ? (
+                        <img
+                          className="project-model-cover"
+                          src={getAssetPath(matchingProject.image)}
+                          alt=""
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="project-model-fallback" aria-hidden="true" />
+                      )}
+                      <span className="project-model-shade" aria-hidden="true" />
+                      <span className="project-choice-icon project-model-icon"><BadgeCheck size={18} /></span>
+                      <div className="project-model-copy">
+                        <span className="project-model-eyebrow">{activeBrand} / Glowworks project</span>
+                        <h4>{model}</h4>
+                        <p>{matchingProject ? 'View the complete project' : 'Explore this model'}</p>
+                      </div>
+                      <span className="project-model-arrow" aria-hidden="true"><ArrowUpRight size={20} /></span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}

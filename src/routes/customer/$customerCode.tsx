@@ -94,6 +94,26 @@ function makeWarrantyDraft(warranty?: Partial<WarrantyRecord>, customerId = '', 
   }
 }
 
+async function addGreekPdfFont(doc: jsPDF) {
+  const response = await fetch('/fonts/NotoSans-Regular.ttf')
+  if (!response.ok) {
+    throw new Error('Unable to load the warranty PDF font')
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  let binary = ''
+  const chunkSize = 0x8000
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize))
+  }
+
+  const fontBase64 = window.btoa(binary)
+  doc.addFileToVFS('NotoSans-Regular.ttf', fontBase64)
+  doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal')
+  doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'bold')
+  doc.setFont('NotoSans', 'normal')
+}
 function CustomerPortalPage() {
   const { customerCode } = Route.useParams()
   const navigate = useNavigate()
@@ -239,6 +259,7 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
 
     const warrantyMeta = calculateWarrantyMeta(warranty, now)
     const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    await addGreekPdfFont(doc)
     const pageWidth = 595
     const pageHeight = 842
     const cyan = '#4CD3D1'
@@ -259,41 +280,41 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
     doc.setLineWidth(1.2)
     doc.roundedRect(40, 190, pageWidth - 80, 520, 18, 18, 'S')
 
+    doc.setFont('NotoSans', 'bold')
+    doc.setFontSize(23)
     doc.setTextColor(text)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(24)
-    doc.text('Glowworks Lab', 56, 78)
-    doc.setFontSize(12)
-    doc.setTextColor(cyan)
-    doc.text('Digital warranty card', 56, 102)
+    doc.text('GLOWWORKS', 56, 80)
 
-    try {
-      const logoDataUrl = await loadImageToDataUrl('/images/glowworks-logo.webp')
-      doc.addImage(logoDataUrl, 'WEBP', 430, 58, 86, 60)
-    } catch {
-      doc.setTextColor(text)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Glowworks', 454, 83)
-    }
+    const glowworksWidth = doc.getTextWidth('GLOWWORKS')
+    doc.setTextColor(cyan)
+    doc.text('.LAB', 56 + glowworksWidth, 80)
+
+    doc.setFontSize(10)
+    doc.setTextColor(text)
+    doc.text('PREMIUM AUTOMOTIVE UPGRADES', 515, 75, { align: 'right' })
+
+    doc.setFontSize(11)
+    doc.setTextColor(cyan)
+    doc.text('DIGITAL WARRANTY CARD', 56, 105)
 
     doc.setFillColor(cyan)
     doc.roundedRect(56, 228, 140, 56, 12, 12, 'F')
     doc.setTextColor(background)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('NotoSans', 'bold')
     doc.setFontSize(13)
     doc.text('Warranty', 84, 252)
 
     doc.setTextColor(text)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('NotoSans', 'bold')
     doc.setFontSize(16)
     doc.text(`${warranty.warrantyNumber ?? 'W-0001'}`, 56, 330)
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('NotoSans', 'normal')
     doc.setFontSize(11)
     doc.setTextColor(muted)
     doc.text('Service details', 56, 352)
 
     doc.setTextColor(text)
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('NotoSans', 'normal')
     doc.setFontSize(13)
     doc.text(`Customer: ${customer.name}`, 56, 392)
     doc.text(`Vehicle: ${entry.vehicle || `${primaryVehicle.make} ${primaryVehicle.model}`}`, 56, 420)
@@ -302,10 +323,10 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
     doc.text(`Expires on: ${formatDate(warranty.endsOn)}`, 56, 504)
 
     doc.setTextColor(cyan)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('NotoSans', 'bold')
     doc.text('Warranty terms', 56, 548)
     doc.setTextColor(text)
-    doc.setFont('helvetica', 'normal')
+    doc.setFont('NotoSans', 'normal')
     const terms = doc.splitTextToSize(warranty.terms ?? 'Coverage applies under normal use.', 470)
     doc.text(terms, 56, 570)
 
@@ -315,11 +336,11 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
     doc.setLineWidth(1)
     doc.roundedRect(56, 690, 482, 84, 14, 14, 'S')
     doc.setTextColor(cyan)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('NotoSans', 'bold')
     doc.setFontSize(12)
     doc.text('Status', 80, 724)
     doc.setTextColor(text)
-    doc.setFont('helvetica', 'bold')
+    doc.setFont('NotoSans', 'bold')
     doc.setFontSize(14)
     doc.text(warrantyMeta?.statusLabel ?? 'WARRANTY ACTIVE', 80, 748)
 
