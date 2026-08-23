@@ -20,14 +20,14 @@ function AdminLoginPage() {
     setNotice(null)
 
     try {
-      const isAuthenticated = await authenticateAdmin(email, password)
+      const role = await authenticateAdmin(email, password)
 
-      if (!isAuthenticated) {
+      if (!role) {
         setNotice('The admin email or password is incorrect.')
         return
       }
 
-      setStoredPortalRole('admin', email)
+      setStoredPortalRole(role, email)
       navigate({ to: '/portal/admin' })
     } finally {
       setIsSigningIn(false)
