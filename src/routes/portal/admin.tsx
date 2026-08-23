@@ -3,7 +3,7 @@ import { Copy, ExternalLink, Link2, Mail, MapPin, PencilLine, Phone, Search, Shi
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PortalShell } from '../../components/portal/PortalShell'
 import { buildCustomerPortalUrl, generateSecureCustomerPortalSlug } from '../../lib/customer-links'
-import { hasValidAdminSession } from '../../lib/portal-auth'
+import { getValidPortalStaffRole, type PortalStaffRole } from '../../lib/portal-auth'
 import {
   deleteCustomerGalleryItem,
   fetchCustomerGallery,
@@ -452,18 +452,21 @@ function AdminPage() {
   const [editingServiceEntryId, setEditingServiceEntryId] = useState<string | null>(null)
   const [copiedCustomerId, setCopiedCustomerId] = useState<string | null>(null)
   const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState<boolean | null>(null)
+  const [portalRole, setPortalRole] = useState<PortalStaffRole | null>(null)
+  const isReviewer = portalRole === 'reviewer'
 
   useEffect(() => {
     let isActive = true
 
-    void hasValidAdminSession().then((isValid) => {
+    void getValidPortalStaffRole().then((role) => {
       if (!isActive) {
         return
       }
 
-      setIsAuthorizedAdmin(isValid)
+      setPortalRole(role)
+      setIsAuthorizedAdmin(Boolean(role))
 
-      if (!isValid) {
+      if (!role) {
         navigate({ to: '/studio-access' })
       }
     })
@@ -1114,7 +1117,32 @@ const saveCustomer = async () => {
     )
   }
   return (
-    <PortalShell active="admin" title="Admin Dashboard" subtitle="Operate Glowworks Lab from one premium control center.">
+    <PortalShell
+      active="admin"
+      title={isReviewer ? 'Reviewer Dashboard' : 'Admin Dashboard'}
+      subtitle={
+        isReviewer
+          ? 'Secure read-only access to Glowworks Lab records.'
+          : 'Operate Glowworks Lab from one premium control center.'
+      }
+    >
+      {isReviewer ? (
+        <section className="portal-card portal-reviewer-banner" role="status">
+          <div>
+            <p className="portal-reviewer-eyebrow">Reviewer access</p>
+            <h3>Read-only dashboard</h3>
+            <p>
+              You can inspect customers, services, vehicles, warranties and projects.
+              Database changes, uploads and deletions are blocked by security policies.
+            </p>
+          </div>
+
+          <span className="portal-reviewer-badge">
+            <ShieldCheck size={17} />
+            View only
+          </span>
+        </section>
+      ) : null}
       <div className="portal-grid portal-grid-two">
         <div className="portal-card admin-operations-card">
           <div className="portal-card-title-row">
