@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BuildRouteImport } from './routes/build'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as StudioAccessRouteImport } from './routes/studio-access'
@@ -27,6 +28,11 @@ import { Route as ProjectProjectSlugRouteImport } from './routes/project/$projec
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BuildRoute = BuildRouteImport.update({
+  id: '/build',
+  path: '/build',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortalRoute = PortalRouteImport.update({
@@ -97,6 +103,7 @@ const ProjectProjectSlugRoute = ProjectProjectSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/build': typeof BuildRoute
   '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/studio-access': typeof StudioAccessRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/build': typeof BuildRoute
   '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/studio-access': typeof StudioAccessRoute
@@ -130,6 +138,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/build': typeof BuildRoute
   '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/studio-access': typeof StudioAccessRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/build'
     | '/portal'
     | '/projects'
     | '/studio-access'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/build'
     | '/portal'
     | '/projects'
     | '/studio-access'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/build'
     | '/portal'
     | '/projects'
     | '/studio-access'
@@ -197,6 +209,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BuildRoute: typeof BuildRoute
   PortalRoute: typeof PortalRouteWithChildren
   ProjectsRoute: typeof ProjectsRoute
   StudioAccessRoute: typeof StudioAccessRoute
@@ -211,6 +224,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/build': {
+      id: '/build'
+      path: '/build'
+      fullPath: '/build'
+      preLoaderRoute: typeof BuildRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portal': {
@@ -334,6 +354,7 @@ const PortalRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BuildRoute: BuildRoute,
   PortalRoute: PortalRouteWithChildren,
   ProjectsRoute: ProjectsRoute,
   StudioAccessRoute: StudioAccessRoute,
