@@ -362,12 +362,6 @@ function ProjectsPage() {
             </p>
           </div>
 
-          <div className="project-stepper" aria-label="Project selection path">
-            <span className={`project-step ${selectedService ? 'is-active' : ''}`}>Service</span>
-            <span className={`project-step ${activeBrand ? 'is-active' : ''}`}>Brand</span>
-            <span className={`project-step ${activeModel ? 'is-active' : ''}`}>Model</span>
-            <span className={`project-step ${visibleProjects.length > 0 ? 'is-active' : ''}`}>Gallery</span>
-          </div>
 
           <div className="project-step-intro">
             {selectedService ? (

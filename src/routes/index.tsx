@@ -456,8 +456,8 @@ function GlowworksPage() {
           <div className="hero-copy reveal">
             <p className="eyebrow"><span /> AUTOMOTIVE LIGHTING & CUSTOMIZATION</p>
             <h1>
-              Άλλαξε την
-              <span>ατμόσφαιρα.</span>
+              <span className="hero-title-main">Άλλαξε την</span>
+              <span className="hero-title-accent">ατμόσφαιρα.</span>
             </h1>
             <p className="hero-lead">
               Custom φωτισμός, τιμόνια, starlight οροφές και media upgrades που κάνουν το εσωτερικό σου πραγματικά δικό σου.
@@ -547,9 +547,9 @@ function GlowworksPage() {
             </p>
 
             <ol className="home-build-steps">
-              <li><span>01</span><div><strong>Show us your car</strong><small>Select any brand and model, then add your own photos.</small></div></li>
-              <li><span>02</span><div><strong>Create your direction</strong><small>Combine interior, exterior and completely custom ideas.</small></div></li>
-              <li><span>03</span><div><strong>Send your build</strong><small>Transfer the full concept into the Glowworks request form.</small></div></li>
+              <li><span>01</span><div><strong>Δείξε μας το αυτοκίνητό σου</strong><small>Επίλεξε μάρκα και μοντέλο και πρόσθεσε τις δικές σου φωτογραφίες.</small></div></li>
+              <li><span>02</span><div><strong>Σχεδίασε το δικό σου concept</strong><small>Συνδύασε ιδέες για το εσωτερικό, το εξωτερικό και εντελώς custom επιλογές.</small></div></li>
+              <li><span>03</span><div><strong>Στείλε μας το project σου</strong><small>Μετέφερε ολοκληρωμένο το concept στη φόρμα αιτήματος της Glowworks.</small></div></li>
             </ol>
 
             <div className="home-build-actions">
