@@ -385,32 +385,32 @@ const HOMEPAGE_IMAGE_SLOTS: ReadonlyArray<{
   {
     slot: 'ambient-lighting',
     label: 'Ambient Lighting',
-    description: 'Service-card image for Ambient Lighting.',
-    fallbackImage: '/images/mercedes_glc_w205_coupe.jpg',
+    description: 'Projects-page category image for Ambient Lighting.',
+    fallbackImage: '/images/ambient-light.webp',
   },
   {
     slot: 'custom-steering',
     label: 'Custom Steering Wheels',
-    description: 'Service-card image for Custom Steering Wheels.',
+    description: 'Projects-page category image for Custom Steering Wheels.',
     fallbackImage: '/images/custom-steering.webp',
   },
   {
     slot: 'starlight-headliner',
     label: 'Starlight Headliner',
-    description: 'Service-card image for Starlight Headliner.',
+    description: 'Projects-page category image for Starlight Headliner.',
     fallbackImage: '/images/starlight-headliner.webp',
   },
   {
     slot: 'android-display',
-    label: 'Android Displays',
-    description: 'Service-card image for Android Displays.',
+    label: 'Screens & Media',
+    description: 'Projects-page category image for Screens & Media.',
     fallbackImage: '/images/android-display.webp',
   },
   {
     slot: 'body-kit',
     label: 'Body Kits',
-    description: 'Service-card image for Body Kits.',
-    fallbackImage: '/images/IMG_2085.JPEG',
+    description: 'Projects-page category image for Body Kits & Exterior.',
+    fallbackImage: '/images/body-kit-exterior.jpg',
   },
 ]
 
@@ -1205,7 +1205,7 @@ const saveCustomer = async () => {
             type="button"
             onClick={() => setManagerView('homepage')}
           >
-            Manage homepage images
+            Manage site & Projects images
           </button>
         </div>
           <div className="portal-chip">
@@ -1215,7 +1215,7 @@ const saveCustomer = async () => {
                 : `${projects.length} projects`
               : homepageImagesLoading
                 ? 'Loading...'
-                : '6 image positions'}
+                : '1 hero + 5 Projects cards'}
           </div>
         </div>
 
@@ -1714,7 +1714,9 @@ const saveCustomer = async () => {
                       <p>{item.description}</p>
                       <small className="portal-muted">
                         {savedImage
-                          ? 'Current homepage image'
+                          ? item.slot === 'hero'
+                            ? 'Current homepage hero image'
+                            : 'Current Projects category image'
                           : 'Current local fallback image'}
                       </small>
                     </div>
