@@ -481,46 +481,13 @@ function GlowworksPage() {
             </div>
           </div>
 
-          <a className="scroll-cue" href="#work" aria-label="Μετάβαση στη δουλειά μας">
+          <a className="scroll-cue" href="#build-experience" aria-label="Μετάβαση στη δουλειά μας">
             <span>Scroll to explore</span><ArrowDownRight size={18} />
           </a>
         </div>
       </header>
 
-      <section className="intro shell" id="work">
-        <div className="section-index">01 / Selected Projects</div>
-        <div className="intro-copy">
-          <p className="eyebrow"><span /> Η δουλειά μας</p>
-          <h2>Η λεπτομέρεια δεν είναι επιπλέον. Είναι η βάση.</h2>
-        </div>
-        <p className="intro-note">
-          Κάθε εγκατάσταση σχεδιάζεται για το συγκεκριμένο όχημα, με καθαρό φινίρισμα και εργοστασιακό αποτέλεσμα.
-        </p>
-      </section>
-
-      <section className="work-grid shell" aria-label="Projects Glowworks.lab">
-        {services.map((service, index) => (
-          <a
-            className={`work-card work-card-${index + 1} project-scroll-reveal`}
-            key={service.title}
-            href={getAssetPath(
-              `/projects?service=${encodeURIComponent(service.projectServiceId)}`,
-            )}
-            aria-label={`View ${service.title} projects`}
-            style={{ color: 'inherit', textDecoration: 'none' }}
-          >
-            <img src={getHomepageImage(service.imageSlot as HomepageImageSlot, service.image)} alt={service.title} />
-            <div className="work-shade" />
-            <div className="work-card-content">
-              <span>{service.number}</span>
-              <h3>{service.title}</h3>
-            </div>
-            <ArrowUpRight className="work-arrow" size={23} />
-          </a>
-        ))}
-      </section>
-
-      <section className="home-build-feature" aria-labelledby="home-build-title">
+      <section className="home-build-feature" id="build-experience" aria-labelledby="home-build-title">
         <div className="shell home-build-shell">
           <div className="home-build-visual" style={{ backgroundImage: `url('${heroBackgroundImage}')` }}>
             <div className="home-build-visual-grid" aria-hidden="true" />
@@ -594,7 +561,7 @@ function GlowworksPage() {
           </div>
 
           <div className="trust-bar">
-            <span><ShieldCheck size={21} /> 2 χρόνια εγγύηση</span>
+            <span><ShieldCheck size={21} /> Έως 4 χρόνια εγγύηση</span>
             <span><CircleGauge size={21} /> Επαγγελματική εγκατάσταση</span>
             <span><Sparkles size={21} /> Υλικά υψηλής ποιότητας</span>
           </div>
@@ -859,7 +826,10 @@ function GlowworksPage() {
       <footer className="site-footer">
         <div className="shell footer-main">
           <img src="/images/glowworks-logo.webp" alt="Glowworks.lab" />
-          <p>Custom interior upgrades<br />στη Ρόδο.</p>
+          <p className="footer-signature">
+            <span>Where automotive design becomes personal.</span>
+            <small>Crafted in Rhodes.</small>
+          </p>
           <a href="#top">Back to top <ArrowUpRight size={16} /></a>
         </div>
         <div className="shell footer-bottom">

@@ -1,6 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ArrowLeft, ArrowUpRight, BadgeCheck, Camera, CarFront, ChevronLeft, ChevronRight, Sparkles, Star, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import {
+  fetchHomepageImages,
+  type HomepageImageSlot,
+} from '../lib/homepage-images'
 import { fetchProjects } from '../lib/projects'
 import type { ProjectMedia, ProjectRecord } from '../types/projects'
 export const Route = createFileRoute('/projects')({
@@ -136,45 +140,82 @@ function matchesServiceCategory(
   projectServiceId: string,
   selectedServiceId: string,
 ) {
-  if (selectedServiceId === 'custom-steering-wheels') {
-    return (
-      projectServiceId === 'carbon-steering-wheels' ||
-      projectServiceId === 'leather-steering-wheel-covers'
-    )
+  const projectServiceKey = normalizeValue(projectServiceId)
+  const selectedServiceKey = normalizeValue(selectedServiceId)
+
+  if (selectedServiceKey === 'custom-steering-wheels') {
+    return [
+      'custom-steering-wheels',
+      'custom-steering-wheel',
+      'carbon-steering-wheels',
+      'carbon-steering-wheel',
+      'leather-steering-wheel-covers',
+      'leather-steering-wheel',
+      'alcantara-steering-wheel',
+    ].includes(projectServiceKey)
   }
 
-  return normalizeValue(projectServiceId) === normalizeValue(selectedServiceId)
+  return projectServiceKey === selectedServiceKey
+}
+
+const serviceCategoryImages: Record<
+  string,
+  {
+    slot: HomepageImageSlot
+    fallbackImage: string
+  }
+> = {
+  'ambient-lighting': {
+    slot: 'ambient-lighting',
+    fallbackImage: '/images/ambient-light.webp',
+  },
+  'custom-steering-wheels': {
+    slot: 'custom-steering',
+    fallbackImage: '/images/custom-steering.webp',
+  },
+  'starlight-headliner': {
+    slot: 'starlight-headliner',
+    fallbackImage: '/images/starlight-headliner.webp',
+  },
+  'screens-media': {
+    slot: 'android-display',
+    fallbackImage: '/images/android-display.webp',
+  },
+  'body-kit': {
+    slot: 'body-kit',
+    fallbackImage: '/images/body-kit-exterior.jpg',
+  },
 }
 
 const serviceCategories: ServiceCategory[] = [
   {
     id: 'ambient-lighting',
     title: 'Ambient Lighting',
-    description: 'Atmospheric cabin lighting with tailored illumination.',
+    description: 'Φωτισμός καμπίνας με εργοστασιακή αισθητική και εξατομικευμένο αποτέλεσμα.',
     icon: Sparkles,
   },
   {
     id: 'custom-steering-wheels',
     title: 'Custom Steering Wheels',
-    description: 'Carbon, leather and Alcantara steering-wheel projects.',
+    description: 'Δέρμα, Alcantara και carbon λεπτομέρειες σχεδιασμένες για το αυτοκίνητό σου.',
     icon: BadgeCheck,
   },
   {
     id: 'starlight-headliner',
     title: 'Starlight Headliner',
-    description: 'A custom star-map ceiling experience for the cabin.',
+    description: 'Οροφές με οπτικές ίνες, shooting stars και μοναδική ατμόσφαιρα.',
     icon: Star,
   },
   {
   id: 'screens-media',
   title: 'Screens & Media',
-  description: 'Multimedia, infotainment and display upgrade projects.',
+  description: 'Σύγχρονες οθόνες, multimedia και εργοστασιακά ενσωματωμένες αναβαθμίσεις.',
   icon: Camera,
 },
 {
     id: 'body-kit',
-    title: 'Body Kit',
-    description: 'Front lip, rear diffuser and rear spoiler in one package.',
+    title: 'Body Kits & Exterior',
+    description: 'Front lips, αεροτομές, diffusers και εξωτερικές αναβαθμίσεις.',
     icon: Zap,
   },
 ]
@@ -194,6 +235,47 @@ function ProjectsPage() {
   const [activeModel, setActiveModel] = useState<string | null>(null)
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<ProjectGalleryItem | null>(null)
   const [galleryItems, setGalleryItems] = useState<ProjectGalleryItem[]>([])
+  const [serviceCardImages, setServiceCardImages] = useState<
+    Partial<Record<HomepageImageSlot, string>>
+  >({})
+
+  const getServiceCategoryImage = (serviceId: string) => {
+    const imageConfiguration = serviceCategoryImages[serviceId]
+
+    if (!imageConfiguration) {
+      return ''
+    }
+
+    return (
+      serviceCardImages[imageConfiguration.slot] ??
+      getAssetPath(imageConfiguration.fallbackImage)
+    )
+  }
+
+  useEffect(() => {
+    let isActive = true
+
+    fetchHomepageImages()
+      .then((images) => {
+        if (!isActive) {
+          return
+        }
+
+        setServiceCardImages(
+          Object.fromEntries(
+            images.map((image) => [image.slot, image.publicUrl]),
+          ) as Partial<Record<HomepageImageSlot, string>>,
+        )
+      })
+      .catch((error) => {
+        console.warn('Failed to load Projects category images', error)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
   useEffect(() => {
     let isActive = true
 
@@ -344,7 +426,16 @@ function ProjectsPage() {
             </p>
           </div>
           <div className="projects-counter reveal reveal-delay">
-            <strong>{String(galleryItems.length).padStart(2, '0')}</strong>
+            <strong>
+              {String(
+                new Set(
+                  galleryItems.map(
+                    (item) =>
+                      `${normalizeBrandValue(item.brand)}::${normalizeValue(item.model)}`,
+                  ),
+                ).size,
+              ).padStart(2, '0')}
+            </strong>
             <span>μοντέλα στο<br />project archive</span>
           </div>
         </div>
@@ -357,9 +448,11 @@ function ProjectsPage() {
               <p className="section-index">01 / Project gallery</p>
               <h2 id="projects-title">Choose your upgrade.</h2>
             </div>
-            <p className="projects-result-count">
-              {String(visibleProjects.length).padStart(2, '0')} gallery items
-            </p>
+            {activeServiceId && activeBrand && activeModel ? (
+              <p className="projects-result-count">
+                {String(visibleProjects.length).padStart(2, '0')} gallery items
+              </p>
+            ) : null}
           </div>
 
 
@@ -378,13 +471,13 @@ function ProjectsPage() {
           </div>
 
           {!activeServiceId && (
-            <div className="project-choice-grid" role="list">
-              {serviceCategories.map((service) => {
+            <div className="project-choice-grid project-service-grid" role="list">
+              {serviceCategories.map((service, index) => {
                 const Icon = service.icon
 
                 return (
                   <button
-                    className="project-choice-card"
+                    className={`project-choice-card project-service-card project-service-card-${index + 1}`}
                     key={service.id}
                     type="button"
                     onClick={() => {
@@ -393,11 +486,24 @@ function ProjectsPage() {
                       setActiveModel(null)
                     }}
                   >
-                    <span className="project-choice-icon"><Icon size={20} /></span>
-                    <div>
+                    <span
+                      className="project-service-card-image"
+                      aria-hidden="true"
+                      style={{
+                        backgroundImage: `url('${getServiceCategoryImage(service.id)}')`,
+                      }}
+                    />
+                    <span className="project-service-number">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span className="project-choice-icon">
+                      <Icon size={20} />
+                    </span>
+                    <div className="project-service-content">
                       <h4>{service.title}</h4>
                       <p>{service.description}</p>
                     </div>
+                    <span className="project-service-arrow" aria-hidden="true">↗</span>
                   </button>
                 )
               })}
@@ -459,9 +565,9 @@ function ProjectsPage() {
                 {availableModels.map((model) => {
                   const matchingProject = galleryItems.find(
                     (project) =>
-                      project.serviceId === activeServiceId &&
-                      project.brand === activeBrand &&
-                      project.model === model &&
+                      matchesServiceCategory(project.serviceId, activeServiceId) &&
+                      normalizeBrandValue(project.brand) === normalizeBrandValue(activeBrand) &&
+                      normalizeValue(project.model) === normalizeValue(model) &&
                       project.slug,
                   )
 
