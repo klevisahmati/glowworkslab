@@ -425,10 +425,6 @@ function GlowworksPage() {
           </a>
 
           <div className={menuOpen ? 'nav-links is-open' : 'nav-links'}>
-
-            <a className="nav-build-link" href={getAssetPath('/build')} onClick={closeMenu}>
-              <Sparkles size={14} /> Build your car
-            </a>
             <a href={getAssetPath('/projects')} onClick={closeMenu}>Projects</a>
             <a href="#services" onClick={closeMenu}>Υπηρεσίες</a>
             <a href="#process" onClick={closeMenu}>Διαδικασία</a>
@@ -463,9 +459,6 @@ function GlowworksPage() {
               Custom φωτισμός, τιμόνια, starlight οροφές και media upgrades που κάνουν το εσωτερικό σου πραγματικά δικό σου.
             </p>
             <div className="hero-actions">
-              <a className="button button-build" href={getAssetPath('/build')}>
-                <Sparkles size={18} /> Design your car
-              </a>
               <a className="button button-primary" href="#booking">
                 Κλείσε ραντεβού <ArrowDownRight size={19} />
               </a>
@@ -481,53 +474,11 @@ function GlowworksPage() {
             </div>
           </div>
 
-          <a className="scroll-cue" href="#build-experience" aria-label="Μετάβαση στη δουλειά μας">
+          <a className="scroll-cue" href="#services" aria-label="Μετάβαση στη δουλειά μας">
             <span>Scroll to explore</span><ArrowDownRight size={18} />
           </a>
         </div>
       </header>
-
-      <section className="home-build-feature" id="build-experience" aria-labelledby="home-build-title">
-        <div className="shell home-build-shell">
-          <div className="home-build-visual" style={{ backgroundImage: `url('${heroBackgroundImage}')` }}>
-            <div className="home-build-visual-grid" aria-hidden="true" />
-            <div className="home-build-visual-top">
-              <span><Sparkles size={14} /> Personal design studio</span>
-              <small>01 / 03</small>
-            </div>
-            <div className="home-build-car-label">
-              <small>Your vehicle</small>
-              <strong>Your vision starts here.</strong>
-            </div>
-            <div className="home-build-tool-preview" aria-hidden="true">
-              <span>Upload</span>
-              <span>Customize</span>
-              <span>Request</span>
-            </div>
-          </div>
-
-          <div className="home-build-copy">
-            <p className="eyebrow"><span /> New Glowworks experience</p>
-            <h2 id="home-build-title">Do not copy a build.<br /><em>Create yours.</em></h2>
-            <p>
-              Ξεκίνα με το δικό σου αυτοκίνητο. Ανέβασε τις φωτογραφίες του, επίλεξε τις αναβαθμίσεις που θέλεις και περιέγραψε στη Glowworks τη δική σου, εντελώς προσωπική ιδέα.
-            </p>
-
-            <ol className="home-build-steps">
-              <li><span>01</span><div><strong>Δείξε μας το αυτοκίνητό σου</strong><small>Επίλεξε μάρκα και μοντέλο και πρόσθεσε τις δικές σου φωτογραφίες.</small></div></li>
-              <li><span>02</span><div><strong>Σχεδίασε το δικό σου concept</strong><small>Συνδύασε ιδέες για το εσωτερικό, το εξωτερικό και εντελώς custom επιλογές.</small></div></li>
-              <li><span>03</span><div><strong>Στείλε μας το project σου</strong><small>Μετέφερε ολοκληρωμένο το concept στη φόρμα αιτήματος της Glowworks.</small></div></li>
-            </ol>
-
-            <div className="home-build-actions">
-              <a className="button button-primary" href={getAssetPath('/build')}>
-                Start your build <ArrowUpRight size={18} />
-              </a>
-              <span><Sparkles size={14} /> AI concept preview coming later</span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section className="services-section" id="services">
         <div className="shell">
