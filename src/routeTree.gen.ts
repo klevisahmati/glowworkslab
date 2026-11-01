@@ -14,6 +14,7 @@ import { Route as BuildRouteImport } from './routes/build'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as StudioAccessRouteImport } from './routes/studio-access'
+import { Route as ApiTranslateProjectRouteImport } from './routes/api/translate-project'
 import { Route as CustomerCustomerCodeRouteImport } from './routes/customer/$customerCode'
 import { Route as PortalAdminRouteImport } from './routes/portal/admin'
 import { Route as PortalClaimsRouteImport } from './routes/portal/claims'
@@ -48,6 +49,11 @@ const ProjectsRoute = ProjectsRouteImport.update({
 const StudioAccessRoute = StudioAccessRouteImport.update({
   id: '/studio-access',
   path: '/studio-access',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTranslateProjectRoute = ApiTranslateProjectRouteImport.update({
+  id: '/api/translate-project',
+  path: '/api/translate-project',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomerCustomerCodeRoute = CustomerCustomerCodeRouteImport.update({
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/studio-access': typeof StudioAccessRoute
+  '/api/translate-project': typeof ApiTranslateProjectRoute
   '/customer/$customerCode': typeof CustomerCustomerCodeRoute
   '/portal/admin': typeof PortalAdminRoute
   '/portal/claims': typeof PortalClaimsRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/studio-access': typeof StudioAccessRoute
+  '/api/translate-project': typeof ApiTranslateProjectRoute
   '/customer/$customerCode': typeof CustomerCustomerCodeRoute
   '/portal/admin': typeof PortalAdminRoute
   '/portal/claims': typeof PortalClaimsRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/portal': typeof PortalRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/studio-access': typeof StudioAccessRoute
+  '/api/translate-project': typeof ApiTranslateProjectRoute
   '/customer/$customerCode': typeof CustomerCustomerCodeRoute
   '/portal/admin': typeof PortalAdminRoute
   '/portal/claims': typeof PortalClaimsRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/portal'
     | '/projects'
     | '/studio-access'
+    | '/api/translate-project'
     | '/customer/$customerCode'
     | '/portal/admin'
     | '/portal/claims'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/portal'
     | '/projects'
     | '/studio-access'
+    | '/api/translate-project'
     | '/customer/$customerCode'
     | '/portal/admin'
     | '/portal/claims'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/portal'
     | '/projects'
     | '/studio-access'
+    | '/api/translate-project'
     | '/customer/$customerCode'
     | '/portal/admin'
     | '/portal/claims'
@@ -213,6 +225,7 @@ export interface RootRouteChildren {
   PortalRoute: typeof PortalRouteWithChildren
   ProjectsRoute: typeof ProjectsRoute
   StudioAccessRoute: typeof StudioAccessRoute
+  ApiTranslateProjectRoute: typeof ApiTranslateProjectRoute
   CustomerCustomerCodeRoute: typeof CustomerCustomerCodeRoute
   ProjectProjectSlugRoute: typeof ProjectProjectSlugRoute
 }
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       path: '/studio-access'
       fullPath: '/studio-access'
       preLoaderRoute: typeof StudioAccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/translate-project': {
+      id: '/api/translate-project'
+      path: '/api/translate-project'
+      fullPath: '/api/translate-project'
+      preLoaderRoute: typeof ApiTranslateProjectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/customer/$customerCode': {
@@ -358,6 +378,7 @@ const rootRouteChildren: RootRouteChildren = {
   PortalRoute: PortalRouteWithChildren,
   ProjectsRoute: ProjectsRoute,
   StudioAccessRoute: StudioAccessRoute,
+  ApiTranslateProjectRoute: ApiTranslateProjectRoute,
   CustomerCustomerCodeRoute: CustomerCustomerCodeRoute,
   ProjectProjectSlugRoute: ProjectProjectSlugRoute,
 }

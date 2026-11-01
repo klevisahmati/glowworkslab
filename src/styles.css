@@ -4937,3 +4937,43 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
     font-size: 0.62rem;
   }
 }
+/* Glowworks language switcher */
+.gw-language-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 6px 9px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+}
+
+.gw-language-switch button {
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.48);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 4px 5px;
+}
+
+.gw-language-switch button.is-active,
+.gw-language-switch button:hover {
+  color: #fff;
+}
+
+.gw-language-switch button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .gw-language-switch {
+    align-self: flex-start;
+    margin-top: 4px;
+  }
+}

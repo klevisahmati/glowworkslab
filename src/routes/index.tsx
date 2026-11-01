@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { useLanguage } from '../lib/language'
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -30,6 +32,28 @@ export const Route = createFileRoute('/')({
   component: GlowworksPage,
 })
 
+const englishServices: Record<string, { title: string; description: string }> = {
+  'ambient-lighting': {
+    title: 'Ambient Lighting',
+    description: 'OEM-style lighting for doors, dashboard and centre console, featuring custom colours and dynamic lighting effects.',
+  },
+  'custom-steering-wheels': {
+    title: 'Custom Steering Wheels',
+    description: 'Leather, Alcantara or carbon-look finishes, personalised stitching and a design tailored to your vehicle.',
+  },
+  'starlight-headliner': {
+    title: 'Starlight Headliners',
+    description: 'Over 600 fibre-optic stars, shooting star effects and an atmosphere that transforms your entire interior.',
+  },
+  'screens-media': {
+    title: 'Multimedia & Displays',
+    description: 'High-resolution displays, modern infotainment systems and a clean, factory-style dashboard installation.',
+  },
+  'body-kit': {
+    title: 'Body Kits & Exterior Upgrades',
+    description: 'Premium body kits combining distinctive design and aerodynamics for a refined, sporty appearance.',
+  },
+}
 const services = [
    {
     number: '01',
@@ -83,6 +107,12 @@ const services = [
   },
 ]
 
+const englishSteps = [
+  ['01', 'Send your enquiry', 'Tell us about your vehicle and the upgrade you have in mind.'],
+  ['02', 'We discuss the details', 'We confirm compatibility, options, pricing and installation time.'],
+  ['03', 'We bring it to life', 'Our team carefully carries out the installation at our workshop in Rhodes.'],
+  ['04', 'Experience the difference', 'Enjoy a personalised result designed around you.'],
+]
 const steps = [
   ['01', 'Στείλε αίτημα', 'Μας λες το όχημα και την αναβάθμιση που θέλεις.'],
   ['02', 'Μιλάμε μαζί', 'Επιβεβαιώνουμε συμβατότητα, επιλογές, κόστος και χρόνο.'],
@@ -97,6 +127,15 @@ const vehicleBrands = [
   'Nissan','Opel','Peugeot','Porsche','Ram','Renault','Rolls-Royce','Saab','Seat','Skoda','Smart','Subaru','Suzuki',
   'Tesla','Toyota','Volkswagen','Volvo','Alpine','BYD','MG','Polestar','Rivian','Vauxhall','Other'
 ]
+
+const bookingServiceEnglishLabels: Record<string, string> = {
+  'Ambient Light': 'Ambient Lighting',
+  'Custom Τιμόνι': 'Custom Steering Wheels',
+  'Αστέρια Οροφής': 'Starlight Headliners',
+  'Οθόνες & Media': 'Multimedia & Displays',
+  'Συνδυασμός υπηρεσιών': 'Multiple Services',
+  'Body Kits & Exterior Upgrades': 'Body Kits & Exterior Upgrades',
+}
 
 const serviceOptions = [
   'Ambient Light',
@@ -179,6 +218,7 @@ function getAssetPath(path: string) {
 }
 
 function GlowworksPage() {
+  const { language } = useLanguage()
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [formStatus, setFormStatus] = useState<FormStatus>('idle')
@@ -406,7 +446,7 @@ function GlowworksPage() {
     if (!query) {
       return true
     }
-    return service.toLowerCase().includes(query)
+    return service.toLowerCase().includes(query) || (language === 'en' && (bookingServiceEnglishLabels[service] ?? service).toLowerCase().includes(query))
   })
 
   return (
@@ -426,17 +466,18 @@ function GlowworksPage() {
 
           <div className={menuOpen ? 'nav-links is-open' : 'nav-links'}>
             <a href={getAssetPath('/projects')} onClick={closeMenu}>Projects</a>
-            <a href="#services" onClick={closeMenu}>Υπηρεσίες</a>
-            <a href="#process" onClick={closeMenu}>Διαδικασία</a>
+            <a href="#services" onClick={closeMenu}>{language === 'en' ? 'Services' : 'Υπηρεσίες'}</a>
+            <a href="#process" onClick={closeMenu}>{language === 'en' ? 'Our Process' : 'Διαδικασία'}</a>
+            <LanguageSwitcher />
             <a className="nav-book" href="#booking" onClick={closeMenu}>
-              Κλείστε ραντεβού <ArrowUpRight size={15} />
+              {language === 'en' ? 'Book an appointment' : 'Κλείστε ραντεβού'} <ArrowUpRight size={15} />
             </a>
           </div>
 
           <button
             className="menu-button"
             type="button"
-            aria-label={menuOpen ? 'Κλείσιμο μενού' : 'Άνοιγμα μενού'}
+            aria-label={menuOpen ? (language === 'en' ? 'Close menu' : 'Κλείσιμο μενού') : (language === 'en' ? 'Open menu' : 'Άνοιγμα μενού')}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
           >
@@ -452,29 +493,29 @@ function GlowworksPage() {
           <div className="hero-copy reveal">
             <p className="eyebrow"><span /> AUTOMOTIVE LIGHTING & CUSTOMIZATION</p>
             <h1>
-              <span className="hero-title-main">Άλλαξε την</span>
-              <span className="hero-title-accent">ατμόσφαιρα.</span>
+              <span className="hero-title-main">{language === 'en' ? 'Transform the' : 'Άλλαξε την'}</span>
+              <span className="hero-title-accent">{language === 'en' ? 'atmosphere.' : 'ατμόσφαιρα.'}</span>
             </h1>
             <p className="hero-lead">
-              Custom φωτισμός, τιμόνια, starlight οροφές και media upgrades που κάνουν το εσωτερικό σου πραγματικά δικό σου.
+              {language === 'en' ? 'Custom lighting, steering wheels, starlight headliners and multimedia upgrades that make your car truly yours.' : 'Custom φωτισμός, τιμόνια, starlight οροφές και media upgrades που κάνουν το εσωτερικό σου πραγματικά δικό σου.'}
             </p>
             <div className="hero-actions">
               <a className="button button-primary" href="#booking">
-                Κλείσε ραντεβού <ArrowDownRight size={19} />
+                {language === 'en' ? 'Book an appointment' : 'Κλείσε ραντεβού'} <ArrowDownRight size={19} />
               </a>
-              <a className="button button-secondary" href={getAssetPath('/projects')}>Δες όλα τα projects</a>
+              <a className="button button-secondary" href={getAssetPath('/projects')}>{language === 'en' ? 'Explore our projects' : 'Δες όλα τα projects'}</a>
             </div>
           </div>
 
           <div className="hero-card reveal reveal-delay">
-            <p>Σχεδιασμένο γύρω από το δικό σου ταξίδι.</p>
+            <p>{language === 'en' ? 'Designed around your journey.' : 'Σχεδιασμένο γύρω από το δικό σου ταξίδι.'}</p>
             <div className="hero-card-meta">
               <span>GLOWWORKS SIGNATURE</span>
-              <span>Βάση τη Ρόδο</span>
+              <span>{language === 'en' ? 'Based in Rhodes' : 'Βάση τη Ρόδο'}</span>
             </div>
           </div>
 
-          <a className="scroll-cue" href="#services" aria-label="Μετάβαση στη δουλειά μας">
+          <a className="scroll-cue" href="#services" aria-label={language === 'en' ? 'Explore our work' : 'Μετάβαση στη δουλειά μας'}>
             <span>Scroll to explore</span><ArrowDownRight size={18} />
           </a>
         </div>
@@ -482,13 +523,13 @@ function GlowworksPage() {
 
       <section className="services-section" id="services">
         <div className="shell">
-          <div className="section-index light">02 / Τι κάνουμε</div>
+          <div className="section-index light">{language === 'en' ? '02 / What we do' : '02 / Τι κάνουμε'}</div>
           <div className="services-heading">
             <div>
-              <p className="eyebrow"><span /> Υπηρεσίες</p>
-              <h2>Σχεδιασμένο για τη δική σου διαδρομή.</h2>
+              <p className="eyebrow"><span /> {language === 'en' ? 'Services' : 'Υπηρεσίες'}</p>
+              <h2>{language === 'en' ? 'Designed for your journey.' : 'Σχεδιασμένο για τη δική σου διαδρομή.'}</h2>
             </div>
-            <p>Πέντε τρόποι να μεταμορφώσεις το σημείο όπου περνάς κάθε χιλιόμετρο.</p>
+            <p>{language === 'en' ? 'Five ways to transform the space where every journey begins.' : 'Πέντε τρόποι να μεταμορφώσεις το σημείο όπου περνάς κάθε χιλιόμετρο.'}</p>
           </div>
 
           <div className="service-list">
@@ -503,8 +544,8 @@ function GlowworksPage() {
 >
                   <span className="service-number">{service.number}</span>
                   <div className="service-icon"><Icon size={23} strokeWidth={1.6} /></div>
-                  <h3>{service.title}</h3>
-                  <p>{service.description}</p>
+                  <h3>{language === 'en' ? englishServices[service.projectServiceId]?.title ?? service.title : service.title}</h3>
+                  <p>{language === 'en' ? englishServices[service.projectServiceId]?.description ?? service.description : service.description}</p>
                   <ChevronRight className="service-arrow" size={22} />
                 </a>
               )
@@ -512,23 +553,23 @@ function GlowworksPage() {
           </div>
 
           <div className="trust-bar">
-            <span><ShieldCheck size={21} /> Έως 4 χρόνια εγγύηση</span>
-            <span><CircleGauge size={21} /> Επαγγελματική εγκατάσταση</span>
-            <span><Sparkles size={21} /> Υλικά υψηλής ποιότητας</span>
+            <span><ShieldCheck size={21} /> {language === 'en' ? 'Up to 4 years warranty' : 'Έως 4 χρόνια εγγύηση'}</span>
+            <span><CircleGauge size={21} /> {language === 'en' ? 'Professional installation' : 'Επαγγελματική εγκατάσταση'}</span>
+            <span><Sparkles size={21} /> {language === 'en' ? 'Premium-quality materials' : 'Υλικά υψηλής ποιότητας'}</span>
           </div>
         </div>
       </section>
 
       <section className="process-section shell" id="process">
-        <div className="section-index">03 / Διαδικασία</div>
+        <div className="section-index">{language === 'en' ? '03 / Our Process' : '03 / Διαδικασία'}</div>
         <div className="process-layout">
           <div className="process-title">
-            <p className="eyebrow"><span /> Η διαδικασία</p>
-            <h2>Από την ιδέα στην εγκατάσταση.</h2>
-            <p>Καθαρά βήματα, ξεκάθαρη επικοινωνία και αποτέλεσμα χωρίς εκπλήξεις.</p>
+            <p className="eyebrow"><span /> {language === 'en' ? 'Our Process' : 'Η διαδικασία'}</p>
+            <h2>{language === 'en' ? 'From concept to installation.' : 'Από την ιδέα στην εγκατάσταση.'}</h2>
+            <p>{language === 'en' ? 'A clear process, transparent communication and results without surprises.' : 'Καθαρά βήματα, ξεκάθαρη επικοινωνία και αποτέλεσμα χωρίς εκπλήξεις.'}</p>
           </div>
           <div className="steps">
-            {steps.map(([number, title, description]) => (
+            {(language === 'en' ? englishSteps : steps).map(([number, title, description]) => (
               <article className="step" key={number}>
                 <span>{number}</span>
                 <div><h3>{title}</h3><p>{description}</p></div>
@@ -542,14 +583,14 @@ function GlowworksPage() {
         <div className="booking-bloom" aria-hidden="true" />
         <div className="shell booking-layout">
           <div className="booking-copy">
-            <div className="section-index light">04 / Ραντεβού</div>
-            <p className="eyebrow"><span /> Κράτηση</p>
-            <h2>Πες μας τι θέλεις να αλλάξεις.</h2>
-            <p>Συμπλήρωσε τα στοιχεία σου και θα επικοινωνήσουμε μαζί σου για επιλογές, διαθεσιμότητα και προσφορά.</p>
+            <div className="section-index light">{language === 'en' ? '04 / Appointment' : '04 / Ραντεβού'}</div>
+            <p className="eyebrow"><span /> {language === 'en' ? 'Booking' : 'Κράτηση'}</p>
+            <h2>{language === 'en' ? 'Tell us what you have in mind.' : 'Πες μας τι θέλεις να αλλάξεις.'}</h2>
+            <p>{language === 'en' ? 'Complete the form and we will contact you to discuss options, availability and a quotation.' : 'Συμπλήρωσε τα στοιχεία σου και θα επικοινωνήσουμε μαζί σου για επιλογές, διαθεσιμότητα και προσφορά.'}</p>
             <div className="contact-list">
-              <a href="tel:+306937153914"><Phone size={19} /> <span><small>Κλήση / SMS</small>693 715 3914</span></a>
+              <a href="tel:+306937153914"><Phone size={19} /> <span><small>{language === 'en' ? 'Call / SMS' : 'Κλήση / SMS'}</small>693 715 3914</span></a>
               <a href="https://www.instagram.com/glowworks.lab/" target="_blank" rel="noreferrer"><Instagram size={19} /> <span><small>Instagram</small>@glowworks.lab</span></a>
-              <a href="https://maps.app.goo.gl/va2psSDWoRwo5FZG9" target="_blank" rel="noreferrer"><MapPin size={19} /> <span><small>Τοποθεσία</small>Glowworks.lab, Ρόδος</span></a>
+              <a href="https://maps.app.goo.gl/va2psSDWoRwo5FZG9" target="_blank" rel="noreferrer"><MapPin size={19} /> <span><small>{language === 'en' ? 'Location' : 'Τοποθεσία'}</small>Glowworks.lab, {language === 'en' ? 'Rhodes' : 'Ρόδος'}</span></a>
             </div>
           </div>
 
@@ -557,10 +598,10 @@ function GlowworksPage() {
             {formStatus === 'success' ? (
               <div className="success-state" role="status">
                 <div><Check size={30} /></div>
-                <p className="eyebrow"><span /> Το λάβαμε</p>
-                <h3>Το αίτημα στάλθηκε.</h3>
-                <p>Επικοινωνούμε μαζί σου το συντομότερο για να οργανώσουμε την αναβάθμιση.</p>
-                <button type="button" className="button button-secondary" onClick={() => setFormStatus('idle')}>Νέο αίτημα</button>
+                <p className="eyebrow"><span /> {language === 'en' ? 'Received' : 'Το λάβαμε'}</p>
+                <h3>{language === 'en' ? 'Your enquiry has been sent.' : 'Το αίτημα στάλθηκε.'}</h3>
+                <p>{language === 'en' ? 'We will contact you as soon as possible to arrange your upgrade.' : 'Επικοινωνούμε μαζί σου το συντομότερο για να οργανώσουμε την αναβάθμιση.'}</p>
+                <button type="button" className="button button-secondary" onClick={() => setFormStatus('idle')}>{language === 'en' ? 'New enquiry' : 'Νέο αίτημα'}</button>
               </div>
             ) : (
               <form
@@ -571,12 +612,12 @@ function GlowworksPage() {
                 onSubmit={handleSubmit}
               >
                 <input type="hidden" name="form-name" value="glowworks-appointment" />
-                <p className="hidden-field"><label>Μην το συμπληρώσετε: <input name="bot-field" /></label></p>
+                <p className="hidden-field"><label>{language === 'en' ? 'Leave this blank:' : 'Μην το συμπληρώσετε:'} <input name="bot-field" /></label></p>
 
                 <div className="form-grid">
-                  <label>Όνομα *<input name="name" type="text" autoComplete="name" required placeholder="Το όνομά σου" /></label>
-                  <label>Τηλέφωνο *<input name="phone" type="tel" autoComplete="tel" required placeholder="69x xxx xxxx" /></label>
-                  <label className="full">Όχημα *
+                  <label>{language === 'en' ? 'Name' : 'Όνομα'} *<input name="name" type="text" autoComplete="name" required placeholder={language === 'en' ? 'Your name' : 'Το όνομά σου'} /></label>
+                  <label>{language === 'en' ? 'Phone' : 'Τηλέφωνο'} *<input name="phone" type="tel" autoComplete="tel" required placeholder="69x xxx xxxx" /></label>
+                  <label className="full">{language === 'en' ? 'Vehicle' : 'Όχημα'} *
                     <div className="vehicle-selector">
                       <input type="hidden" name="vehicle" value={selectedVehicleBrand ? `${selectedVehicleBrand}${selectedVehicleModel ? ` ${selectedVehicleModel}` : ''}${selectedVehicleYear ? ` ${selectedVehicleYear}` : ''}` : ''} required />
                       <div className="vehicle-search-wrap">
@@ -594,7 +635,7 @@ function GlowworksPage() {
                           }}
                           onFocus={() => setIsVehicleDropdownOpen(true)}
                           onBlur={() => setTimeout(() => setIsVehicleDropdownOpen(false), 120)}
-                          placeholder="Μάρκα"
+                          placeholder={language === 'en' ? 'Make' : 'Μάρκα'}
                         />
                         {isVehicleDropdownOpen ? (
                           <div className="vehicle-dropdown">
@@ -619,7 +660,7 @@ function GlowworksPage() {
                                 </button>
                               ))
                             ) : (
-                              <div className="vehicle-dropdown-empty">Δεν βρέθηκε η μάρκα σου. Μπορείς να γράψεις τη δική σου.</div>
+                              <div className="vehicle-dropdown-empty">{language === 'en' ? 'Make not found. You can enter your own.' : 'Δεν βρέθηκε η μάρκα σου. Μπορείς να γράψεις τη δική σου.'}</div>
                             )}
                           </div>
                         ) : null}
@@ -636,7 +677,7 @@ function GlowworksPage() {
                             }}
                             onFocus={() => setIsVehicleModelDropdownOpen(true)}
                             onBlur={() => setTimeout(() => setIsVehicleModelDropdownOpen(false), 120)}
-                            placeholder="Μοντέλο"
+                            placeholder={language === 'en' ? 'Model' : 'Μοντέλο'}
                           />
                           {isVehicleModelDropdownOpen ? (
                             <div className="vehicle-dropdown">
@@ -657,7 +698,7 @@ function GlowworksPage() {
                                   </button>
                                 ))
                               ) : (
-                                <div className="vehicle-dropdown-empty">Δεν βρέθηκε μοντέλο για αυτή τη μάρκα.</div>
+                                <div className="vehicle-dropdown-empty">{language === 'en' ? 'No models found for this make.' : 'Δεν βρέθηκε μοντέλο για αυτή τη μάρκα.'}</div>
                               )}
                             </div>
                           ) : null}
@@ -676,7 +717,7 @@ function GlowworksPage() {
                             }}
                             onFocus={() => setIsVehicleYearDropdownOpen(true)}
                             onBlur={() => setTimeout(() => setIsVehicleYearDropdownOpen(false), 120)}
-                            placeholder="Έτος"
+                            placeholder={language === 'en' ? 'Year' : 'Έτος'}
                           />
                           {isVehicleYearDropdownOpen ? (
                             <div className="vehicle-dropdown">
@@ -697,7 +738,7 @@ function GlowworksPage() {
                                   </button>
                                 ))
                               ) : (
-                                <div className="vehicle-dropdown-empty">Δεν βρέθηκε έτος.</div>
+                                <div className="vehicle-dropdown-empty">{language === 'en' ? 'No year found.' : 'Δεν βρέθηκε έτος.'}</div>
                               )}
                             </div>
                           ) : null}
@@ -705,13 +746,13 @@ function GlowworksPage() {
                       ) : null}
                     </div>
                   </label>
-                  <label className="full">Υπηρεσία *
+                  <label className="full">{language === 'en' ? 'Service' : 'Υπηρεσία'} *
                     <div className="vehicle-selector">
                       <input type="hidden" name="service" value={selectedService} required />
                       <div className="vehicle-search-wrap">
                         <input
                           type="text"
-                          value={serviceSearch || selectedService}
+                          value={serviceSearch || (language === 'en' ? bookingServiceEnglishLabels[selectedService] ?? selectedService : selectedService)}
                           onChange={(event) => {
                             setServiceSearch(event.target.value)
                             setSelectedService('')
@@ -719,54 +760,54 @@ function GlowworksPage() {
                           }}
                           onFocus={() => setIsServiceDropdownOpen(true)}
                           onBlur={() => setTimeout(() => setIsServiceDropdownOpen(false), 120)}
-                          placeholder="Πληκτρολόγησε υπηρεσία ή διάλεξε"
+                          placeholder={language === 'en' ? 'Type or select a service' : 'Πληκτρολόγησε υπηρεσία ή διάλεξε'}
                         />
                         {isServiceDropdownOpen ? (
                           <div className="vehicle-dropdown">
                             {filteredServices.length > 0 ? (
                               filteredServices.map((service) => (
                                 <button
-                                  key={service}
+                                  key={language === 'en' ? bookingServiceEnglishLabels[service] ?? service : service}
                                   type="button"
                                   className="vehicle-dropdown-option"
                                   onMouseDown={(event) => event.preventDefault()}
                                   onClick={() => {
                                     setSelectedService(service)
-                                    setServiceSearch(service)
+                                    setServiceSearch('')
                                     setIsServiceDropdownOpen(false)
                                   }}
                                 >
-                                  {service}
+                                  {language === 'en' ? bookingServiceEnglishLabels[service] ?? service : service}
                                 </button>
                               ))
                             ) : (
-                              <div className="vehicle-dropdown-empty">Δεν βρέθηκε υπηρεσία.</div>
+                              <div className="vehicle-dropdown-empty">{language === 'en' ? 'No service found.' : 'Δεν βρέθηκε υπηρεσία.'}</div>
                             )}
                           </div>
                         ) : null}
                       </div>
                     </div>
                   </label>
-                  <label><CalendarDays size={16} /> Προτιμώμενη ημερομηνία<input name="date" type="date" /></label>
-                  <label><Clock3 size={16} /> Ώρα
+                  <label><CalendarDays size={16} /> {language === 'en' ? 'Preferred date' : 'Προτιμώμενη ημερομηνία'}<input name="date" type="date" /></label>
+                  <label><Clock3 size={16} /> {language === 'en' ? 'Time' : 'Ώρα'}
                     <select name="time" defaultValue="Οποιαδήποτε">
-                      <option>Οποιαδήποτε</option><option>09:00–12:00</option><option>12:00–15:00</option><option>15:00–18:00</option>
+                      <option value="Οποιαδήποτε">{language === 'en' ? 'Any time' : 'Οποιαδήποτε'}</option><option>09:00–12:00</option><option>12:00–15:00</option><option>15:00–18:00</option>
                     </select>
                   </label>
-                  <label className="full">Σχόλια<textarea
+                  <label className="full">{language === 'en' ? 'Comments' : 'Σχόλια'}<textarea
                     name="message"
                     rows={4}
                     value={appointmentMessage}
                     onChange={(event) =>
                       setAppointmentMessage(event.target.value)
                     }
-                    placeholder="Πες μας περισσότερα για την αναβάθμιση που έχεις στο μυαλό σου..."
+                    placeholder={language === 'en' ? 'Tell us more about the upgrade you have in mind...' : 'Πες μας περισσότερα για την αναβάθμιση που έχεις στο μυαλό σου...'}
                   /></label>
                 </div>
 
-                {formStatus === 'error' && <p className="form-error" role="alert">Κάτι πήγε στραβά. Δοκίμασε ξανά ή κάλεσέ μας απευθείας.</p>}
+                {formStatus === 'error' && <p className="form-error" role="alert">{language === 'en' ? 'Something went wrong. Please try again or call us directly.' : 'Κάτι πήγε στραβά. Δοκίμασε ξανά ή κάλεσέ μας απευθείας.'}</p>}
                 <button className="submit-button" type="submit" disabled={formStatus === 'sending'}>
-                  {formStatus === 'sending' ? 'Αποστολή…' : 'Στείλε αίτημα'} <ArrowUpRight size={19} />
+                  {formStatus === 'sending' ? (language === 'en' ? 'Sending…' : 'Αποστολή…') : (language === 'en' ? 'Send enquiry' : 'Στείλε αίτημα')} <ArrowUpRight size={19} />
                 </button>
               </form>
             )}
@@ -779,13 +820,13 @@ function GlowworksPage() {
           <img src="/images/glowworks-logo.webp" alt="Glowworks.lab" />
           <p className="footer-signature">
             <span>Where automotive design becomes personal.</span>
-            <small>Crafted in Rhodes.</small>
+            <small>{language === 'en' ? 'Crafted in Rhodes.' : 'Δημιουργημένο στη Ρόδο.'}</small>
           </p>
-          <a href="#top">Back to top <ArrowUpRight size={16} /></a>
+          <a href="#top">{language === 'en' ? 'Back to top' : 'Επιστροφή στην αρχή'} <ArrowUpRight size={16} /></a>
         </div>
         <div className="shell footer-bottom">
           <span>© 2026 Glowworks.lab</span>
-          <span>Rhodes, Greece</span>
+          <span>{language === 'en' ? 'Rhodes, Greece' : 'Ρόδος, Ελλάδα'}</span>
           <a href="https://www.instagram.com/glowworks.lab/" target="_blank" rel="noreferrer">@glowworks.lab</a>
         </div>
       </footer>

@@ -16,6 +16,8 @@ import {
 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { useEffect, useMemo, useState } from 'react'
+import { LanguageSwitcher } from '../../components/LanguageSwitcher'
+import { useLanguage } from '../../lib/language'
 import { PortalActionButton } from '../../components/portal/PortalActionButton'
 import { PortalEmptyState, PortalSectionCard } from '../../components/portal/PortalSectionCard'
 import { hasValidAdminSession } from '../../lib/portal-auth'
@@ -27,13 +29,13 @@ export const Route = createFileRoute('/customer/$customerCode')({
   component: CustomerPortalPage,
 })
 
-function formatDate(value: string) {
+function formatLocalizedDate(value: string, language: 'el' | 'en') {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
     return value
   }
 
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat(language === 'el' ? 'el-GR' : 'en-GB', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -115,6 +117,9 @@ async function addGreekPdfFont(doc: jsPDF) {
   doc.setFont('NotoSans', 'normal')
 }
 function CustomerPortalPage() {
+  const { language } = useLanguage()
+  const tr = (el: string, en: string) => language === 'el' ? el : en
+  const formatDate = (value: string) => formatLocalizedDate(value, language)
   const { customerCode } = Route.useParams()
   const navigate = useNavigate()
   const initialPortalState = useMemo(() => getPortalState(), [])
@@ -291,18 +296,18 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
 
     doc.setFontSize(10)
     doc.setTextColor(text)
-    doc.text('PREMIUM AUTOMOTIVE UPGRADES', 515, 75, { align: 'right' })
+    doc.text(tr("PREMIUM ΑΝΑΒΑΘΜΙΣΕΙΣ ΑΥΤΟΚΙΝΗΤΩΝ", "PREMIUM AUTOMOTIVE UPGRADES"), 515, 75, { align: 'right' })
 
     doc.setFontSize(11)
     doc.setTextColor(cyan)
-    doc.text('DIGITAL WARRANTY CARD', 56, 105)
+    doc.text(tr("ΨΗΦΙΑΚΗ ΚΑΡΤΑ ΕΓΓΥΗΣΗΣ", "DIGITAL WARRANTY CARD"), 56, 105)
 
     doc.setFillColor(cyan)
     doc.roundedRect(56, 228, 140, 56, 12, 12, 'F')
     doc.setTextColor(background)
     doc.setFont('NotoSans', 'bold')
     doc.setFontSize(13)
-    doc.text('Warranty', 84, 252)
+    doc.text(tr("Εγγύηση", "Warranty"), 84, 252)
 
     doc.setTextColor(text)
     doc.setFont('NotoSans', 'bold')
@@ -311,23 +316,23 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
     doc.setFont('NotoSans', 'normal')
     doc.setFontSize(11)
     doc.setTextColor(muted)
-    doc.text('Service details', 56, 352)
+    doc.text(tr("Στοιχεία εργασίας", "Service details"), 56, 352)
 
     doc.setTextColor(text)
     doc.setFont('NotoSans', 'normal')
     doc.setFontSize(13)
-    doc.text(`Customer: ${customer.name}`, 56, 392)
-    doc.text(`Vehicle: ${entry.vehicle || `${primaryVehicle.make} ${primaryVehicle.model}`}`, 56, 420)
-    doc.text(`Installation: ${entry.title}`, 56, 448)
-    doc.text(`Completed on: ${formatDate(entry.completedOn)}`, 56, 476)
-    doc.text(`Expires on: ${formatDate(warranty.endsOn)}`, 56, 504)
+    doc.text(`${tr("Πελάτης", "Customer")}: ${customer.name}`, 56, 392)
+    doc.text(`${tr("Όχημα", "Vehicle")}: ${entry.vehicle || `${primaryVehicle.make} ${primaryVehicle.model}`}`, 56, 420)
+    doc.text(`${tr("Εργασία", "Installation")}: ${entry.title}`, 56, 448)
+    doc.text(`${tr("Ολοκληρώθηκε", "Completed on")}: ${formatDate(entry.completedOn)}`, 56, 476)
+    doc.text(`${tr("Λήξη", "Expires on")}: ${formatDate(warranty.endsOn)}`, 56, 504)
 
     doc.setTextColor(cyan)
     doc.setFont('NotoSans', 'bold')
-    doc.text('Warranty terms', 56, 548)
+    doc.text(tr("Όροι εγγύησης", "Warranty terms"), 56, 548)
     doc.setTextColor(text)
     doc.setFont('NotoSans', 'normal')
-    const terms = doc.splitTextToSize(warranty.terms ?? 'Coverage applies under normal use.', 470)
+    const terms = doc.splitTextToSize(warranty.terms ?? tr("Η κάλυψη ισχύει υπό κανονική χρήση.", "Coverage applies under normal use."), 470)
     doc.text(terms, 56, 570)
 
     doc.setFillColor(18, 24, 38)
@@ -338,7 +343,7 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
     doc.setTextColor(cyan)
     doc.setFont('NotoSans', 'bold')
     doc.setFontSize(12)
-    doc.text('Status', 80, 724)
+    doc.text(tr("Κατάσταση", "Status"), 80, 724)
     doc.setTextColor(text)
     doc.setFont('NotoSans', 'bold')
     doc.setFontSize(14)
@@ -377,8 +382,8 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
         <div className="customer-shell">
           <div className="customer-hero-card">
             <div className="customer-hero-copy">
-              <p className="customer-eyebrow">Customer portal</p>
-              <h1>Loading customer profile...</h1>
+              <p className="customer-eyebrow">{tr("Πύλη πελάτη", "Customer portal")}</p>
+              <h1>{tr("Φόρτωση προφίλ πελάτη...", "Loading customer profile...")}</h1>
             </div>
           </div>
         </div>
@@ -392,11 +397,10 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
         <div className="customer-shell">
           <div className="customer-hero-card">
             <div className="customer-hero-copy">
-              <p className="customer-eyebrow">Customer portal</p>
-              <h1>Customer profile not found</h1>
+              <p className="customer-eyebrow">{tr("Πύλη πελάτη", "Customer portal")}</p>
+              <h1>{tr("Το προφίλ πελάτη δεν βρέθηκε", "Customer profile not found")}</h1>
               <p>
-                This customer link is invalid or the profile is no longer
-                available.
+                {tr("Ο σύνδεσμος πελάτη δεν είναι έγκυρος ή το προφίλ δεν είναι πλέον διαθέσιμο.", "This customer link is invalid or the profile is no longer available.")}
               </p>
             </div>
           </div>
@@ -409,97 +413,96 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
       <div className="customer-shell">
         {isAdminViewingCustomer ? (
           <div className="customer-card-actions" style={{ justifyContent: 'flex-start' }}>
-            <PortalActionButton onClick={() => navigate({ to: '/portal/admin' })}>Back to admin portal</PortalActionButton>
+            <PortalActionButton onClick={() => navigate({ to: '/portal/admin' })}>{tr("Επιστροφή στη διαχείριση", "Back to admin portal")}</PortalActionButton>
           </div>
         ) : null}
-        <header className="customer-hero-card">
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}><LanguageSwitcher /></div><header className="customer-hero-card">
           <img src="/images/glowworks-logo.webp" alt="Glowworks Lab logo" />
           <div className="customer-hero-copy">
-            <p className="customer-eyebrow">Customer profile</p>
+            <p className="customer-eyebrow">{tr("Προφίλ πελάτη", "Customer profile")}</p>
             <h1>{customer.name}</h1>
             <p className="customer-hero-meta">{customer.customerCode}</p>
           </div>
           <div className="customer-hero-side">
             <div className="customer-hero-summary">
-              <span>Completed jobs</span>
+              <span>{tr("Ολοκληρωμένες εργασίες", "Completed jobs")}</span>
               <strong>{customerHistory.length}</strong>
             </div>
           </div>
         </header>
 
         <section className="customer-grid">
-          <PortalSectionCard eyebrow="Basic details" title="Contact information" icon={<ShieldCheck size={16} />}>
+          <PortalSectionCard eyebrow={tr("Βασικά στοιχεία", "Basic details")} title={tr("Στοιχεία επικοινωνίας", "Contact information")} icon={<ShieldCheck size={16} />}>
             <div className="customer-list">
               <div className="customer-detail"><span>Email</span><strong>{customer.email}</strong></div>
-              <div className="customer-detail"><span>Phone</span><strong>{customer.phone}</strong></div>
-              <div className="customer-detail"><span>Address</span><strong>{customer.address}</strong></div>
-              <div className="customer-detail"><span>Loyalty tier</span><strong>{customer.loyaltyTier}</strong></div>
+              <div className="customer-detail"><span>{tr("Τηλέφωνο", "Phone")}</span><strong>{customer.phone}</strong></div>
+              <div className="customer-detail"><span>{tr("Διεύθυνση", "Address")}</span><strong>{customer.address}</strong></div>
+              <div className="customer-detail"><span>{tr("Επίπεδο μέλους", "Loyalty tier")}</span><strong>{customer.loyaltyTier}</strong></div>
             </div>
           </PortalSectionCard>
 
-          <PortalSectionCard eyebrow="Vehicle" title="Current vehicle" icon={<CarFront size={16} />}>
+          <PortalSectionCard eyebrow={tr("Όχημα", "Vehicle")} title={tr("Το αυτοκίνητό σου", "Current vehicle")} icon={<CarFront size={16} />}>
             <div className="customer-list">
-              <div className="customer-detail"><span>Brand</span><strong>{primaryVehicle.make}</strong></div>
-              <div className="customer-detail"><span>Model</span><strong>{primaryVehicle.model}</strong></div>
-              <div className="customer-detail"><span>Year</span><strong>{primaryVehicle.year}</strong></div>
-              <div className="customer-detail"><span>Plate</span><strong>{primaryVehicle.plate}</strong></div>
+              <div className="customer-detail"><span>{tr("Μάρκα", "Brand")}</span><strong>{primaryVehicle.make}</strong></div>
+              <div className="customer-detail"><span>{tr("Μοντέλο", "Model")}</span><strong>{primaryVehicle.model}</strong></div>
+              <div className="customer-detail"><span>{tr("Έτος", "Year")}</span><strong>{primaryVehicle.year}</strong></div>
+              <div className="customer-detail"><span>{tr("Πινακίδα", "Plate")}</span><strong>{primaryVehicle.plate}</strong></div>
             </div>
           </PortalSectionCard>
         </section>
         <section className="customer-member-grid">
           <PortalSectionCard
-            eyebrow="Glowworks member benefit"
-            title="Το προσωπικό σου προνόμιο"
+            eyebrow={tr("Προνόμιο μέλους", "Glowworks member benefit")}
+            title={tr("Το προσωπικό σου προνόμιο", "Your personal benefit")}
             icon={<BadgePercent size={17} />}
             className="customer-member-benefit"
           >
                         {discountIsActive ? (
               <div className="customer-member-content">
-                <p className="customer-member-kicker">MEMBER BENEFIT ACTIVE</p>
+                <p className="customer-member-kicker">{tr("ΕΝΕΡΓΟ ΠΡΟΝΟΜΙΟ ΜΕΛΟΥΣ", "MEMBER BENEFIT ACTIVE")}</p>
                 <strong className="customer-member-value">{memberDiscountPercentage}% OFF</strong>
-                <div className="customer-discount-countdown" aria-label="Discount time remaining">
-                  <div><strong>{countdownDays}</strong><span>Days</span></div>
-                  <div><strong>{String(countdownHours).padStart(2, '0')}</strong><span>Hours</span></div>
-                  <div><strong>{String(countdownMinutes).padStart(2, '0')}</strong><span>Minutes</span></div>
-                  <div><strong>{String(countdownSeconds).padStart(2, '0')}</strong><span>Seconds</span></div>
+                <div className="customer-discount-countdown" aria-label={tr("Χρόνος που απομένει", "Discount time remaining")}>
+                  <div><strong>{countdownDays}</strong><span>{tr("Ημέρες", "Days")}</span></div>
+                  <div><strong>{String(countdownHours).padStart(2, '0')}</strong><span>{tr("Ώρες", "Hours")}</span></div>
+                  <div><strong>{String(countdownMinutes).padStart(2, '0')}</strong><span>{tr("Λεπτά", "Minutes")}</span></div>
+                  <div><strong>{String(countdownSeconds).padStart(2, '0')}</strong><span>{tr("Δευτερόλεπτα", "Seconds")}</span></div>
                 </div>
-                <p>Your personal benefit is available for your next Glowworks.lab upgrade.</p>
+                <p>{tr("Το προσωπικό σου προνόμιο ισχύει για την επόμενη αναβάθμιση στο Glowworks.lab.", "Your personal benefit is available for your next Glowworks.lab upgrade.")}</p>
                 <div className="customer-member-code">
-                  <span>MEMBER CODE</span>
+                  <span>{tr("ΚΩΔΙΚΟΣ ΜΕΛΟΥΣ", "MEMBER CODE")}</span>
                   <strong>{memberDiscountCode}</strong>
                 </div>
-                <small>Expires on {formatDate(customer.discountExpiresAt as string)}</small>
+                <small>{tr("Λήγει στις", "Expires on")} {formatDate(customer.discountExpiresAt as string)}</small>
               </div>
             ) : discountIsExpired ? (
               <div className="customer-member-content customer-member-expired">
-                <p className="customer-member-kicker">MEMBER BENEFIT</p>
-                <strong className="customer-member-value">EXPIRED</strong>
-                <p>This benefit has ended. It will restart only after Glowworks.lab adds a new completed service.</p>
+                <p className="customer-member-kicker">{tr("ΠΡΟΝΟΜΙΟ ΜΕΛΟΥΣ", "MEMBER BENEFIT")}</p>
+                <strong className="customer-member-value">{tr("ΕΛΗΞΕ", "EXPIRED")}</strong>
+                <p>{tr("Το προνόμιο έληξε. Θα ενεργοποιηθεί ξανά όταν καταχωρηθεί νέα ολοκληρωμένη εργασία.", "This benefit has ended. It will restart only after Glowworks.lab adds a new completed service.")}</p>
                 <div className="customer-member-code">
-                  <span>MEMBER CODE</span>
+                  <span>{tr("ΚΩΔΙΚΟΣ ΜΕΛΟΥΣ", "MEMBER CODE")}</span>
                   <strong>{memberDiscountCode}</strong>
                 </div>
-                <small>Expired on {formatDate(customer.discountExpiresAt as string)}</small>
+                <small>{tr("Έληξε στις", "Expired on")} {formatDate(customer.discountExpiresAt as string)}</small>
               </div>
             ) : (
               <div className="customer-member-content">
-                <p className="customer-member-kicker">MEMBER BENEFIT</p>
-                <strong className="customer-member-value">NOT ACTIVE</strong>
-                <p>Your 60-day benefit starts automatically when Glowworks.lab adds a new completed service.</p>
+                <p className="customer-member-kicker">{tr("ΠΡΟΝΟΜΙΟ ΜΕΛΟΥΣ", "MEMBER BENEFIT")}</p>
+                <strong className="customer-member-value">{tr("ΜΗ ΕΝΕΡΓΟ", "NOT ACTIVE")}</strong>
+                <p>{tr("Το προνόμιο 60 ημερών ενεργοποιείται αυτόματα μόλις καταχωρηθεί νέα ολοκληρωμένη εργασία.", "Your 60-day benefit starts automatically when Glowworks.lab adds a new completed service.")}</p>
               </div>
             )}
           </PortalSectionCard>
 
           <PortalSectionCard
-            eyebrow="Your experience"
-            title="Η εμπειρία σου μετράει"
+            eyebrow={tr("Η εμπειρία σου", "Your experience")}
+            title={tr("Η εμπειρία σου μετράει", "Your experience matters")}
             icon={<Sparkles size={17} />}
             className="customer-review-card"
           >
             <div className="customer-member-content">
               <p>
-                Μοιράσου την ειλικρινή εμπειρία σου και βοήθησε άλλους
-                οδηγούς να γνωρίσουν τη δουλειά μας.
+                {tr("Μοιράσου την ειλικρινή εμπειρία σου και βοήθησε άλλους οδηγούς να γνωρίσουν τη δουλειά μας.", "Share your honest experience and help other drivers discover our work.")}
               </p>
 
               <div className="customer-card-actions">
@@ -509,21 +512,20 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
                   rel="noreferrer"
                   primary
                 >
-                  Αξιολόγησέ μας στο Google
+                  {tr("Αξιολόγησέ μας στο Google", "Review us on Google")}
                 </PortalActionButton>
               </div>
 
               <small>
-                Η αξιολόγηση είναι προαιρετική και δεν συνδέεται με το
-                προνόμιο μέλους.
+                {tr("Η αξιολόγηση είναι προαιρετική και δεν συνδέεται με το προνόμιο μέλους.", "Leaving a review is optional and is not connected to your membership benefit.")}
               </small>
             </div>
           </PortalSectionCard>
         </section>
 <PortalSectionCard
   className="customer-quick-actions-card"
-  eyebrow="Quick actions"
-  title="Contact Glowworks"
+  eyebrow={tr("Γρήγορες ενέργειες", "Quick actions")}
+  title={tr("Επικοινωνία με Glowworks", "Contact Glowworks")}
   icon={<Sparkles size={16} />}
 >
   <div
@@ -539,7 +541,7 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
     </PortalActionButton>
 
     <PortalActionButton href="tel:+306937153914">
-      <Phone size={16} /> Call us
+      <Phone size={16} /> {tr("Κάλεσέ μας", "Call us")}
     </PortalActionButton>
 
     <PortalActionButton href="mailto:klevis.ahmati@icloud.com">
@@ -551,7 +553,7 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
       target="_blank"
       rel="noreferrer"
     >
-      <MapPin size={16} /> Location
+      <MapPin size={16} /> {tr("Τοποθεσία", "Location")}
     </PortalActionButton>
 
     <PortalActionButton
@@ -564,11 +566,11 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
     </PortalActionButton>
 
     <PortalActionButton href="/">
-      <Home size={16} /> Main website
+      <Home size={16} /> {tr("Κεντρική ιστοσελίδα", "Main website")}
     </PortalActionButton>
   </div>
 </PortalSectionCard>
-        <PortalSectionCard eyebrow="Gallery" title="Customer photos" icon={<Sparkles size={16} />}>
+        <PortalSectionCard eyebrow={tr("Συλλογή", "Gallery")} title={tr("Φωτογραφίες πελάτη", "Customer photos")} icon={<Sparkles size={16} />}>
           {customerGallery.length ? (
             <div className="customer-gallery">
               {customerGallery.map((item) => (
@@ -582,11 +584,11 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
               ))}
             </div>
           ) : (
-            <p className="portal-muted">No photos uploaded for this customer yet.</p>
+            <p className="portal-muted">{tr("Δεν έχουν προστεθεί ακόμη φωτογραφίες για αυτόν τον πελάτη.", "No photos uploaded for this customer yet.")}</p>
           )}
         </PortalSectionCard>
 
-        <PortalSectionCard eyebrow="Warranty" title="Job warranties" icon={<ShieldCheck size={16} />}>
+        <PortalSectionCard eyebrow={tr("Εγγύηση", "Warranty")} title={tr("Εγγυήσεις εργασιών", "Job warranties")} icon={<ShieldCheck size={16} />}>
           {warrantyHistory.length ? (
             <div className="customer-list">
               {warrantyHistory.map(({ entry, warranty, warrantyMeta }) => (
@@ -597,18 +599,18 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
                     {warranty ? (
                       <>
                         <p style={{ marginTop: '6px', color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', lineHeight: 1.5 }}>
-                          Warranty: {warranty.warrantyNumber ?? 'Service warranty'} • {warrantyMeta?.statusLabel ?? warranty.status} • Expires {warranty.endsOn}
+                          {tr("Εγγύηση", "Warranty")}: {warranty.warrantyNumber ?? 'Service warranty'} • {warrantyMeta?.statusLabel ?? warranty.status} • {tr("Λήγει", "Expires")} {warranty.endsOn}
                         </p>
                         <p style={{ marginTop: '6px', color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', lineHeight: 1.5 }}>
                           {warranty.coverage}
                         </p>
                         <div className="customer-card-actions" style={{ justifyContent: 'flex-start', marginTop: '10px' }}>
-                          <PortalActionButton primary onClick={() => { void downloadWarrantyPdf(entry, warranty) }}><Download size={16} /> Download warranty PDF</PortalActionButton>
+                          <PortalActionButton primary onClick={() => { void downloadWarrantyPdf(entry, warranty) }}><Download size={16} /> {tr("Λήψη εγγύησης PDF", "Download warranty PDF")}</PortalActionButton>
                         </div>
                       </>
                     ) : (
                       <p style={{ marginTop: '6px', color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', lineHeight: 1.5 }}>
-                        No warranty linked to this job yet.
+                        {tr("Δεν έχει συνδεθεί ακόμη εγγύηση με αυτή την εργασία.", "No warranty linked to this job yet.")}
                       </p>
                     )}
                   </div>
@@ -616,11 +618,11 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
               ))}
             </div>
           ) : (
-            <PortalEmptyState title="Warranty details pending" description="Your warranty details will appear here once the installation is recorded." />
+            <PortalEmptyState title={tr("Αναμονή στοιχείων εγγύησης", "Warranty details pending")} description={tr("Τα στοιχεία εγγύησης θα εμφανιστούν εδώ μόλις καταχωρηθεί η εγκατάσταση.", "Your warranty details will appear here once the installation is recorded.")} />
           )}
         </PortalSectionCard>
 
-        <PortalSectionCard eyebrow="Services" title="Installed services" icon={<ShieldCheck size={16} />}>
+        <PortalSectionCard eyebrow={tr("Υπηρεσίες", "Services")} title={tr("Εγκατεστημένες αναβαθμίσεις", "Installed services")} icon={<ShieldCheck size={16} />}>
           {customerHistory.length ? (
             <div className="customer-list">
               {customerHistory.slice().sort((a, b) => b.completedOn.localeCompare(a.completedOn)).map((entry) => (
@@ -629,14 +631,14 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
                     <span>{entry.completedOn}</span>
                     <strong>{entry.title}</strong>
                     <p style={{ marginTop: '6px', color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', lineHeight: 1.5 }}>
-                      Vehicle: {entry.vehicle || `${primaryVehicle.make} ${primaryVehicle.model}`}
+                      {tr("Όχημα", "Vehicle")}: {entry.vehicle || `${primaryVehicle.make} ${primaryVehicle.model}`}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <PortalEmptyState title="Service history pending" description="Your installation history will appear here once service records are linked to this profile." />
+            <PortalEmptyState title={tr("Αναμονή ιστορικού εργασιών", "Service history pending")} description={tr("Το ιστορικό εγκαταστάσεων θα εμφανιστεί μόλις συνδεθούν οι εργασίες με το προφίλ σου.", "Your installation history will appear here once service records are linked to this profile.")} />
           )}
         </PortalSectionCard>
       </div>
