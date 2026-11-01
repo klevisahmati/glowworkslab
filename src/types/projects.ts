@@ -20,6 +20,8 @@ export interface ProjectRecord {
   model: string
   title: string
   description: string
+  titleEn?: string | null
+  descriptionEn?: string | null
   createdAt: string
   updatedAt: string
   media: ProjectMedia[]
@@ -32,4 +34,6 @@ export interface ProjectDraft {
   model: string
   title: string
   description: string
+  titleEn?: string | null
+  descriptionEn?: string | null
 }

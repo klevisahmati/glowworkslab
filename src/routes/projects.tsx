@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { useLanguage } from '../lib/language'
 import { ArrowLeft, ArrowUpRight, BadgeCheck, Camera, CarFront, ChevronLeft, ChevronRight, Sparkles, Star, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -17,12 +19,18 @@ export const Route = createFileRoute('/projects')({
 
 
   component: ProjectsPage,
-  head: () => ({
+  head: ({ match }) => ({
     meta: [
-      { title: 'Projects — Glowworks.lab' },
+      {
+        title: match.context.initialLanguage === 'en'
+          ? 'Automotive Customisation Projects — Glowworks.lab'
+          : 'Έργα & Αναβαθμίσεις Αυτοκινήτων — Glowworks.lab',
+      },
       {
         name: 'description',
-        content: 'Δες τα custom automotive interior projects της Glowworks.lab ανά μάρκα και μοντέλο.',
+        content: match.context.initialLanguage === 'en'
+          ? 'Explore Glowworks.lab automotive customisation projects in Rhodes, Greece. Ambient lighting, custom steering wheels, starlight headliners and more.'
+          : 'Ανακάλυψε τα projects της Glowworks.lab στη Ρόδο. Ambient φωτισμός, custom τιμόνια, αστέρια οροφής και premium αναβαθμίσεις αυτοκινήτων.',
       },
     ],
   }),
@@ -42,6 +50,7 @@ type ProjectGalleryItem = {
   model: string
   image: string
   title: string
+  titleEn?: string | null
 }
 
 function getAssetPath(path: string) {
@@ -187,6 +196,13 @@ const serviceCategoryImages: Record<
   },
 }
 
+const projectCategoryEnglishDescriptions: Record<string, string> = {
+  'ambient-lighting': 'Factory-style cabin lighting with a personalised finish.',
+  'custom-steering-wheels': 'Leather, Alcantara and carbon details tailored to your vehicle.',
+  'starlight-headliner': 'Fibre-optic starlight headliners with shooting star effects.',
+  'screens-media': 'Modern displays, multimedia systems and seamlessly integrated upgrades.',
+  'body-kit': 'Front lips, spoilers, diffusers and premium exterior enhancements.',
+}
 const serviceCategories: ServiceCategory[] = [
   {
     id: 'ambient-lighting',
@@ -221,6 +237,7 @@ const serviceCategories: ServiceCategory[] = [
 ]
 
 function ProjectsPage() {
+  const { language } = useLanguage()
   const { service: requestedServiceId } = Route.useSearch()
   const [activeServiceId, setActiveServiceId] = useState<string | null>(
     () =>
@@ -290,6 +307,7 @@ function ProjectsPage() {
               brand: project.brand,
               model: project.model,
               title: project.title,
+              titleEn: project.titleEn,
               image: media.publicUrl,
             })),
         )
@@ -408,9 +426,9 @@ function ProjectsPage() {
           <a className="brand" href={getAssetPath('/')} aria-label="Glowworks.lab αρχική">
             <img src={getAssetPath('/images/glowworks-logo.webp')} alt="Glowworks.lab" />
           </a>
-          <div className="project-nav-links">
-            <a href={getAssetPath('/')}><ArrowLeft size={16} /> Αρχική</a>
-            <a className="nav-book" href={getAssetPath('/#booking')}>Κλείσε ραντεβού <ArrowUpRight size={15} /></a>
+          <div className="project-nav-links"><LanguageSwitcher />
+            <a href={getAssetPath('/')}><ArrowLeft size={16} /> {language === 'en' ? 'Home' : 'Αρχική'}</a>
+            <a className="nav-book" href={getAssetPath('/#booking')}>{language === 'en' ? 'Book an appointment' : 'Κλείσε ραντεβού'} <ArrowUpRight size={15} /></a>
           </div>
         </div>
       </nav>
@@ -420,9 +438,9 @@ function ProjectsPage() {
         <div className="shell projects-hero-layout">
           <div className="projects-hero-copy reveal">
             <p className="eyebrow"><span /> Glowworks archive</p>
-            <h1>Project<br /><em>garage.</em></h1>
+            <h1>{language === 'en' ? 'Project' : 'Project'}<br /><em>garage.</em></h1>
             <p>
-              Επίλεξε μάρκα και ανακάλυψε τις μεταμορφώσεις εσωτερικού που δημιουργήσαμε για κάθε μοντέλο.
+              {language === 'en' ? 'Choose a car brand and explore the custom transformations we have created for each model.' : 'Επίλεξε μάρκα και ανακάλυψε τις μεταμορφώσεις εσωτερικού που δημιουργήσαμε για κάθε μοντέλο.'}
             </p>
           </div>
           <div className="projects-counter reveal reveal-delay">
@@ -436,7 +454,7 @@ function ProjectsPage() {
                 ).size,
               ).padStart(2, '0')}
             </strong>
-            <span>μοντέλα στο<br />project archive</span>
+            <span>{language === 'en' ? 'models in our' : 'μοντέλα στο'}<br />project archive</span>
           </div>
         </div>
       </header>
@@ -446,11 +464,11 @@ function ProjectsPage() {
           <div className="projects-toolbar">
             <div>
               <p className="section-index">01 / Project gallery</p>
-              <h2 id="projects-title">Choose your upgrade.</h2>
+              <h2 id="projects-title">{language === 'en' ? 'Choose your upgrade.' : 'Επίλεξε την αναβάθμισή σου.'}</h2>
             </div>
             {activeServiceId && activeBrand && activeModel ? (
               <p className="projects-result-count">
-                {String(visibleProjects.length).padStart(2, '0')} gallery items
+                {String(visibleProjects.length).padStart(2, '0')} {language === 'en' ? 'gallery items' : 'φωτογραφίες'}
               </p>
             ) : null}
           </div>
@@ -460,12 +478,12 @@ function ProjectsPage() {
             {selectedService ? (
               <>
                 <p className="eyebrow"><span /> {selectedService.title}</p>
-                <h3>{selectedService.description}</h3>
+                <h3>{language === 'en' ? projectCategoryEnglishDescriptions[selectedService.id] ?? selectedService.description : selectedService.description}</h3>
               </>
             ) : (
               <>
-                <p className="eyebrow"><span /> Browse by service</p>
-                <h3>Pick the upgrade you want to explore first.</h3>
+                <p className="eyebrow"><span /> {language === 'en' ? 'Browse by service' : 'Αναζήτηση ανά υπηρεσία'}</p>
+                <h3>{language === 'en' ? 'Pick the upgrade you want to explore first.' : 'Επίλεξε πρώτα την αναβάθμιση που σε ενδιαφέρει.'}</h3>
               </>
             )}
           </div>
@@ -501,7 +519,7 @@ function ProjectsPage() {
                     </span>
                     <div className="project-service-content">
                       <h4>{service.title}</h4>
-                      <p>{service.description}</p>
+                      <p>{language === 'en' ? projectCategoryEnglishDescriptions[service.id] ?? service.description : service.description}</p>
                     </div>
                     <span className="project-service-arrow" aria-hidden="true">↗</span>
                   </button>
@@ -517,7 +535,7 @@ function ProjectsPage() {
                 setActiveBrand(null)
                 setActiveModel(null)
               }}>
-                <ArrowLeft size={15} /> Back to services
+                <ArrowLeft size={15} /> {language === 'en' ? 'Back to services' : 'Επιστροφή στις υπηρεσίες'}
               </button>
 
               <div className="project-choice-grid" role="list">
@@ -544,7 +562,7 @@ function ProjectsPage() {
                     </span>
                     <div>
                       <h4>{brand}</h4>
-                      <p>Show all models for this manufacturer.</p>
+                      <p>{language === 'en' ? 'Show all models for this manufacturer.' : 'Δες όλα τα μοντέλα αυτής της μάρκας.'}</p>
                     </div>
                   </button>
                 ))}
@@ -558,7 +576,7 @@ function ProjectsPage() {
                 setActiveBrand(null)
                 setActiveModel(null)
               }}>
-                <ArrowLeft size={15} /> Back to brands
+                <ArrowLeft size={15} /> {language === 'en' ? 'Back to brands' : 'Επιστροφή στις μάρκες'}
               </button>
 
               <div className="project-choice-grid project-model-grid" role="list">
@@ -600,9 +618,9 @@ function ProjectsPage() {
                       <span className="project-model-shade" aria-hidden="true" />
                       <span className="project-choice-icon project-model-icon"><BadgeCheck size={18} /></span>
                       <div className="project-model-copy">
-                        <span className="project-model-eyebrow">{activeBrand} / Glowworks project</span>
+                        <span className="project-model-eyebrow">{activeBrand} / {language === 'en' ? 'Glowworks project' : 'Έργο Glowworks'}</span>
                         <h4>{model}</h4>
-                        <p>{matchingProject ? 'View the complete project' : 'Explore this model'}</p>
+                        <p>{matchingProject ? (language === 'en' ? 'View the complete project' : 'Δες ολόκληρο το project') : (language === 'en' ? 'Explore this model' : 'Εξερεύνησε το μοντέλο')}</p>
                       </div>
                       <span className="project-model-arrow" aria-hidden="true"><ArrowUpRight size={20} /></span>
                     </button>
@@ -615,7 +633,7 @@ function ProjectsPage() {
           {activeServiceId && activeBrand && activeModel && (
             <div className="project-choice-panel">
               <button className="project-back" type="button" onClick={() => setActiveModel(null)}>
-                <ArrowLeft size={15} /> Back to models
+                <ArrowLeft size={15} /> {language === 'en' ? 'Back to models' : 'Επιστροφή στα μοντέλα'}
               </button>
 
               <div className="projects-grid">
@@ -625,7 +643,7 @@ function ProjectsPage() {
                     key={`${project.slug}-${index}`}
                     role="link"
                     tabIndex={0}
-                    aria-label={`View the complete ${project.title} project`}
+                    aria-label={`${language === 'en' ? 'View' : 'Προβολή'} ${language === 'en' ? project.titleEn?.trim() || project.title : project.title}`}
                     onClick={() => {
                       window.location.assign(
                         getAssetPath(`/project/${project.slug}`),
@@ -640,11 +658,11 @@ function ProjectsPage() {
                       }
                     }}
                   >
-                    <img src={getAssetPath(project.image)} alt={project.title} />
+                    <img src={getAssetPath(project.image)} alt={language === 'en' ? project.titleEn?.trim() || project.title : project.title} />
                     <div className="project-card-shade" />
                     <div className="project-card-topline">
                       <span>{String(index + 1).padStart(2, '0')}</span>
-                      <span className="project-photo-status"><ArrowUpRight size={14} /> View project</span>
+                      <span className="project-photo-status"><ArrowUpRight size={14} /> {language === 'en' ? 'View project' : 'Προβολή project'}</span>
                     </div>
                   </article>
                 ))}
@@ -659,13 +677,13 @@ function ProjectsPage() {
           className="project-lightbox"
           role="dialog"
           aria-modal="true"
-          aria-label="Project photo viewer"
+          aria-label={language === 'en' ? 'Project photo viewer' : 'Προβολή φωτογραφιών project'}
           onClick={() => setSelectedGalleryImage(null)}
         >
           <button
             className="project-lightbox-close"
             type="button"
-            aria-label="Close photo"
+            aria-label={language === 'en' ? 'Close photo' : 'Κλείσιμο φωτογραφίας'}
             onClick={() => setSelectedGalleryImage(null)}
           >
             ×
@@ -676,7 +694,7 @@ function ProjectsPage() {
               <button
                 className="project-lightbox-nav project-lightbox-prev"
                 type="button"
-                aria-label="Previous photo"
+                aria-label={language === 'en' ? 'Previous photo' : 'Προηγούμενη φωτογραφία'}
                 onClick={(event) => {
                   event.stopPropagation()
                   showAdjacentGalleryImage(-1)
@@ -688,7 +706,7 @@ function ProjectsPage() {
               <button
                 className="project-lightbox-nav project-lightbox-next"
                 type="button"
-                aria-label="Next photo"
+                aria-label={language === 'en' ? 'Next photo' : 'Επόμενη φωτογραφία'}
                 onClick={(event) => {
                   event.stopPropagation()
                   showAdjacentGalleryImage(1)
@@ -709,22 +727,22 @@ function ProjectsPage() {
       <section className="projects-cta">
         <div className="shell projects-cta-layout">
           <div>
-            <p className="eyebrow"><span /> Your car, next</p>
-            <h2>Το επόμενο project μπορεί να είναι το δικό σου.</h2>
+            <p className="eyebrow"><span /> {language === 'en' ? 'Your car, next' : 'Το δικό σου αυτοκίνητο είναι το επόμενο'}</p>
+            <h2>{language === 'en' ? 'Your car could be our next project.' : 'Το επόμενο project μπορεί να είναι το δικό σου.'}</h2>
           </div>
-          <a className="button button-primary" href={getAssetPath('/#booking')}>Στείλε το όχημά σου <ArrowUpRight size={19} /></a>
+          <a className="button button-primary" href={getAssetPath('/#booking')}>{language === 'en' ? 'Send us your vehicle details' : 'Στείλε το όχημά σου'} <ArrowUpRight size={19} /></a>
         </div>
       </section>
 
       <footer className="site-footer project-footer">
         <div className="shell footer-main">
           <img src={getAssetPath('/images/glowworks-logo.webp')} alt="Glowworks.lab" />
-          <p>Custom interior upgrades<br />στη Ρόδο.</p>
-          <a href="#top">Back to top <ArrowUpRight size={16} /></a>
+          <p>{language === 'en' ? 'Custom automotive upgrades' : 'Εξατομικευμένες αναβαθμίσεις αυτοκινήτων'}<br />{language === 'en' ? 'in Rhodes.' : 'στη Ρόδο.'}</p>
+          <a href="#top">{language === 'en' ? 'Back to top' : 'Επιστροφή στην αρχή'} <ArrowUpRight size={16} /></a>
         </div>
         <div className="shell footer-bottom">
           <span>© 2026 Glowworks.lab</span>
-          <span>Rhodes, Greece</span>
+          <span>{language === 'en' ? 'Rhodes, Greece' : 'Ρόδος, Ελλάδα'}</span>
           <a href="https://www.instagram.com/glowworks.lab/" target="_blank" rel="noreferrer">@glowworks.lab</a>
         </div>
       </footer>

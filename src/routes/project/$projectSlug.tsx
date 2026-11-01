@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { LanguageSwitcher } from '../../components/LanguageSwitcher'
+import { useLanguage } from '../../lib/language'
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -46,18 +48,26 @@ function getServiceLabel(serviceId: string) {
 
 export const Route = createFileRoute('/project/$projectSlug')({
   loader: ({ params }) => fetchProjectBySlug(params.projectSlug),
-  head: ({ loaderData }) => ({
+  head: ({ loaderData, match }) => ({
     meta: [
       {
         title: loaderData
-          ? `${loaderData.title} — Glowworks.lab`
-          : 'Project not found — Glowworks.lab',
+          ? `${match.context.initialLanguage === 'en' ? (loaderData.titleEn || loaderData.title) : loaderData.title} — Glowworks.lab`
+          : match.context.initialLanguage === 'en'
+            ? 'Project not found — Glowworks.lab'
+            : 'Το έργο δεν βρέθηκε — Glowworks.lab',
       },
       {
         name: 'description',
-        content:
-          loaderData?.description ||
-          'Premium automotive project by Glowworks.lab in Rhodes, Greece.',
+        content: loaderData
+          ? (
+              match.context.initialLanguage === 'en'
+                ? (loaderData.descriptionEn || loaderData.description)
+                : loaderData.description
+            ) || 'Premium automotive project by Glowworks.lab in Rhodes, Greece.'
+          : match.context.initialLanguage === 'en'
+            ? 'Explore premium automotive customisation projects by Glowworks.lab in Rhodes, Greece.'
+            : 'Ανακάλυψε τις premium αναβαθμίσεις αυτοκινήτων της Glowworks.lab στη Ρόδο.',
       },
       ...(loaderData?.media[0]?.publicUrl
         ? [
@@ -73,6 +83,7 @@ export const Route = createFileRoute('/project/$projectSlug')({
 })
 
 function IndividualProjectPage() {
+  const { language } = useLanguage()
   const project = Route.useLoaderData()
   const [activeMedia, setActiveMedia] = useState<ProjectMedia | null>(null)
   const [relatedProjects, setRelatedProjects] = useState<ProjectRecord[]>([])
@@ -194,12 +205,12 @@ function IndividualProjectPage() {
 
         <section className="project-not-found">
           <p className="eyebrow"><span /> Glowworks archive</p>
-          <h1>Project not found.</h1>
+          <h1>{language === 'en' ? 'Project not found.' : 'Το project δεν βρέθηκε.'}</h1>
           <p>
-            This project may have been moved or is no longer available.
+            {language === 'en' ? 'This project may have been moved or is no longer available.' : 'Αυτό το project μπορεί να έχει μετακινηθεί ή να μην είναι πλέον διαθέσιμο.'}
           </p>
           <a className="button button-primary" href={getAssetPath('/projects')}>
-            <ArrowLeft size={16} /> View all projects
+            <ArrowLeft size={16} /> {language === 'en' ? 'View all projects' : 'Όλα τα projects'}
           </a>
         </section>
       </main>
@@ -212,7 +223,7 @@ function IndividualProjectPage() {
         <a
           className="project-detail-brand"
           href={getAssetPath('/')}
-          aria-label="Glowworks.lab homepage"
+          aria-label={language === 'en' ? 'Glowworks.lab homepage' : 'Αρχική σελίδα Glowworks.lab'}
         >
           <img
             src={getAssetPath('/images/glowworks-logo.webp')}
@@ -220,7 +231,7 @@ function IndividualProjectPage() {
           />
         </a>
 
-        <div className="project-detail-nav-actions">
+        <div className="project-detail-nav-actions"><LanguageSwitcher />
           <a href={getAssetPath('/projects')}>
             <ArrowLeft size={16} /> Projects
           </a>
@@ -228,7 +239,7 @@ function IndividualProjectPage() {
             className="project-detail-book"
             href={bookingUrl}
           >
-            Κλείσε ραντεβού <ArrowUpRight size={16} />
+            {language === 'en' ? 'Book an appointment' : 'Κλείσε ραντεβού'} <ArrowUpRight size={16} />
           </a>
         </div>
       </nav>
@@ -254,13 +265,13 @@ function IndividualProjectPage() {
             <span>{project.model}</span>
           </div>
 
-          <h1>{project.title}</h1>
+          <h1>{language === 'en' ? project.titleEn?.trim() || project.title : project.title}</h1>
 
           <a
             className="project-detail-scroll"
             href="#project-story"
           >
-            Explore the project <ArrowUpRight size={17} />
+            {language === 'en' ? 'Explore the project' : 'Ανακάλυψε το project'} <ArrowUpRight size={17} />
           </a>
         </div>
       </header>
@@ -270,17 +281,17 @@ function IndividualProjectPage() {
         id="project-story"
       >
         <div className="project-detail-story-heading">
-          <p className="eyebrow"><span /> The transformation</p>
-          <h2>Designed around<br />the vehicle.</h2>
+          <p className="eyebrow"><span /> {language === 'en' ? 'The transformation' : 'Η μεταμόρφωση'}</p>
+          <h2>{language === 'en' ? 'Designed around' : 'Σχεδιασμένο για'}<br />{language === 'en' ? 'the vehicle.' : 'το αυτοκίνητό σου.'}</h2>
         </div>
 
         <div className="project-detail-story-copy">
-          <p>{project.description}</p>
+          <p>{language === 'en' ? project.descriptionEn?.trim() || project.description : project.description}</p>
 
           <div className="project-detail-features">
-            <span><Check size={17} /> Tailored vehicle integration</span>
-            <span><Check size={17} /> Premium installation finish</span>
-            <span><Check size={17} /> Glowworks.lab quality control</span>
+            <span><Check size={17} /> {language === 'en' ? 'Tailored vehicle integration' : 'Εξατομικευμένη εφαρμογή στο όχημα'}</span>
+            <span><Check size={17} /> {language === 'en' ? 'Premium installation finish' : 'Προσεγμένο αποτέλεσμα εγκατάστασης'}</span>
+            <span><Check size={17} /> {language === 'en' ? 'Glowworks.lab quality control' : 'Έλεγχος ποιότητας Glowworks.lab'}</span>
           </div>
         </div>
       </section>
@@ -288,9 +299,9 @@ function IndividualProjectPage() {
       {imageMedia.length ? (
         <section className="project-detail-gallery">
           <div className="project-detail-section-title">
-            <p className="eyebrow"><span /> Project gallery</p>
+            <p className="eyebrow"><span /> {language === 'en' ? 'Project gallery' : 'Φωτογραφίες project'}</p>
             <strong>
-              {String(imageMedia.length).padStart(2, '0')} images
+              {String(imageMedia.length).padStart(2, '0')} {language === 'en' ? 'images' : 'φωτογραφίες'}
             </strong>
           </div>
 
@@ -322,8 +333,8 @@ function IndividualProjectPage() {
       {relatedProjects.length ? (
         <section className="project-detail-related">
           <div className="project-detail-section-title">
-            <p className="eyebrow"><span /> Continue exploring</p>
-            <strong>Related projects</strong>
+            <p className="eyebrow"><span /> {language === 'en' ? 'Continue exploring' : 'Συνέχισε την εξερεύνηση'}</p>
+            <strong>{language === 'en' ? 'Related projects' : 'Σχετικά projects'}</strong>
           </div>
 
           <div className="project-detail-related-grid">
@@ -361,9 +372,9 @@ function IndividualProjectPage() {
                     <span>
                       {relatedProject.brand} / {relatedProject.model}
                     </span>
-                    <h3>{relatedProject.title}</h3>
+                    <h3>{language === 'en' ? relatedProject.titleEn?.trim() || relatedProject.title : relatedProject.title}</h3>
                     <strong>
-                      View project <ArrowUpRight size={16} />
+                      {language === 'en' ? 'View project' : 'Δες το project'} <ArrowUpRight size={16} />
                     </strong>
                   </div>
                 </a>
@@ -374,11 +385,11 @@ function IndividualProjectPage() {
       ) : null}
       <section className="project-detail-cta">
         <div>
-          <p className="eyebrow"><span /> Your vehicle, next</p>
-          <h2>Ready for your own transformation?</h2>
+          <p className="eyebrow"><span /> {language === 'en' ? 'Your vehicle, next' : 'Το δικό σου αυτοκίνητο είναι το επόμενο'}</p>
+          <h2>{language === 'en' ? 'Ready for your own transformation?' : 'Έτοιμος για τη δική σου αναβάθμιση;'}</h2>
           <p>
-            Tell us your vehicle and the upgrade you have in mind.
-            We will design the right solution for you.
+            {language === 'en' ? 'Tell us your vehicle and the upgrade you have in mind.' : 'Πες μας ποιο αυτοκίνητο έχεις και τι αναβάθμιση θέλεις.'}
+            {language === 'en' ? 'We will design the right solution for you.' : 'Θα σχεδιάσουμε τη σωστή λύση για εσένα.'}
           </p>
         </div>
 
@@ -386,7 +397,7 @@ function IndividualProjectPage() {
           className="button button-primary"
           href={bookingUrl}
         >
-          Κλείσε ραντεβού <ArrowUpRight size={17} />
+          {language === 'en' ? 'Book an appointment' : 'Κλείσε ραντεβού'} <ArrowUpRight size={17} />
         </a>
       </section>
 
@@ -395,7 +406,7 @@ function IndividualProjectPage() {
           src={getAssetPath('/images/glowworks-logo.webp')}
           alt="Glowworks.lab"
         />
-        <p>Premium automotive upgrades — Rhodes, Greece</p>
+        <p>{language === 'en' ? 'Premium automotive upgrades — Rhodes, Greece' : 'Premium αναβαθμίσεις αυτοκινήτων — Ρόδος, Ελλάδα'}</p>
       </footer>
 
       {activeMedia ? (

@@ -19,6 +19,7 @@ import {
   uploadProjectImages,
 } from '../../lib/projects'
 import type { ProjectDraft, ProjectMedia, ProjectRecord } from '../../types/projects'
+import { requestProjectTranslation } from '../../lib/project-translation-request'
 import {
   fetchHomepageImages,
   uploadHomepageImage,
@@ -948,7 +949,16 @@ const saveCustomer = async () => {
 
     try {
       setProjectsLoading(true)
-      const projectId = await createProject(projectDraft)
+      const translation = await requestProjectTranslation(
+        projectDraft.title,
+        projectDraft.description,
+      )
+
+      const projectId = await createProject({
+        ...projectDraft,
+        titleEn: translation.title_en,
+        descriptionEn: translation.description_en,
+      })
       setSelectedManagedProjectId(projectId)
       await uploadProjectImages(projectId, projectFiles)
       setProjects(await fetchProjects())
@@ -1004,6 +1014,8 @@ const saveCustomer = async () => {
       model: project.model,
       title: project.title,
       description: project.description,
+      titleEn: project.titleEn ?? '',
+      descriptionEn: project.descriptionEn ?? '',
     })
     setProjectStatus(null)
   }
@@ -1021,7 +1033,38 @@ const saveCustomer = async () => {
     try {
       setProjectsLoading(true)
       setProjectStatus(null)
-      await updateProject(editingProjectId, editingProjectDraft)
+      const originalProject = projects.find(
+        (project) => project.id === editingProjectId,
+      )
+
+      const greekChanged =
+        !originalProject ||
+        originalProject.title.trim() !== editingProjectDraft.title.trim() ||
+        originalProject.description.trim() !== editingProjectDraft.description.trim()
+
+      const englishMissing =
+        !editingProjectDraft.titleEn?.trim() ||
+        (
+          Boolean(editingProjectDraft.description.trim()) &&
+          !editingProjectDraft.descriptionEn?.trim()
+        )
+
+      let draftToSave = editingProjectDraft
+
+      if (greekChanged || englishMissing) {
+        const translation = await requestProjectTranslation(
+          editingProjectDraft.title,
+          editingProjectDraft.description,
+        )
+
+        draftToSave = {
+          ...editingProjectDraft,
+          titleEn: translation.title_en,
+          descriptionEn: translation.description_en,
+        }
+      }
+
+      await updateProject(editingProjectId, draftToSave)
       setProjects(await fetchProjects())
       setEditingProjectId(null)
       setEditingProjectDraft(null)
@@ -1294,7 +1337,7 @@ const saveCustomer = async () => {
             </label>
 
             <label>
-              <span>Project title</span>
+              <span>Project title (Greek)</span>
               <input
                 required
                 value={projectDraft.title}
@@ -1309,7 +1352,7 @@ const saveCustomer = async () => {
             </label>
 
             <label className="full">
-              <span>Description</span>
+              <span>Description (Greek)</span>
               <textarea
                 value={projectDraft.description}
                 onChange={(event) =>
@@ -1322,6 +1365,33 @@ const saveCustomer = async () => {
               />
             </label>
 
+<label>
+  <span>Project title (English)</span>
+  <input
+    value={projectDraft.titleEn ?? ''}
+    onChange={(event) =>
+      setProjectDraft((current) => ({
+        ...current,
+        titleEn: event.target.value,
+      }))
+    }
+    placeholder="English project title (optional)"
+  />
+</label>
+
+<label className="full">
+  <span>Description (English)</span>
+  <textarea
+    value={projectDraft.descriptionEn ?? ''}
+    onChange={(event) =>
+      setProjectDraft((current) => ({
+        ...current,
+        descriptionEn: event.target.value,
+      }))
+    }
+    placeholder="English description (optional)"
+  />
+</label>
             <label className="full">
               <span>Project photos</span>
               <input
@@ -1491,7 +1561,7 @@ const saveCustomer = async () => {
                       </label>
 
                       <label className="full">
-                        <span>Project title</span>
+                        <span>Project title (Greek)</span>
                         <input
                           value={editingProjectDraft.title}
                           onChange={(event) =>
@@ -1505,7 +1575,7 @@ const saveCustomer = async () => {
                       </label>
 
                       <label className="full">
-                        <span>Description</span>
+                        <span>Description (Greek)</span>
                         <textarea
                           value={editingProjectDraft.description}
                           onChange={(event) =>
@@ -1518,7 +1588,30 @@ const saveCustomer = async () => {
                         />
                       </label>
 
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <label className="full">
+  <span>Project title (English)</span>
+  <input
+    value={editingProjectDraft.titleEn ?? ''}
+    onChange={(event) =>
+      setEditingProjectDraft((current) =>
+        current ? { ...current, titleEn: event.target.value } : current,
+      )
+    }
+  />
+</label>
+
+<label className="full">
+  <span>Description (English)</span>
+  <textarea
+    value={editingProjectDraft.descriptionEn ?? ''}
+    onChange={(event) =>
+      setEditingProjectDraft((current) =>
+        current ? { ...current, descriptionEn: event.target.value } : current,
+      )
+    }
+  />
+</label>
+<div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button
                           className="button button-primary portal-inline-button"
                           type="button"

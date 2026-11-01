@@ -7,6 +7,14 @@ import netlify from '@netlify/vite-plugin-tanstack-start'
 
 const config = defineConfig({
   base: '/',
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
+  optimizeDeps: {
+    noDiscovery: true,
+    include: [],
+  },
+  cacheDir: 'node_modules/.vite-glowworks-bilingual',
   server: {
     host: 'localhost',
     watch: {

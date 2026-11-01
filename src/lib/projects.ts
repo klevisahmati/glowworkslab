@@ -27,6 +27,8 @@ type ProjectRow = {
   model: string
   title: string
   description: string
+  title_en: string | null
+  description_en: string | null
   created_at: string
   updated_at: string
   project_media?: ProjectMediaRow[] | null
@@ -71,6 +73,8 @@ function mapProject(row: ProjectRow): ProjectRecord {
     model: row.model,
     title: row.title,
     description: row.description,
+    titleEn: row.title_en,
+    descriptionEn: row.description_en,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     media,
@@ -97,6 +101,8 @@ export async function fetchProjects() {
       model,
       title,
       description,
+      title_en,
+      description_en,
       created_at,
       updated_at,
       project_media (
@@ -136,6 +142,8 @@ export async function fetchProjectBySlug(slug: string) {
       model,
       title,
       description,
+      title_en,
+      description_en,
       created_at,
       updated_at,
       project_media (
@@ -166,6 +174,8 @@ export async function createProject(draft: ProjectDraft) {
     model: draft.model.trim(),
     title: draft.title.trim(),
     description: draft.description.trim(),
+    title_en: draft.titleEn?.trim() || null,
+    description_en: draft.descriptionEn?.trim() || null,
   }
 
   if (
@@ -202,6 +212,8 @@ export async function updateProject(
     model: draft.model.trim(),
     title: draft.title.trim(),
     description: draft.description.trim(),
+    title_en: draft.titleEn?.trim() || null,
+    description_en: draft.descriptionEn?.trim() || null,
   }
 
   if (
