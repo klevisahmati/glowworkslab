@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Copy, ExternalLink, Link2, Mail, MapPin, PencilLine, Phone, Search, ShieldCheck, Trash2, UserPlus, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PortalShell } from '../../components/portal/PortalShell'
+import { ProductManager } from '../../components/portal/ProductManager'
 import { buildCustomerPortalUrl, generateSecureCustomerPortalSlug } from '../../lib/customer-links'
 import { getValidPortalStaffRole, type PortalStaffRole } from '../../lib/portal-auth'
 import {
@@ -437,10 +438,16 @@ function getCustomerBenefitStatus(customer: CustomerProfile, now = new Date()) {
     detail: `${daysRemaining} days remaining Â· expires ${expiresAt.toLocaleDateString('en-GB')}`,
   }
 }
-function AdminPage() {
+export function AdminPage({ customerRouteId }: { customerRouteId?: string } = {}) {
   const [state, setState] = useState<PortalState>(() => createInitialPortalState())
   const [portalHydrated, setPortalHydrated] = useState(false)
   const [search, setSearch] = useState('')
+  const [adminSection, setAdminSection] = useState<
+    'overview' | 'customers' | 'projects' | 'products' | 'site'
+  >(customerRouteId ? 'customers' : 'overview')
+  const [customerWorkspace, setCustomerWorkspace] = useState<'list' | 'profile'>(customerRouteId ? 'profile' : 'list')
+  const initializedCustomerRouteId = useRef<string | null>(null)
+  const [customerTab, setCustomerTab] = useState<'details' | 'services' | 'photos'>('details')
   const navigate = useNavigate()
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
@@ -698,7 +705,18 @@ function AdminPage() {
     setVehicleDraft(existingVehicle ?? makeVehicleDraft(customer.id))
     setEditingCustomerId(customer.id)
     setSelectedCustomerId(customer.id)
+    setCustomerWorkspace('profile')
+    setCustomerTab('details')
   }
+
+  useEffect(() => {
+    if (!customerRouteId || !portalHydrated || portalRole !== 'admin') return
+    if (initializedCustomerRouteId.current === customerRouteId) return
+    const customer = state.customers.find((entry) => entry.id === customerRouteId)
+    if (!customer) return
+    initializedCustomerRouteId.current = customerRouteId
+    startEditingCustomer(customer)
+  }, [customerRouteId, portalHydrated, portalRole, state.customers])
 
   const cancelCustomerEdit = () => {
     setEditingCustomerId(null)
@@ -719,6 +737,8 @@ function AdminPage() {
     const serviceWarranty = state.warranties.find((warranty) => warranty.id === entry.warrantyId)
     setSelectedCustomerId(entry.customerId)
     setEditingServiceEntryId(entry.id)
+    setCustomerWorkspace('profile')
+    setCustomerTab('services')
     setServiceDraft({
       title: entry.title,
       completedOn: entry.completedOn,
@@ -843,6 +863,8 @@ const saveCustomer = async () => {
       warrantyNotes: '',
     })
     setEditingCustomerId(null)
+    setCustomerWorkspace('list')
+    if (customerRouteId) void navigate({ to: '/portal/admin' })
   }
 
   const saveGalleryItem = async () => {
@@ -1146,6 +1168,25 @@ const saveCustomer = async () => {
       setProjectsLoading(false)
     }
   }
+  if (customerRouteId && portalRole !== 'admin') {
+    return (
+      <PortalShell active="admin" title="Customer management" subtitle="Checking administrator access...">
+        <div className="portal-card">Administrator access required.</div>
+      </PortalShell>
+    )
+  }
+
+  if (customerRouteId && portalHydrated && !state.customers.some((customer) => customer.id === customerRouteId)) {
+    return (
+      <PortalShell active="admin" title="Customer not found">
+        <div className="portal-card">
+          <p>Ο πελάτης δεν βρέθηκε.</p>
+          <button className="button button-secondary" type="button" onClick={() => void navigate({ to: '/portal/admin' })}>Επιστροφή στο Admin</button>
+        </div>
+      </PortalShell>
+    )
+  }
+
   if (!portalHydrated) {
     return (
       <PortalShell
@@ -1186,6 +1227,44 @@ const saveCustomer = async () => {
           </span>
         </section>
       ) : null}
+      <div className="glow-admin-workspace">
+        <aside className="glow-admin-sidebar" aria-label="Admin sections">
+          <div className="glow-admin-sidebar-brand">
+            <strong>GLOWWORKS.LAB</strong>
+            <small>ADMIN CONTROL CENTER</small>
+          </div>
+          {([
+            ['overview', 'Επισκόπηση', '01'],
+            ['customers', 'Πελάτες', '02'],
+            ['projects', 'Project Manager', '03'],
+            ['products', 'Product Manager', '04'],
+            ['site', 'Manage Site', '05'],
+          ] as const)
+            .filter(([key]) => !isReviewer || key !== 'products')
+            .map(([key, label, number]) => (
+              <button
+                key={key}
+                type="button"
+                className={`glow-admin-nav-item ${adminSection === key ? 'is-active' : ''}`}
+                aria-current={adminSection === key ? 'page' : undefined}
+                onClick={() => {
+                  if (customerRouteId) {
+                    void navigate({ to: '/portal/admin' })
+                    return
+                  }
+                  setAdminSection(key)
+                  if (key === 'projects') setManagerView('projects')
+                  if (key === 'site') setManagerView('homepage')
+                }}
+              >
+                <span>{number}</span>
+                {label}
+              </button>
+            ))}
+        </aside>
+        <div className="glow-admin-content">
+          {adminSection === 'overview' && (
+            <>
       <div className="portal-grid portal-grid-two">
         <div className="portal-card admin-operations-card">
           <div className="portal-card-title-row">
@@ -1210,6 +1289,17 @@ const saveCustomer = async () => {
 
       </div>
 
+            </>
+          )}
+
+          {adminSection === 'products' && !isReviewer && (
+            <>
+      {!isReviewer && <ProductManager />}
+            </>
+          )}
+
+          {(adminSection === 'projects' || adminSection === 'site') && (
+            <>
       <section
         className="portal-card admin-project-manager-card"
         style={{ marginBottom: '20px' }}
@@ -1863,6 +1953,38 @@ const saveCustomer = async () => {
           </div>
         )}
       </section>
+            </>
+          )}
+
+          {adminSection === 'customers' && (
+            <>
+              <div className="glow-customers-toolbar">
+                <div>
+                  <p className="portal-eyebrow">CUSTOMER RELATIONSHIP MANAGEMENT</p>
+                  <h2>{customerRouteId ? 'Προφίλ πελάτη' : 'Πελάτες'}</h2>
+                  <p className="portal-muted">Επίλεξε πελάτη για τα στοιχεία, τις εργασίες και τις φωτογραφίες του.</p>
+                </div>
+                {customerWorkspace === 'list' && !isReviewer ? (
+                  <button className="button button-primary" type="button" onClick={() => {
+                    cancelCustomerEdit()
+                    setSelectedCustomerId(null)
+                    setCustomerWorkspace('profile')
+                    setCustomerTab('details')
+                  }}>+ Νέος πελάτης</button>
+                ) : null}
+                {customerWorkspace === 'profile' ? (
+                  <button className="button button-secondary" type="button" onClick={() => {
+                    if (customerRouteId) {
+                      void navigate({ to: '/portal/admin' })
+                    } else {
+                      setCustomerWorkspace('list')
+                      cancelCustomerEdit()
+                    }
+                  }}>← Πίσω στους πελάτες</button>
+                ) : null}
+              </div>
+              {customerWorkspace === 'list' && (
+                <>
       <div className="portal-card">
         <div className="portal-card-title-row">
           <h3>Search customers</h3>
@@ -1966,14 +2088,14 @@ const saveCustomer = async () => {
                   Open profile
                 </button>
 
-                <button
+                {!isReviewer ? <button
                   className="button button-primary"
                   type="button"
-                  onClick={() => startEditingCustomer(customer)}
+                  onClick={() => void navigate({ to: '/portal/customer-management/$customerId', params: { customerId: customer.id } })}
                 >
                   <PencilLine size={15} />
-                  Edit
-                </button>
+                  Διαχείριση
+                </button> : null}
               </div>
 
               {customer.address ? (
@@ -2024,13 +2146,32 @@ const saveCustomer = async () => {
           </div>
         ) : null}
       </div>
-
-      <div className="portal-card">
+                </>
+              )}
+              {customerWorkspace === 'profile' && (
+                <>
+      <div className="portal-card glow-customer-editor">
         <div className="portal-card-title-row">
-          <h3>Create / edit customer</h3>
+          <h3>{editingCustomerId ? `Διαχείριση: ${customerDraft.name}` : 'Νέος πελάτης'}</h3>
           <div className="portal-chip"><UserPlus size={15} /> CRM</div>
         </div>
 
+        <div className="glow-customer-tabs" role="tablist" aria-label="Customer management">
+          {([
+            ['details', 'Στοιχεία & όχημα'],
+            ['services', 'Εργασίες & εγγυήσεις'],
+            ['photos', 'Φωτογραφίες'],
+          ] as const).map(([key, label]) => (
+            <button key={key} type="button" role="tab" aria-selected={customerTab === key}
+              className={customerTab === key ? 'is-active' : ''}
+              onClick={() => setCustomerTab(key)}
+              disabled={!editingCustomerId && key !== 'details'}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {customerTab === 'details' && (
+          <>
         <div className="portal-grid portal-grid-two">
           <div>
             <form className="form-grid">
@@ -2114,6 +2255,10 @@ const saveCustomer = async () => {
           </div>
         </div>
 
+          </>
+        )}
+        {customerTab === 'services' && (
+          <>
         <div className="portal-card" style={{ marginTop: '16px', border: '1px solid rgba(76, 211, 209, 0.18)', padding: '16px' }}>
           <div className="portal-card-title-row">
             <h3>Add service entry</h3>
@@ -2217,6 +2362,10 @@ const saveCustomer = async () => {
           ) : null}
         </div>
 
+          </>
+        )}
+        {customerTab === 'photos' && (
+          <>
         <div className="form-grid" style={{ marginTop: '16px' }}>
           <label className="full">
             <span>Profile photos</span>
@@ -2274,6 +2423,14 @@ const saveCustomer = async () => {
           )}
         </div>
 
+          </>
+        )}
+      </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
     </PortalShell>

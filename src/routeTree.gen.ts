@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BuildRouteImport } from './routes/build'
 import { Route as PortalRouteImport } from './routes/portal'
+import { Route as ProductsRouteImport } from './routes/products'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as StudioAccessRouteImport } from './routes/studio-access'
 import { Route as ApiTranslateProjectRouteImport } from './routes/api/translate-project'
@@ -24,7 +25,9 @@ import { Route as PortalNfcRouteImport } from './routes/portal/nfc'
 import { Route as PortalProfileRouteImport } from './routes/portal/profile'
 import { Route as PortalVehiclesRouteImport } from './routes/portal/vehicles'
 import { Route as PortalWarrantiesRouteImport } from './routes/portal/warranties'
+import { Route as ProductsProductSlugRouteImport } from './routes/products/$productSlug'
 import { Route as ProjectProjectSlugRouteImport } from './routes/project/$projectSlug'
+import { Route as PortalCustomerManagementCustomerIdRouteImport } from './routes/portal/customer-management.$customerId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -39,6 +42,11 @@ const BuildRoute = BuildRouteImport.update({
 const PortalRoute = PortalRouteImport.update({
   id: '/portal',
   path: '/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsRoute = ProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsRoute = ProjectsRouteImport.update({
@@ -101,16 +109,28 @@ const PortalWarrantiesRoute = PortalWarrantiesRouteImport.update({
   path: '/warranties',
   getParentRoute: () => PortalRoute,
 } as any)
+const ProductsProductSlugRoute = ProductsProductSlugRouteImport.update({
+  id: '/$productSlug',
+  path: '/$productSlug',
+  getParentRoute: () => ProductsRoute,
+} as any)
 const ProjectProjectSlugRoute = ProjectProjectSlugRouteImport.update({
   id: '/project/$projectSlug',
   path: '/project/$projectSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalCustomerManagementCustomerIdRoute =
+  PortalCustomerManagementCustomerIdRouteImport.update({
+    id: '/customer-management/$customerId',
+    path: '/customer-management/$customerId',
+    getParentRoute: () => PortalRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/build': typeof BuildRoute
   '/portal': typeof PortalRouteWithChildren
+  '/products': typeof ProductsRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/studio-access': typeof StudioAccessRoute
   '/api/translate-project': typeof ApiTranslateProjectRoute
@@ -123,12 +143,15 @@ export interface FileRoutesByFullPath {
   '/portal/profile': typeof PortalProfileRoute
   '/portal/vehicles': typeof PortalVehiclesRoute
   '/portal/warranties': typeof PortalWarrantiesRoute
+  '/products/$productSlug': typeof ProductsProductSlugRoute
   '/project/$projectSlug': typeof ProjectProjectSlugRoute
+  '/portal/customer-management/$customerId': typeof PortalCustomerManagementCustomerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/build': typeof BuildRoute
   '/portal': typeof PortalRouteWithChildren
+  '/products': typeof ProductsRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/studio-access': typeof StudioAccessRoute
   '/api/translate-project': typeof ApiTranslateProjectRoute
@@ -141,13 +164,16 @@ export interface FileRoutesByTo {
   '/portal/profile': typeof PortalProfileRoute
   '/portal/vehicles': typeof PortalVehiclesRoute
   '/portal/warranties': typeof PortalWarrantiesRoute
+  '/products/$productSlug': typeof ProductsProductSlugRoute
   '/project/$projectSlug': typeof ProjectProjectSlugRoute
+  '/portal/customer-management/$customerId': typeof PortalCustomerManagementCustomerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/build': typeof BuildRoute
   '/portal': typeof PortalRouteWithChildren
+  '/products': typeof ProductsRouteWithChildren
   '/projects': typeof ProjectsRoute
   '/studio-access': typeof StudioAccessRoute
   '/api/translate-project': typeof ApiTranslateProjectRoute
@@ -160,7 +186,9 @@ export interface FileRoutesById {
   '/portal/profile': typeof PortalProfileRoute
   '/portal/vehicles': typeof PortalVehiclesRoute
   '/portal/warranties': typeof PortalWarrantiesRoute
+  '/products/$productSlug': typeof ProductsProductSlugRoute
   '/project/$projectSlug': typeof ProjectProjectSlugRoute
+  '/portal/customer-management/$customerId': typeof PortalCustomerManagementCustomerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -168,6 +196,7 @@ export interface FileRouteTypes {
     | '/'
     | '/build'
     | '/portal'
+    | '/products'
     | '/projects'
     | '/studio-access'
     | '/api/translate-project'
@@ -180,12 +209,15 @@ export interface FileRouteTypes {
     | '/portal/profile'
     | '/portal/vehicles'
     | '/portal/warranties'
+    | '/products/$productSlug'
     | '/project/$projectSlug'
+    | '/portal/customer-management/$customerId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/build'
     | '/portal'
+    | '/products'
     | '/projects'
     | '/studio-access'
     | '/api/translate-project'
@@ -198,12 +230,15 @@ export interface FileRouteTypes {
     | '/portal/profile'
     | '/portal/vehicles'
     | '/portal/warranties'
+    | '/products/$productSlug'
     | '/project/$projectSlug'
+    | '/portal/customer-management/$customerId'
   id:
     | '__root__'
     | '/'
     | '/build'
     | '/portal'
+    | '/products'
     | '/projects'
     | '/studio-access'
     | '/api/translate-project'
@@ -216,13 +251,16 @@ export interface FileRouteTypes {
     | '/portal/profile'
     | '/portal/vehicles'
     | '/portal/warranties'
+    | '/products/$productSlug'
     | '/project/$projectSlug'
+    | '/portal/customer-management/$customerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BuildRoute: typeof BuildRoute
   PortalRoute: typeof PortalRouteWithChildren
+  ProductsRoute: typeof ProductsRouteWithChildren
   ProjectsRoute: typeof ProjectsRoute
   StudioAccessRoute: typeof StudioAccessRoute
   ApiTranslateProjectRoute: typeof ApiTranslateProjectRoute
@@ -251,6 +289,13 @@ declare module '@tanstack/react-router' {
       path: '/portal'
       fullPath: '/portal'
       preLoaderRoute: typeof PortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products': {
+      id: '/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof ProductsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects': {
@@ -337,12 +382,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalWarrantiesRouteImport
       parentRoute: typeof PortalRoute
     }
+    '/products/$productSlug': {
+      id: '/products/$productSlug'
+      path: '/$productSlug'
+      fullPath: '/products/$productSlug'
+      preLoaderRoute: typeof ProductsProductSlugRouteImport
+      parentRoute: typeof ProductsRoute
+    }
     '/project/$projectSlug': {
       id: '/project/$projectSlug'
       path: '/project/$projectSlug'
       fullPath: '/project/$projectSlug'
       preLoaderRoute: typeof ProjectProjectSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/portal/customer-management/$customerId': {
+      id: '/portal/customer-management/$customerId'
+      path: '/customer-management/$customerId'
+      fullPath: '/portal/customer-management/$customerId'
+      preLoaderRoute: typeof PortalCustomerManagementCustomerIdRouteImport
+      parentRoute: typeof PortalRoute
     }
   }
 }
@@ -356,6 +415,7 @@ interface PortalRouteChildren {
   PortalProfileRoute: typeof PortalProfileRoute
   PortalVehiclesRoute: typeof PortalVehiclesRoute
   PortalWarrantiesRoute: typeof PortalWarrantiesRoute
+  PortalCustomerManagementCustomerIdRoute: typeof PortalCustomerManagementCustomerIdRoute
 }
 
 const PortalRouteChildren: PortalRouteChildren = {
@@ -367,15 +427,30 @@ const PortalRouteChildren: PortalRouteChildren = {
   PortalProfileRoute: PortalProfileRoute,
   PortalVehiclesRoute: PortalVehiclesRoute,
   PortalWarrantiesRoute: PortalWarrantiesRoute,
+  PortalCustomerManagementCustomerIdRoute:
+    PortalCustomerManagementCustomerIdRoute,
 }
 
 const PortalRouteWithChildren =
   PortalRoute._addFileChildren(PortalRouteChildren)
 
+interface ProductsRouteChildren {
+  ProductsProductSlugRoute: typeof ProductsProductSlugRoute
+}
+
+const ProductsRouteChildren: ProductsRouteChildren = {
+  ProductsProductSlugRoute: ProductsProductSlugRoute,
+}
+
+const ProductsRouteWithChildren = ProductsRoute._addFileChildren(
+  ProductsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BuildRoute: BuildRoute,
   PortalRoute: PortalRouteWithChildren,
+  ProductsRoute: ProductsRouteWithChildren,
   ProjectsRoute: ProjectsRoute,
   StudioAccessRoute: StudioAccessRoute,
   ApiTranslateProjectRoute: ApiTranslateProjectRoute,
