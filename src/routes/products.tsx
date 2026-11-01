@@ -1,6 +1,6 @@
 import { SiteFooter } from '../components/SiteFooter'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, ArrowRight, ArrowUpRight, Package, Search, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, Image as ImageIcon, MessageCircle, Package, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLanguage } from '../lib/language'
@@ -36,6 +36,8 @@ function ProductsPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [activeProduct, setActiveProduct] = useState<ProductRecord | null>(null)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -81,6 +83,46 @@ function ProductsPage() {
       return matchesCategory && (!term || text.includes(term))
     })
   }, [products, category, search])
+
+  useEffect(() => {
+    if (!activeProduct) return
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setActiveProduct(null)
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [activeProduct])
+
+  const openProduct = (product: ProductRecord) => {
+    setActiveImageIndex(0)
+    setActiveProduct(product)
+  }
+
+  const activeTitle = activeProduct
+    ? (en ? activeProduct.titleEn || activeProduct.titleEl : activeProduct.titleEl)
+    : ''
+  const activeDescription = activeProduct
+    ? (en ? activeProduct.descriptionEn || activeProduct.descriptionEl : activeProduct.descriptionEl)
+    : ''
+  const activePrice = activeProduct?.priceEur == null
+    ? (en ? 'Ask for price' : 'Ρωτήστε τιμή')
+    : new Intl.NumberFormat(en ? 'en-GB' : 'el-GR', {
+        style: 'currency', currency: 'EUR',
+      }).format(activeProduct.priceEur)
+  const activeImages = activeProduct?.images ?? []
+  const activeImage = activeImages[activeImageIndex] ?? activeImages[0]
+  const message = en
+    ? `Hello Glowworks.lab! I am interested in the product "${activeTitle}" (${activeProduct?.slug ?? ''}). Could you provide more information?`
+    : `Καλησπέρα Glowworks.lab! Ενδιαφέρομαι για το προϊόν "${activeTitle}" (${activeProduct?.slug ?? ''}). Θα ήθελα περισσότερες πληροφορίες.`
+  const whatsappUrl = `https://wa.me/306937153914?text=${encodeURIComponent(message)}`
 
   const availabilityLabel = (value: ProductRecord['availability']) => {
     if (value === 'available') return en ? 'Available' : 'Διαθέσιμο'
@@ -218,7 +260,7 @@ function ProductsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="products-catalog-grid grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {visibleProducts.map((product) => {
                 const title = en
                   ? product.titleEn || product.titleEl
@@ -227,13 +269,14 @@ function ProductsPage() {
                 const image = product.images[0]?.signedUrl
 
                 return (
-                  <Link
+                  <button
                     key={product.id}
-                    to="/products/$productSlug"
-                    params={{ productSlug: product.slug }}
-                    className="group overflow-hidden rounded-2xl border border-white/10 bg-[var(--paper-deep)] transition-all duration-300 hover:-translate-y-1 hover:border-[var(--cyan)] hover:shadow-[0_18px_45px_rgba(76,211,209,0.08)]"
+                    type="button"
+                    onClick={() => openProduct(product)}
+                    aria-label={`${en ? 'View details' : 'Προβολή λεπτομερειών'}: ${title}`}
+                    className="products-catalog-card group w-full overflow-hidden rounded-2xl border border-white/10 bg-[var(--paper-deep)] text-left transition-all duration-300 hover:-translate-y-1 hover:border-[var(--cyan)] hover:shadow-[0_18px_45px_rgba(76,211,209,0.08)]"
                   >
-                    <div className="aspect-[4/3] overflow-hidden bg-white/[0.04]">
+                    <div className="products-catalog-image aspect-[4/3] overflow-hidden bg-white/[0.04]">
                       {image ? (
                         <img
                           src={image}
@@ -248,7 +291,7 @@ function ProductsPage() {
                       )}
                     </div>
 
-                    <div className="p-5">
+                    <div className="products-catalog-info p-5">
                       <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-white/50">
                         <span>{product.category
                           ? (en
@@ -260,7 +303,7 @@ function ProductsPage() {
                         <span>{availabilityLabel(product.availability)}</span>
                       </div>
 
-                      <h3 className="text-lg font-semibold text-white">{title}</h3>
+                      <h3 className="products-catalog-title text-lg font-semibold text-white">{title}</h3>
 
                       <div className="mt-5 flex items-center justify-between">
                         <span className="text-lg font-semibold text-white">
@@ -274,7 +317,7 @@ function ProductsPage() {
                         <ArrowRight size={19} className="text-[var(--cyan)] transition group-hover:translate-x-1" />
                       </div>
                     </div>
-                  </Link>
+                  </button>
                 )
               })}
             </div>
@@ -282,6 +325,90 @@ function ProductsPage() {
         </section>
 
       </div>
+      {activeProduct && (
+        <div
+          className="products-quickview-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setActiveProduct(null)
+          }}
+        >
+          <section
+            className="products-quickview"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="products-quickview-title"
+          >
+            <header className="products-quickview-header">
+              <span>GLOWWORKS.LAB / 3D SHOP</span>
+              <button
+                type="button"
+                className="products-quickview-close"
+                onClick={() => setActiveProduct(null)}
+                aria-label={en ? 'Close product details' : 'Κλείσιμο λεπτομερειών'}
+              ><X size={21} /></button>
+            </header>
+            <div className="products-quickview-body">
+              <div className="products-quickview-gallery">
+                <div className="products-quickview-main-image">
+                  {activeImage?.signedUrl ? (
+                    <img src={activeImage.signedUrl} alt={activeImage.altText || activeTitle} />
+                  ) : (
+                    <ImageIcon size={48} className="text-white/25" />
+                  )}
+                </div>
+                {activeImages.length > 1 && (
+                  <div className="products-quickview-thumbs">
+                    {activeImages.map((image, index) => (
+                      <button
+                        key={image.id}
+                        type="button"
+                        className={activeImageIndex === index ? 'selected' : ''}
+                        onClick={() => setActiveImageIndex(index)}
+                        aria-label={`${en ? 'Photo' : 'Φωτογραφία'} ${index + 1}`}
+                      >
+                        <img src={image.signedUrl} alt={image.altText || `${activeTitle} ${index + 1}`} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="products-quickview-details">
+                <p className="products-quickview-category">
+                  {activeProduct.category
+                    ? (en ? activeProduct.category.nameEn || activeProduct.category.nameEl : activeProduct.category.nameEl)
+                    : '3D PRINTING'}
+                </p>
+                <h2 id="products-quickview-title">{activeTitle}</h2>
+                <div className="products-quickview-pricing">
+                  <strong>{activePrice}</strong>
+                  <span>{availabilityLabel(activeProduct.availability)}</span>
+                </div>
+                {activeDescription && (
+                  <div className="products-quickview-section">
+                    <h3>{en ? 'Description' : 'Περιγραφή'}</h3>
+                    <p>{activeDescription}</p>
+                  </div>
+                )}
+                {activeProduct.vehicleCompatibility && (
+                  <div className="products-quickview-section">
+                    <h3>{en ? 'Vehicle compatibility' : 'Συμβατότητα οχημάτων'}</h3>
+                    <p>{activeProduct.vehicleCompatibility}</p>
+                  </div>
+                )}
+                <a className="products-quickview-whatsapp" href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle size={19} />
+                  {en ? 'Enquire on WhatsApp' : 'Ερώτηση μέσω WhatsApp'}
+                  <ArrowRight size={17} />
+                </a>
+                <p className="products-quickview-footnote">
+                  {en ? 'Enquiries only. No online payment required.' : 'Επικοινωνία για πληροφορίες ή παραγγελία, χωρίς online πληρωμή.'}
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
       <SiteFooter />
     </div>
   )

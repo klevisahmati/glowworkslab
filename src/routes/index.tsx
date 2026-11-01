@@ -415,6 +415,23 @@ function GlowworksPage() {
 }
 
   const closeMenu = () => setMenuOpen(false)
+
+// STEP 100C - CLOSE MENU ON SCROLL
+useEffect(() => {
+  if (!menuOpen) return
+
+  const closeOnScroll = () => setMenuOpen(false)
+
+  window.addEventListener('scroll', closeOnScroll, { passive: true })
+  window.addEventListener('wheel', closeOnScroll, { passive: true })
+  window.addEventListener('touchmove', closeOnScroll, { passive: true })
+
+  return () => {
+    window.removeEventListener('scroll', closeOnScroll)
+    window.removeEventListener('wheel', closeOnScroll)
+    window.removeEventListener('touchmove', closeOnScroll)
+  }
+}, [menuOpen])
   const heroBackgroundImage = getHomepageImage('hero', '/images/homepage-ambient-mercedes.png')
   const filteredVehicleBrands = vehicleBrands.filter((brand) => {
     const query = vehicleSearch.trim().toLowerCase()
@@ -465,6 +482,13 @@ function GlowworksPage() {
           </a>
 
           <div className={menuOpen ? 'nav-links is-open' : 'nav-links'}>
+            <a
+  href={getAssetPath('/products')}
+  className="nav-3d-shop"
+  onClick={closeMenu}
+>
+  3D SHOP
+</a>
             <a href={getAssetPath('/projects')} onClick={closeMenu}>Projects</a>
             <a href="#services" onClick={closeMenu}>{language === 'en' ? 'Services' : 'Υπηρεσίες'}</a>
             <a href="#process" onClick={closeMenu}>{language === 'en' ? 'Our Process' : 'Διαδικασία'}</a>
@@ -521,7 +545,42 @@ function GlowworksPage() {
         </div>
       </header>
 
-      <section className="services-section" id="services">
+      <section className="home-3d-section" aria-labelledby="home-3d-title">
+  <div className="home-3d-inner">
+    <div className="home-3d-copy">
+      <p className="home-3d-eyebrow">
+        GLOWWORKS.LAB / 3D PRINTING
+      </p>
+      <h2 id="home-3d-title">
+        {language === 'en' ? 'PRECISION 3D PRODUCTS' : '3D ΕΚΤΥΠΩΣΗ ΜΕ ΑΚΡΙΒΕΙΑ'}
+      </h2>
+      <p className="home-3d-description">
+        {language === 'en'
+          ? 'Explore custom 3D-printed automotive accessories, practical solutions and carefully designed components.'
+          : 'Ανακάλυψε εξατομικευμένα 3D εκτυπωμένα αξεσουάρ αυτοκινήτου, πρακτικές λύσεις και προσεκτικά σχεδιασμένα εξαρτήματα.'}
+      </p>
+      <a className="home-3d-cta" href={getAssetPath('/products')}>
+        {language === 'en' ? 'EXPLORE 3D SHOP' : 'ΑΝΑΚΑΛΥΨΕ ΤΟ 3D SHOP'}
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
+    <div className="home-3d-media">
+      <picture>
+        <source
+          media="(max-width: 700px)"
+          srcSet={getAssetPath('/images/products-hero-mobile.jpg')}
+        />
+        <img
+          src={getAssetPath('/images/products-hero-desktop.jpg')}
+          alt={language === 'en' ? 'Glowworks 3D printing' : '3D εκτύπωση Glowworks'}
+          loading="lazy"
+        />
+      </picture>
+      <span className="home-3d-media-label">CUSTOM 3D / GLOWWORKS.LAB</span>
+    </div>
+  </div>
+</section>
+<section className="services-section" id="services">
         <div className="shell">
           <div className="section-index light">{language === 'en' ? '02 / What we do' : '02 / Τι κάνουμε'}</div>
           <div className="services-heading">

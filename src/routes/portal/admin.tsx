@@ -443,8 +443,8 @@ export function AdminPage({ customerRouteId }: { customerRouteId?: string } = {}
   const [portalHydrated, setPortalHydrated] = useState(false)
   const [search, setSearch] = useState('')
   const [adminSection, setAdminSection] = useState<
-    'overview' | 'customers' | 'projects' | 'products' | 'site'
-  >(customerRouteId ? 'customers' : 'overview')
+    'customers' | 'projects' | 'products' | 'site'
+  >('customers')
   const [customerWorkspace, setCustomerWorkspace] = useState<'list' | 'profile'>(customerRouteId ? 'profile' : 'list')
   const initializedCustomerRouteId = useRef<string | null>(null)
   const [customerTab, setCustomerTab] = useState<'details' | 'services' | 'photos'>('details')
@@ -1234,11 +1234,10 @@ const saveCustomer = async () => {
             <small>ADMIN CONTROL CENTER</small>
           </div>
           {([
-            ['overview', 'Επισκόπηση', '01'],
-            ['customers', 'Πελάτες', '02'],
-            ['projects', 'Project Manager', '03'],
-            ['products', 'Product Manager', '04'],
-            ['site', 'Manage Site', '05'],
+            ['customers', 'Πελάτες', '01'],
+            ['projects', 'Project Manager', '02'],
+            ['products', 'Product Manager', '03'],
+            ['site', 'Manage Site', '04'],
           ] as const)
             .filter(([key]) => !isReviewer || key !== 'products')
             .map(([key, label, number]) => (
@@ -1263,35 +1262,6 @@ const saveCustomer = async () => {
             ))}
         </aside>
         <div className="glow-admin-content">
-          {adminSection === 'overview' && (
-            <>
-      <div className="portal-grid portal-grid-two">
-        <div className="portal-card admin-operations-card">
-          <div className="portal-card-title-row">
-            <h3>Operations overview</h3>
-            <div className="portal-chip"><ShieldCheck size={15} /> Secure</div>
-          </div>
-          <div className="portal-stat-row">
-            <div className="portal-stat">
-              <strong>{state.customers.length}</strong>
-              <span>Total Customers</span>
-            </div>
-            <div className="portal-stat">
-              <strong>{state.warranties.filter((item) => item.status === 'Active').length}</strong>
-              <span>Active Warranties</span>
-            </div>
-            <div className="portal-stat">
-              <strong>{state.warranties.filter((item) => item.status === 'Expired').length}</strong>
-              <span>Expired Warranties</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-            </>
-          )}
-
           {adminSection === 'products' && !isReviewer && (
             <>
       {!isReviewer && <ProductManager />}
