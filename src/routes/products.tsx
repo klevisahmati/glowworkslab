@@ -1,6 +1,6 @@
 import { SiteFooter } from '../components/SiteFooter'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, ArrowRight, ArrowUpRight, Image as ImageIcon, MessageCircle, Package, Search, SlidersHorizontal, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, Image as ImageIcon, MessageCircle, Package, Search, SlidersHorizontal, X, Phone, Instagram } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLanguage } from '../lib/language'
@@ -401,7 +401,26 @@ function ProductsPage() {
                   {en ? 'Enquire on WhatsApp' : 'Ερώτηση μέσω WhatsApp'}
                   <ArrowRight size={17} />
                 </a>
-                <p className="products-quickview-footnote">
+                <div className="products-quickview-contact-options">
+                  <a
+                    href="tel:+306937153914"
+                    className="products-quickview-contact-link"
+                    aria-label={en ? 'Call Glowworks.lab' : 'Κλήση στη Glowworks.lab'}
+                  >
+                    <Phone size={18} />
+                    <span>{en ? 'Call us' : 'Κλήση'}</span>
+                  </a>
+                  <a
+                    href="https://www.instagram.com/glowworks.lab/"
+                    className="products-quickview-contact-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Glowworks.lab Instagram"
+                  >
+                    <Instagram size={18} />
+                    <span>Instagram</span>
+                  </a>
+                </div>                <p className="products-quickview-footnote">
                   {en ? 'Enquiries only. No online payment required.' : 'Επικοινωνία για πληροφορίες ή παραγγελία, χωρίς online πληρωμή.'}
                 </p>
               </div>

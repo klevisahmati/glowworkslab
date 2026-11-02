@@ -6808,3 +6808,54 @@ h1, h2, h3 { font-family: 'Oswald', sans-serif; text-transform: uppercase; }
     aspect-ratio: auto !important;
   }
 }
+/* STEP 104 - PRODUCT CONTACT OPTIONS */
+.products-quickview-contact-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  margin-bottom: 15px;
+}
+
+.products-quickview-contact-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 15px;
+  box-sizing: border-box;
+  border: 1px solid rgba(76, 211, 209, .28);
+  border-radius: 10px;
+  background: rgba(255,255,255,.035);
+  color: #f5f5f7;
+  font-family: Manrope, sans-serif;
+  font-size: .87rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .2s ease, border-color .2s ease;
+}
+
+.products-quickview-contact-link:hover {
+  background: rgba(76,211,209,.12);
+  border-color: #4cd3d1;
+  color: #4cd3d1;
+}
+
+.products-quickview-contact-link:focus-visible {
+  outline: 2px solid #4cd3d1;
+  outline-offset: 3px;
+}
+
+@media (max-width: 390px) {
+  .products-quickview-contact-options {
+    gap: 8px;
+  }
+
+  .products-quickview-contact-link {
+    padding: 11px 8px;
+    font-size: .8rem;
+    gap: 7px;
+  }
+}

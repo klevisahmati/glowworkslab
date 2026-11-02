@@ -27,7 +27,7 @@ import {
   type HomepageImageRecord,
   type HomepageImageSlot,
 } from '../../lib/homepage-images'
-import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, updatePortalVehicle } from '../../lib/portal-session'
+import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, savePortalVehicle } from '../../lib/portal-session'
 import type { AdminGalleryItem, CustomerProfile, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyRecord } from '../../types/portal'
 import { createInitialPortalState } from '../../lib/portal-data'
 
@@ -205,6 +205,7 @@ const makeServiceDraft = () => ({
   title: '',
   completedOn: new Date().toISOString().slice(0, 10),
   vehicle: '',
+  vehicleId: '',
   notes: '',
   servicePreset: 'Ambient Lighting',
   warrantyNumber: '',
@@ -447,12 +448,15 @@ export function AdminPage({ customerRouteId }: { customerRouteId?: string } = {}
   >('customers')
   const [customerWorkspace, setCustomerWorkspace] = useState<'list' | 'profile'>(customerRouteId ? 'profile' : 'list')
   const initializedCustomerRouteId = useRef<string | null>(null)
-  const [customerTab, setCustomerTab] = useState<'details' | 'services' | 'photos'>('details')
+  const [customerTab, setCustomerTab] = useState<'details' | 'vehicles' | 'services' | 'photos'>('details')
   const navigate = useNavigate()
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
   const [customerDraft, setCustomerDraft] = useState<CustomerProfile>(makeCustomerDraft)
   const [vehicleDraft, setVehicleDraft] = useState<VehicleRecord>(() => makeVehicleDraft())
+  const [vehicleSaving, setVehicleSaving] = useState(false)
+  const [vehicleError, setVehicleError] = useState('')
+  const [vehicleSuccess, setVehicleSuccess] = useState('')
   const [, setWarrantyDraft] = useState<WarrantyRecord>(() => makeWarrantyDraft())
   const [galleryDraft, setGalleryDraft] = useState<AdminGalleryItem>(() => makeGalleryDraft())
   const [pendingGalleryImages, setPendingGalleryImages] = useState<string[]>([])
@@ -707,6 +711,8 @@ export function AdminPage({ customerRouteId }: { customerRouteId?: string } = {}
     setSelectedCustomerId(customer.id)
     setCustomerWorkspace('profile')
     setCustomerTab('details')
+    setVehicleError('')
+    setVehicleSuccess('')
   }
 
   useEffect(() => {
@@ -743,6 +749,7 @@ export function AdminPage({ customerRouteId }: { customerRouteId?: string } = {}
       title: entry.title,
       completedOn: entry.completedOn,
       vehicle: entry.vehicle,
+      vehicleId: entry.vehicleId || serviceWarranty?.vehicleId || '',
       notes: entry.notes ?? '',
       servicePreset: entry.title || 'Ambient Lighting',
       warrantyNumber: entry.warrantyNumber || serviceWarranty?.warrantyNumber || '',
@@ -758,6 +765,12 @@ export function AdminPage({ customerRouteId }: { customerRouteId?: string } = {}
     if (!customerId) {
       return
     }
+    // STEP 105E4 - Require real customer vehicle ID for every service.
+    const chosenVehicle = state.vehicles.find((v) => v.customerId === customerId && v.id === serviceDraft.vehicleId && /^\d+$/.test(v.id))
+    if (!chosenVehicle) {
+      window.alert('Επίλεξε καταχωρισμένο όχημα πριν αποθηκεύσεις την εργασία.')
+      return
+    }
 
     const title = (serviceDraft.title || serviceDraft.servicePreset).trim()
     if (!title) {
@@ -769,13 +782,14 @@ export function AdminPage({ customerRouteId }: { customerRouteId?: string } = {}
       return
     }
 
-    const vehicleLabel = serviceDraft.vehicle.trim() || [vehicleDraft.make, vehicleDraft.model].filter(Boolean).join(' ').trim() || 'Vehicle'
+    const vehicleLabel = [chosenVehicle.make, chosenVehicle.model, chosenVehicle.plate].filter(Boolean).join(' · ')
     const autoWarrantyNumber = `W-SVC-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
     const serviceEntry = {
       id: editingServiceEntryId ?? `history-${Date.now()}`,
       customerId: selectedCustomer.id,
       title,
       vehicle: vehicleLabel,
+      vehicleId: chosenVehicle.id,
       completedOn: serviceDraft.completedOn,
       notes: serviceDraft.notes.trim(),
       warrantyNumber: serviceDraft.warrantyNumber.trim() || autoWarrantyNumber,
@@ -832,17 +846,11 @@ const saveCustomer = async () => {
       discountCode: customerDraft.discountCode?.trim() ?? '',
     }
 
-    let nextState = editingCustomerId
-  ? updatePortalCustomer({ ...nextCustomer, id: editingCustomerId })
-  : await createPortalCustomer(nextCustomer);
-    if (editingCustomerId) {
-            const customerVehicle = {
-        ...vehicleDraft,
-        customerId: editingCustomerId,
-        id: vehicleDraft.id || `veh-${Math.random().toString(36).slice(2, 8)}`,
-      }
-      nextState = updatePortalVehicle(customerVehicle)
-    }
+    // STEP 105E1 - CUSTOMER SAVE DOES NOT UPSERT VEHICLES
+    // Vehicle creation/editing will use a separate explicit action.
+    const nextState = editingCustomerId
+      ? updatePortalCustomer({ ...nextCustomer, id: editingCustomerId })
+      : await createPortalCustomer(nextCustomer);
 
     setState(nextState)
     resetServiceDraft()
@@ -854,6 +862,7 @@ const saveCustomer = async () => {
       title: '',
       completedOn: new Date().toISOString().slice(0, 10),
       vehicle: '',
+      vehicleId: '',
       notes: '',
       servicePreset: 'Ambient Lighting',
       warrantyNumber: '',
@@ -867,9 +876,34 @@ const saveCustomer = async () => {
     if (customerRouteId) void navigate({ to: '/portal/admin' })
   }
 
+  // STEP 105E2 - Separate vehicle actions; never reuse Save customer.
+  const startNewVehicle = () => {
+    if (!editingCustomerId) return
+    setVehicleDraft(makeVehicleDraft(editingCustomerId))
+    setVehicleError('')
+    setVehicleSuccess('')
+  }
+
+  const saveVehicle = async () => {
+    if (!editingCustomerId || vehicleSaving || isReviewer) return
+    setVehicleError('')
+    setVehicleSuccess('')
+    setVehicleSaving(true)
+    try {
+      const saved = await savePortalVehicle({ ...vehicleDraft, customerId: editingCustomerId })
+      setState(getPortalState())
+      setVehicleDraft(saved)
+      setVehicleSuccess('Το όχημα αποθηκεύτηκε επιτυχώς.')
+    } catch (error) {
+      setVehicleError(error instanceof Error ? error.message : 'Η αποθήκευση απέτυχε.')
+    } finally {
+      setVehicleSaving(false)
+    }
+  }
+
   const saveGalleryItem = async () => {
     const trimmedTitle = galleryDraft.title.trim()
-    const trimmedDescription = galleryDraft.description.trim()
+    // STEP 105E3 - PHOTOS WITHOUT DESCRIPTION
     const selectedImages = pendingGalleryImages.length
       ? pendingGalleryImages
       : galleryDraft.imageUrl.trim()
@@ -899,7 +933,7 @@ const saveCustomer = async () => {
           ...galleryDraft,
           id: `${galleryDraft.id}-${Date.now()}-${index}`,
           title: fallbackTitle,
-          description: trimmedDescription || 'Customer photo',
+          description: '',
           imageUrl,
           category: galleryDraft.category || 'customer',
           featured: galleryDraft.featured ?? false,
@@ -1404,7 +1438,7 @@ const saveCustomer = async () => {
                 onChange={(event) =>
                   setProjectDraft((current) => ({
                     ...current,
-                    title: event.target.value,
+                    title: event.target.value /* STEP 105F5 - INDEPENDENT SERVICE TITLE */,
                   }))
                 }
                 placeholder="Example: Ambient Lighting - Mercedes W205"
@@ -1627,7 +1661,7 @@ const saveCustomer = async () => {
                           onChange={(event) =>
                             setEditingProjectDraft((current) =>
                               current
-                                ? { ...current, title: event.target.value }
+                                ? { ...current, title: event.target.value /* STEP 105F5 - INDEPENDENT SERVICE TITLE */ }
                                 : current,
                             )
                           }
@@ -2128,7 +2162,8 @@ const saveCustomer = async () => {
 
         <div className="glow-customer-tabs" role="tablist" aria-label="Customer management">
           {([
-            ['details', 'Στοιχεία & όχημα'],
+            ['details', 'Στοιχεία'],
+            ['vehicles', 'Οχήματα'],
             ['services', 'Εργασίες & εγγυήσεις'],
             ['photos', 'Φωτογραφίες'],
           ] as const).map(([key, label]) => (
@@ -2140,6 +2175,87 @@ const saveCustomer = async () => {
             </button>
           ))}
         </div>
+        {/* STEP 105D1 - CUSTOMER VEHICLES */}
+        {customerTab === 'vehicles' && editingCustomerId && (
+          <div className="portal-card" style={{ marginBottom: '20px', padding: '20px', border: '1px solid rgba(76,211,209,.2)' }}>
+            <div className="portal-card-title-row">
+              <h3>Οχήματα πελάτη</h3>
+              <button type="button" className="button button-secondary" disabled={isReviewer || vehicleSaving} onClick={startNewVehicle}>+ Προσθήκη οχήματος</button>
+              <div className="portal-chip">
+                {state.vehicles.filter(v => v.customerId === editingCustomerId).length} οχήματα
+              </div>
+            </div>
+            {state.vehicles.filter(v => v.customerId === editingCustomerId).length === 0 ? (
+              <p className="portal-muted">Δεν υπάρχουν καταχωρισμένα οχήματα.</p>
+            ) : (
+              <div className="portal-list">
+                {state.vehicles
+                  .filter(v => v.customerId === editingCustomerId)
+                  .map(v => (
+                    <div className="portal-row" key={v.id}>
+                      <div>
+                        <strong>{[v.make, v.model].filter(Boolean).join(' ') || 'Όχημα'}</strong>
+                        <p>
+                          {[v.year || '', v.plate || ''].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      <button type="button" className="button button-secondary" disabled={vehicleSaving} onClick={() => {
+                        setVehicleDraft(v)
+                        setVehicleError('')
+                        setVehicleSuccess('')
+                      }}>{v.id === vehicleDraft.id ? 'Επιλεγμένο' : 'Επεξεργασία'}</button>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+        {customerTab === 'vehicles' && editingCustomerId && (
+          <div className="portal-card" style={{padding:'20px', marginBottom:'20px'}}>
+            <h3>{/^\d+$/.test(vehicleDraft.id) ? 'Επεξεργασία οχήματος' : 'Νέο όχημα'}</h3>
+          <div>
+            <div className="form-grid">
+              <label>
+                <span>Vehicle make</span>
+                <SearchableSelect
+                  value={vehicleDraft.make}
+                  onSelect={(brand) => setVehicleDraft((current) => ({ ...current, make: brand, model: '' }))}
+                  options={VEHICLE_BRAND_OPTIONS}
+                  placeholder="Mercedes-Benz"
+                  emptyText="No matching brand"
+                />
+              </label>
+              <label>
+                <span>Vehicle model</span>
+                <SearchableSelect
+                  value={vehicleDraft.model}
+                  onSelect={(model) => setVehicleDraft((current) => ({ ...current, model }))}
+                  options={selectedVehicleModels}
+                  placeholder="A-Class"
+                  emptyText="No matching model for this brand"
+                />
+              </label>
+              <label>
+                <span>Year</span>
+                <input type="number" value={vehicleDraft.year} onChange={(event) => setVehicleDraft((current) => ({ ...current, year: Number(event.target.value) }))} />
+              </label>
+              <label>
+                <span>Plate (optional)</span>
+                <input value={vehicleDraft.plate} onChange={(event) => setVehicleDraft((current) => ({ ...current, plate: event.target.value }))} placeholder="RO-4821" />
+              </label>
+              <label>
+                <span>VIN (optional)</span>
+                <input value={vehicleDraft.vin} onChange={(event) => setVehicleDraft((current) => ({ ...current, vin: event.target.value }))} placeholder="WDB123..." />
+              </label>
+            </div>
+            {vehicleError ? <p role="alert" style={{color:'#ff899a'}}>{vehicleError}</p> : null}
+              {vehicleSuccess ? <p role="status" style={{color:'#4cd3d1'}}>{vehicleSuccess}</p> : null}
+              <div className="portal-actions" style={{ marginTop: '16px' }}>
+                <button type="button" className="button button-primary" disabled={vehicleSaving || isReviewer || !editingCustomerId} onClick={saveVehicle}>{vehicleSaving ? 'Αποθήκευση...' : 'Αποθήκευση οχήματος'}</button>
+              </div>
+            </div>
+          </div>
+        )}
         {customerTab === 'details' && (
           <>
         <div className="portal-grid portal-grid-two">
@@ -2183,46 +2299,6 @@ const saveCustomer = async () => {
             </form>
           </div>
 
-          <div>
-            <div className="form-grid">
-              <label>
-                <span>Vehicle make</span>
-                <SearchableSelect
-                  value={vehicleDraft.make}
-                  onSelect={(brand) => setVehicleDraft((current) => ({ ...current, make: brand, model: '' }))}
-                  options={VEHICLE_BRAND_OPTIONS}
-                  placeholder="Mercedes-Benz"
-                  emptyText="No matching brand"
-                />
-              </label>
-              <label>
-                <span>Vehicle model</span>
-                <SearchableSelect
-                  value={vehicleDraft.model}
-                  onSelect={(model) => setVehicleDraft((current) => ({ ...current, model }))}
-                  options={selectedVehicleModels}
-                  placeholder="A-Class"
-                  emptyText="No matching model for this brand"
-                />
-              </label>
-              <label>
-                <span>Year</span>
-                <input type="number" value={vehicleDraft.year} onChange={(event) => setVehicleDraft((current) => ({ ...current, year: Number(event.target.value) }))} />
-              </label>
-              <label>
-                <span>Plate (optional)</span>
-                <input value={vehicleDraft.plate} onChange={(event) => setVehicleDraft((current) => ({ ...current, plate: event.target.value }))} placeholder="RO-4821" />
-              </label>
-              <label>
-                <span>VIN (optional)</span>
-                <input value={vehicleDraft.vin} onChange={(event) => setVehicleDraft((current) => ({ ...current, vin: event.target.value }))} placeholder="WDB123..." />
-              </label>
-              <label>
-                <span>Purchase date</span>
-                <input type="date" value={vehicleDraft.purchaseDate} onChange={(event) => setVehicleDraft((current) => ({ ...current, purchaseDate: event.target.value }))} />
-              </label>
-            </div>
-          </div>
         </div>
 
           </>
@@ -2256,11 +2332,24 @@ const saveCustomer = async () => {
             </label>
             <label className="full">
               <span>Service title</span>
-              <input value={serviceDraft.title} onChange={(event) => setServiceDraft((current) => ({ ...current, title: event.target.value, servicePreset: 'Custom' }))} placeholder="Ambient lighting or custom title" />
+              <input value={serviceDraft.title} onChange={(event) => setServiceDraft((current) => ({ ...current, title: event.target.value /* STEP 105F5 - INDEPENDENT SERVICE TITLE */ }))} placeholder="Ambient lighting or custom title" />
             </label>
             <label className="full">
-              <span>Vehicle</span>
-              <input value={serviceDraft.vehicle} onChange={(event) => setServiceDraft((current) => ({ ...current, vehicle: event.target.value }))} placeholder="Mercedes A-Class" />
+              <span>Όχημα εργασίας *</span>
+              <select
+                value={serviceDraft.vehicleId}
+                onChange={(event) => setServiceDraft((current) => ({ ...current, vehicleId: event.target.value }))}
+                required
+              >
+                <option value="">Επίλεξε όχημα...</option>
+                {state.vehicles
+                  .filter((v) => v.customerId === (selectedCustomerId ?? editingCustomerId) && /^\d+$/.test(v.id))
+                  .map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {[v.make, v.model, v.year, v.plate].filter(Boolean).join(' · ')} (ID {v.id})
+                    </option>
+                  ))}
+              </select>
             </label>
             <label className="full">
               <span>Notes</span>
@@ -2279,7 +2368,7 @@ const saveCustomer = async () => {
               <textarea value={serviceDraft.warrantyNotes} onChange={(event) => setServiceDraft((current) => ({ ...current, warrantyNotes: event.target.value }))} placeholder="Warranty details for this service" />
             </label>
             <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
-              <button className="button button-primary" type="button" onClick={handleSaveServiceHistory} disabled={!(selectedCustomerId || editingCustomerId)}>
+              <button className="button button-primary" type="button" onClick={handleSaveServiceHistory} disabled={!(selectedCustomerId || editingCustomerId) || !serviceDraft.vehicleId || isReviewer}>
                 {editingServiceEntryId ? 'Save service changes' : 'Add service to profile'}
               </button>
               {editingServiceEntryId ? (
@@ -2355,11 +2444,7 @@ const saveCustomer = async () => {
           ) : null}
           <label className="full">
             <span>Photo title</span>
-            <input value={galleryDraft.title} onChange={(event) => setGalleryDraft((current) => ({ ...current, title: event.target.value }))} placeholder="Ambient lighting install" />
-          </label>
-          <label className="full">
-            <span>Photo description</span>
-            <textarea value={galleryDraft.description} onChange={(event) => setGalleryDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Customer photo and installation detail" />
+            <input value={galleryDraft.title} onChange={(event) => setGalleryDraft((current) => ({ ...current, title: event.target.value /* STEP 105F5 - INDEPENDENT SERVICE TITLE */ }))} placeholder="Ambient lighting install" />
           </label>
           <button className="button button-secondary" type="button" onClick={saveGalleryItem}>Save customer photo</button>
         </div>
@@ -2379,7 +2464,7 @@ const saveCustomer = async () => {
                     ) : null}
                     <div>
                       <strong>{item.title}</strong>
-                      <p>{item.description || 'Customer photo'}</p>
+
                     </div>
                   </div>
                   <button className="portal-ghost-button" type="button" onClick={() => removeGalleryItem(item.id)}>

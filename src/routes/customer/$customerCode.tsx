@@ -133,10 +133,19 @@ function CustomerPortalPage() {
   const customer =
     matchedCustomer ?? makeCustomerDraft({ customerCode })
   const customerVehicles = portalState.vehicles.filter((vehicle) => vehicle.customerId === customer.id)
+  // STEP 105G: Vehicle selection is local to this page and never alters Supabase data.
+  const [selectedVehicleId, setSelectedVehicleId] = useState('')
+  const activeVehicle = customerVehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? customerVehicles[0]
   const customerWarranties = portalState.warranties.filter((warranty) => warranty.customerId === customer.id)
   const customerHistory = portalState.serviceHistory.filter((entry) => entry.customerId === customer.id)
   const customerGallery = portalState.gallery.filter((item) => item.customerId === customer.id)
-  const primaryVehicle = customerVehicles[0] ?? {
+  const selectedHistory = customerHistory.filter((entry) => {
+    if (!activeVehicle) return false
+    if (entry.vehicleId) return entry.vehicleId === activeVehicle.id
+    // Legacy records without an ID are safe to show on a single-vehicle account only.
+    return customerVehicles.length === 1
+  })
+  const primaryVehicle = activeVehicle ?? {
     id: 'pending',
     customerId: customer.id,
     make: 'Vehicle',
@@ -161,7 +170,7 @@ useEffect(() => {
 }, [])
 
 const warrantyHistory = useMemo(() => {
-  return customerHistory
+  return selectedHistory
     .slice()
     .sort((a, b) => b.completedOn.localeCompare(a.completedOn))
     .map((entry) => ({
@@ -180,7 +189,7 @@ const warrantyHistory = useMemo(() => {
           )
         : null,
     }))
-}, [customerHistory, now, portalState.warranties])
+}, [selectedHistory, now, portalState.warranties])
 
 const memberDiscountCode = (customer.discountCode?.trim() || 'GLOW10').toUpperCase()
 
@@ -369,7 +378,7 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
     doc.text(`Invoice Number: INV-${customer.customerCode}`, 40, 140)
     doc.text(`Customer: ${customer.name}`, 40, 170)
     doc.text(`Vehicle: ${primaryVehicle.make} ${primaryVehicle.model}`, 40, 200)
-    doc.text(`Service Package: ${customerHistory[0]?.title ?? 'Awaiting installation'}`, 40, 230)
+    doc.text(`Service Package: ${selectedHistory[0]?.title ?? 'Awaiting installation'}`, 40, 230)
     doc.text(`Issued: ${formatDate(new Date().toISOString().slice(0, 10))}`, 40, 260)
     doc.text('Status: Paid / Prepared for delivery', 40, 290)
     doc.text('Thank you for choosing Glowworks Lab.', 40, 340)
@@ -441,13 +450,36 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
             </div>
           </PortalSectionCard>
 
-          <PortalSectionCard eyebrow={tr("Όχημα", "Vehicle")} title={tr("Το αυτοκίνητό σου", "Current vehicle")} icon={<CarFront size={16} />}>
-            <div className="customer-list">
-              <div className="customer-detail"><span>{tr("Μάρκα", "Brand")}</span><strong>{primaryVehicle.make}</strong></div>
-              <div className="customer-detail"><span>{tr("Μοντέλο", "Model")}</span><strong>{primaryVehicle.model}</strong></div>
-              <div className="customer-detail"><span>{tr("Έτος", "Year")}</span><strong>{primaryVehicle.year}</strong></div>
-              <div className="customer-detail"><span>{tr("Πινακίδα", "Plate")}</span><strong>{primaryVehicle.plate}</strong></div>
-            </div>
+          <PortalSectionCard eyebrow={tr("Οχήματα", "Vehicles")} title={tr("Τα αυτοκίνητά σου", "Your vehicles")} icon={<CarFront size={16} />}>
+            {customerVehicles.length > 1 ? (
+              <div style={{ display: 'grid', gap: '8px', marginBottom: '18px' }}>
+                <label htmlFor="customer-active-vehicle" style={{ color: '#4cd3d1', fontSize: '0.82rem', fontWeight: 700 }}>
+                  {tr("Επιλογή οχήματος", "Select vehicle")}
+                </label>
+                <select
+                  id="customer-active-vehicle"
+                  value={primaryVehicle.id}
+                  onChange={(event) => setSelectedVehicleId(event.target.value)}
+                  style={{ width: '100%', maxWidth: '100%', minWidth: 0, minHeight: '48px', padding: '12px', background: '#191923', color: '#fff', border: '1px solid rgba(76,211,209,.35)', borderRadius: '10px', font: 'inherit' }}
+                >
+                  {customerVehicles.map((vehicle) => (
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {[vehicle.make, vehicle.model, vehicle.year || '', vehicle.plate || ''].filter(Boolean).join(' · ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            {customerVehicles.length ? (
+              <div className="customer-list">
+                <div className="customer-detail"><span>{tr("Μάρκα", "Brand")}</span><strong>{primaryVehicle.make}</strong></div>
+                <div className="customer-detail"><span>{tr("Μοντέλο", "Model")}</span><strong>{primaryVehicle.model}</strong></div>
+                <div className="customer-detail"><span>{tr("Έτος", "Year")}</span><strong>{primaryVehicle.year || '—'}</strong></div>
+                <div className="customer-detail"><span>{tr("Πινακίδα", "Plate")}</span><strong>{primaryVehicle.plate || '—'}</strong></div>
+              </div>
+            ) : (
+              <p className="portal-muted">{tr("Δεν έχουν καταχωριστεί ακόμη οχήματα.", "No vehicles registered yet.")}</p>
+            )}
           </PortalSectionCard>
         </section>
         <section className="customer-member-grid">
@@ -623,9 +655,9 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
         </PortalSectionCard>
 
         <PortalSectionCard eyebrow={tr("Υπηρεσίες", "Services")} title={tr("Εγκατεστημένες αναβαθμίσεις", "Installed services")} icon={<ShieldCheck size={16} />}>
-          {customerHistory.length ? (
+          {selectedHistory.length ? (
             <div className="customer-list">
-              {customerHistory.slice().sort((a, b) => b.completedOn.localeCompare(a.completedOn)).map((entry) => (
+              {selectedHistory.slice().sort((a, b) => b.completedOn.localeCompare(a.completedOn)).map((entry) => (
                 <div className="customer-detail" key={entry.id} style={{ alignItems: 'flex-start', gap: '10px' }}>
                   <div>
                     <span>{entry.completedOn}</span>
