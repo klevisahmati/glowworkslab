@@ -502,9 +502,6 @@ export function AdminPage({ customerRouteId }: { customerRouteId?: string } = {}
   const [selectedManagedProjectId, setSelectedManagedProjectId] = useState('')
   const [projectStatus, setProjectStatus] = useState<string | null>(null)
   const [projectsLoading, setProjectsLoading] = useState(true)
-  const [managerView, setManagerView] = useState<
-    'projects' | 'homepage'
-  >('projects')
   const [homepageImages, setHomepageImages] =
     useState<HomepageImageRecord[]>([])
   const [homepageImageFiles, setHomepageImageFiles] = useState<
@@ -1286,8 +1283,6 @@ const saveCustomer = async () => {
                     return
                   }
                   setAdminSection(key)
-                  if (key === 'projects') setManagerView('projects')
-                  if (key === 'site') setManagerView('homepage')
                 }}
               >
                 <span>{number}</span>
@@ -1310,43 +1305,11 @@ const saveCustomer = async () => {
       >
         <div className="portal-card-title-row">
           <div>
-            <p className="portal-eyebrow">Public projects</p>
-            <h3>Project Manager</h3>
+            <p className="portal-eyebrow">{adminSection === 'projects' ? 'Public projects' : 'Website images'}</p>
+            <h3>{adminSection === 'projects' ? 'Project Manager' : 'Manage Site'}</h3>
           </div>
-        <div
-          className="portal-actions"
-          style={{
-            marginTop: '16px',
-            marginBottom: '22px',
-            gap: '10px',
-          }}
-        >
-          <button
-            className={`button ${
-              managerView === 'projects'
-                ? 'button-primary'
-                : 'button-secondary'
-            }`}
-            type="button"
-            onClick={() => setManagerView('projects')}
-          >
-            Manage projects
-          </button>
-
-          <button
-            className={`button ${
-              managerView === 'homepage'
-                ? 'button-primary'
-                : 'button-secondary'
-            }`}
-            type="button"
-            onClick={() => setManagerView('homepage')}
-          >
-            Manage site & Projects images
-          </button>
-        </div>
           <div className="portal-chip">
-            {managerView === 'projects'
+            {adminSection === 'projects'
               ? projectsLoading
                 ? 'Loading...'
                 : `${projects.length} projects`
@@ -1356,7 +1319,7 @@ const saveCustomer = async () => {
           </div>
         </div>
 
-        {managerView === 'projects' ? (
+        {adminSection === 'projects' ? (
           <>
         <form onSubmit={saveProject}>
           <div className="form-grid">
