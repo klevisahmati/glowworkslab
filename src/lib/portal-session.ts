@@ -562,14 +562,12 @@ export async function fetchCustomerPortalStateByCode(
       }
     })
 
+  // STEP 110J1: Query a code-scoped RPC, not the publicly selectable gallery table.
+  // The database function validates the NFC customer code server-side.
   const { data: customerGalleryData, error: customerGalleryError } =
-    await supabase
-      .from('customer_gallery')
-      .select(
-        'id, customer_id, title, description, image_url, category, featured, created_at',
-      )
-      .eq('customer_id', customer.id)
-      .order('created_at', { ascending: false })
+    await supabase.rpc('get_customer_gallery_by_code', {
+      p_customer_code: customerCode.trim(),
+    })
 
   if (customerGalleryError) {
     throw customerGalleryError

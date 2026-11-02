@@ -22,6 +22,7 @@ import { PortalActionButton } from '../../components/portal/PortalActionButton'
 import { PortalEmptyState, PortalSectionCard } from '../../components/portal/PortalSectionCard'
 import { hasValidAdminSession } from '../../lib/portal-auth'
 import { fetchCustomerPortalStateByCode, getPortalState } from '../../lib/portal-session'
+import { getPrivateCustomerPhotoUrls } from '../../lib/customer-gallery-private'
 import { calculateWarrantyMeta } from '../../lib/warranty'
 import type { CustomerProfile, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyRecord } from '../../types/portal'
 
@@ -139,6 +140,25 @@ function CustomerPortalPage() {
   const customerWarranties = portalState.warranties.filter((warranty) => warranty.customerId === customer.id)
   const customerHistory = portalState.serviceHistory.filter((entry) => entry.customerId === customer.id)
   const customerGallery = portalState.gallery.filter((item) => item.customerId === customer.id)
+  // Private URLs override legacy public URLs only when a matching private file exists.
+  // During migration the current public images remain available.
+  const [privateGalleryUrls, setPrivateGalleryUrls] = useState<Record<string, string>>({})
+  useEffect(() => {
+    let active = true
+    setPrivateGalleryUrls({})
+    void getPrivateCustomerPhotoUrls({ data: { customerCode } })
+      .then((photos) => {
+        if (!active) return
+        const urls: Record<string, string> = {}
+        for (const photo of photos) urls[photo.id] = photo.signedUrl
+        setPrivateGalleryUrls(urls)
+      })
+      .catch(() => {
+        // No private photos or server credentials yet: preserve legacy gallery.
+        if (active) setPrivateGalleryUrls({})
+      })
+    return () => { active = false }
+  }, [customerCode])
   const selectedHistory = customerHistory.filter((entry) => {
     if (!activeVehicle) return false
     if (entry.vehicleId) return entry.vehicleId === activeVehicle.id
@@ -607,7 +627,7 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
             <div className="customer-gallery">
               {customerGallery.map((item) => (
                 <figure key={item.id}>
-                  <img src={item.imageUrl} alt={item.title || 'Glowworks project photo'} />
+                  <img src={privateGalleryUrls[item.id] ?? item.imageUrl} alt={item.title || 'Glowworks project photo'} />
                   <figcaption>
                     <strong>{item.title}</strong>
                     {item.description ? <p>{item.description}</p> : null}

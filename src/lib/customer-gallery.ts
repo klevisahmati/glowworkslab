@@ -34,6 +34,26 @@ export async function saveCustomerGalleryItem(
   let imageUrl = item.imageUrl
   let storagePath: string | null = null
 
+  // Preserve the existing file reference when only gallery metadata changes.
+  // Never reuse a path for a different URL or customer.
+  if (!item.imageUrl.startsWith('data:')) {
+    const { data: existing, error: existingError } = await supabase
+      .from('customer_gallery')
+      .select('customer_id, image_url, storage_path')
+      .eq('id', item.id)
+      .maybeSingle()
+
+    if (existingError) throw existingError
+
+    if (existing && String(existing.customer_id) !== item.customerId) {
+      throw new Error('Cannot move a gallery photo between customers.')
+    }
+
+    if (existing && String(existing.image_url ?? '') === item.imageUrl) {
+      storagePath = existing.storage_path ? String(existing.storage_path) : null
+    }
+  }
+
   if (item.imageUrl.startsWith('data:')) {
     const blob = await dataUrlToBlob(item.imageUrl)
 
