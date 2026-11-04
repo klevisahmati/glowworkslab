@@ -140,24 +140,36 @@ function CustomerPortalPage() {
   const customerWarranties = portalState.warranties.filter((warranty) => warranty.customerId === customer.id)
   const customerHistory = portalState.serviceHistory.filter((entry) => entry.customerId === customer.id)
   const customerGallery = portalState.gallery.filter((item) => item.customerId === customer.id)
-  // Private URLs override legacy public URLs only when a matching private file exists.
-  // During migration the current public images remain available.
+  // Signed URLs are short-lived (300s): renew before expiry, never use public URLs.
   const [privateGalleryUrls, setPrivateGalleryUrls] = useState<Record<string, string>>({})
   useEffect(() => {
     let active = true
+    let requestSequence = 0
     setPrivateGalleryUrls({})
-    void getPrivateCustomerPhotoUrls({ data: { customerCode } })
-      .then((photos) => {
-        if (!active) return
+
+    const refresh = async () => {
+      const sequence = ++requestSequence
+      try {
+        const photos = await getPrivateCustomerPhotoUrls({ data: { customerCode } })
+        if (!active || sequence !== requestSequence) return
         const urls: Record<string, string> = {}
         for (const photo of photos) urls[photo.id] = photo.signedUrl
         setPrivateGalleryUrls(urls)
-      })
-      .catch(() => {
-        // No private photos or server credentials yet: preserve legacy gallery.
-        if (active) setPrivateGalleryUrls({})
-      })
-    return () => { active = false }
+      } catch (error) {
+        console.warn('Private customer photos could not be loaded', error)
+        if (active && sequence === requestSequence) setPrivateGalleryUrls({})
+      }
+    }
+
+    void refresh()
+    const interval = window.setInterval(() => { void refresh() }, 240_000)
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      active = false
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [customerCode])
   const selectedHistory = customerHistory.filter((entry) => {
     if (!activeVehicle) return false
@@ -248,12 +260,17 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
 
     void fetchCustomerPortalStateByCode(customerCode, getPortalState())
       .then((hydratedState) => {
-        if (isActive) {
+        if (!isActive) return
+        if (hydratedState) {
           setPortalState(hydratedState)
+        } else {
+          // Never expose a cached customer from a previous session/code.
+          setPortalState((current) => ({ ...current, customers: [], gallery: [] }))
         }
       })
       .catch((error) => {
         console.error('Failed to load customer profile', error)
+        if (isActive) setPortalState((current) => ({ ...current, customers: [], gallery: [] }))
       })
       .finally(() => {
         if (isActive) {
@@ -627,7 +644,14 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
             <div className="customer-gallery">
               {customerGallery.map((item) => (
                 <figure key={item.id}>
-                  <img src={privateGalleryUrls[item.id] ?? item.imageUrl} alt={item.title || 'Glowworks project photo'} />
+                  {privateGalleryUrls[item.id] ? (
+  <img
+    src={privateGalleryUrls[item.id]}
+    alt={item.title || 'Glowworks project photo'}
+  />
+) : (
+  <p className="portal-muted">Η φωτογραφία δεν είναι προσωρινά διαθέσιμη.</p>
+)}
                   <figcaption>
                     <strong>{item.title}</strong>
                     {item.description ? <p>{item.description}</p> : null}

@@ -348,7 +348,7 @@ const { data: serviceData, error: serviceError } = await supabase
   const { data: galleryData, error: galleryError } = await supabase
     .from('customer_gallery')
     .select(
-      'id, customer_id, title, description, image_url, category, featured, created_at',
+      'id, customer_id, title, description, category, featured, created_at',
     )
     .order('created_at', { ascending: false })
 
@@ -362,7 +362,7 @@ const { data: serviceData, error: serviceError } = await supabase
       customerId: String(row.customer_id),
       title: String(row.title ?? ''),
       description: String(row.description ?? ''),
-      imageUrl: String(row.image_url ?? ''),
+      imageUrl: '',
       category: String(row.category ?? 'customer'),
       featured: Boolean(row.featured),
     }),
@@ -579,7 +579,7 @@ export async function fetchCustomerPortalStateByCode(
       customerId: String(row.customer_id),
       title: String(row.title ?? ''),
       description: String(row.description ?? ''),
-      imageUrl: String(row.image_url ?? ''),
+      imageUrl: '',
       category: String(row.category ?? 'customer'),
       featured: Boolean(row.featured),
     }))
@@ -706,7 +706,7 @@ function readStoredState(): PortalState | null {
       serviceHistory: parsed.serviceHistory ?? baseState.serviceHistory,
       nfcTags: parsed.nfcTags ?? baseState.nfcTags,
       services: parsed.services ?? baseState.services,
-      gallery: parsed.gallery ?? baseState.gallery,
+      gallery: (parsed.gallery ?? baseState.gallery).map((item) => ({ ...item, imageUrl: '' })),
       discounts: parsed.discounts ?? baseState.discounts,
       appointments: parsed.appointments ?? baseState.appointments,
       uploads: parsed.uploads ?? baseState.uploads,
@@ -791,6 +791,7 @@ export function savePortalState(state: PortalState) {
   const normalizedState: PortalState = {
     ...state,
     session: state.session ?? null,
+    gallery: state.gallery.map((item) => ({ ...item, imageUrl: '' })),
   }
 
   window.localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(normalizedState))

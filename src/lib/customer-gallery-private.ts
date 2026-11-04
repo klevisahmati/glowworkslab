@@ -1,7 +1,7 @@
 /**
- * Step 110K.1: private-gallery signed URLs (server-only preparation).
- * This module is intentionally NOT wired into the customer portal yet.
- * Never return a Storage path or a service-role credential to the browser.
+ * Issue short-lived customer photo URLs server-side.
+ * NFC customer codes act as bearer credentials: treat them as private.
+ * Never expose the service-role key or raw Storage paths to the browser.
  */
 import { createServerFn } from '@tanstack/react-start'
 import { createClient } from '@supabase/supabase-js'
@@ -59,20 +59,23 @@ export const getPrivateCustomerPhotoUrls = createServerFn({ method: 'POST' })
       .limit(100)
     if (photoError) throw new Error('Private gallery lookup failed.')
 
-    const results: SignedCustomerPhoto[] = []
-    for (const photo of photos ?? []) {
+    const valid = (photos ?? []).filter((photo) => {
       const path = photo.storage_path
-      if (typeof path !== 'string' || !path.startsWith(prefix)) continue
-      // Only issue URLs for objects that actually exist in the private bucket.
-      const { data: urlData, error: signError } = await adminClient.storage
-        .from(PRIVATE_BUCKET)
-        .createSignedUrl(path, URL_TTL_SECONDS)
-      if (signError || !urlData?.signedUrl) continue
-      results.push({
-        id: String(photo.id),
-        signedUrl: urlData.signedUrl,
-        expiresIn: URL_TTL_SECONDS,
-      })
-    }
-    return results
+      return typeof path === 'string'
+        && path.startsWith(prefix)
+        && !path.includes('..')
+        && !path.includes('\\')
+    })
+    if (!valid.length) return []
+
+    const { data: signed, error: signError } = await adminClient.storage
+      .from(PRIVATE_BUCKET)
+      .createSignedUrls(valid.map((photo) => String(photo.storage_path)), URL_TTL_SECONDS)
+    if (signError) throw new Error('Private gallery signing failed.')
+
+    return valid.flatMap((photo, index): SignedCustomerPhoto[] => {
+      const signedUrl = signed?.[index]?.signedUrl
+      if (!signedUrl) return []
+      return [{ id: String(photo.id), signedUrl, expiresIn: URL_TTL_SECONDS }]
+    })
   })

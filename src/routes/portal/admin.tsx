@@ -8,6 +8,7 @@ import { getValidPortalStaffRole, type PortalStaffRole } from '../../lib/portal-
 import {
   deleteCustomerGalleryItem,
   fetchCustomerGallery,
+  fetchPrivateGalleryPreviewUrls,
   saveCustomerGalleryItem,
 } from '../../lib/customer-gallery'
 import {
@@ -487,6 +488,38 @@ export function AdminPage({ customerRouteId }: { customerRouteId?: string } = {}
       isActive = false
     }
   }, [navigate])
+  const [privateGalleryPreviewUrls, setPrivateGalleryPreviewUrls] =
+    useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (portalRole !== 'admin' || !portalHydrated) {
+      setPrivateGalleryPreviewUrls({})
+      return
+    }
+
+    let active = true
+
+    const refreshPreviews = async () => {
+      try {
+        const urls = await fetchPrivateGalleryPreviewUrls()
+        if (active) setPrivateGalleryPreviewUrls(urls)
+      } catch (error) {
+        console.warn('Private gallery previews could not be loaded', error)
+        if (active) setPrivateGalleryPreviewUrls({})
+      }
+    }
+
+    void refreshPreviews()
+    const interval = setInterval(() => {
+      void refreshPreviews()
+    }, 240000)
+
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
+  }, [portalRole, portalHydrated, state.gallery])
+
   const [projects, setProjects] = useState<ProjectRecord[]>([])
   const [projectDraft, setProjectDraft] = useState<ProjectDraft>({
     serviceId: 'ambient-lighting',
@@ -899,6 +932,7 @@ const saveCustomer = async () => {
   }
 
   const saveGalleryItem = async () => {
+    if (portalRole !== 'admin') return
     const trimmedTitle = galleryDraft.title.trim()
     // STEP 105E3 - PHOTOS WITHOUT DESCRIPTION
     const selectedImages = pendingGalleryImages.length
@@ -954,6 +988,7 @@ const saveCustomer = async () => {
   }
 
   const removeGalleryItem = async (itemId: string) => {
+    if (portalRole !== 'admin') return
     try {
       await deleteCustomerGalleryItem(itemId)
       setState((current) => removePortalGalleryItem(itemId, current))
@@ -972,6 +1007,7 @@ const saveCustomer = async () => {
   }
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (portalRole !== 'admin') return
     const files = Array.from(event.target.files ?? [])
     if (!files.length) {
       return
@@ -2391,7 +2427,7 @@ const saveCustomer = async () => {
         <div className="form-grid" style={{ marginTop: '16px' }}>
           <label className="full">
             <span>Profile photos</span>
-            <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} />
+            <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} disabled={portalRole !== 'admin'} />
             <p className="portal-muted" style={{ marginTop: '6px' }}>You can select several images at once and save them as separate gallery items.</p>
           </label>
           {pendingGalleryImages.length ? (
@@ -2409,7 +2445,7 @@ const saveCustomer = async () => {
             <span>Photo title</span>
             <input value={galleryDraft.title} onChange={(event) => setGalleryDraft((current) => ({ ...current, title: event.target.value /* STEP 105F5 - INDEPENDENT SERVICE TITLE */ }))} placeholder="Ambient lighting install" />
           </label>
-          <button className="button button-secondary" type="button" onClick={saveGalleryItem}>Save customer photo</button>
+          <button className="button button-secondary" type="button" onClick={saveGalleryItem} disabled={portalRole !== 'admin'}>Save customer photo</button>
         </div>
 
         <div className="portal-card" style={{ marginTop: '16px', border: '1px solid rgba(76, 211, 209, 0.18)', padding: '16px' }}>
@@ -2422,15 +2458,15 @@ const saveCustomer = async () => {
               {state.gallery.filter((item) => item.customerId === (editingCustomerId ?? selectedCustomerId ?? undefined)).map((item) => (
                 <div className="portal-row portal-row-with-actions" key={item.id}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.title || 'Customer photo'} style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '10px', border: '1px solid rgba(76, 211, 209, 0.25)' }} />
+                    {privateGalleryPreviewUrls[item.id] ? (
+                      <img src={privateGalleryPreviewUrls[item.id]} alt={item.title || 'Customer photo'} style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '10px', border: '1px solid rgba(76, 211, 209, 0.25)' }} />
                     ) : null}
                     <div>
                       <strong>{item.title}</strong>
 
                     </div>
                   </div>
-                  <button className="portal-ghost-button" type="button" onClick={() => removeGalleryItem(item.id)}>
+                  <button className="portal-ghost-button" type="button" onClick={() => removeGalleryItem(item.id)} disabled={portalRole !== 'admin'}>
                     <Trash2 size={14} /> Delete
                   </button>
                 </div>
