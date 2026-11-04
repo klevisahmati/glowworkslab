@@ -64,8 +64,8 @@ function PortalLandingPage() {
     }
 
     setNotice(null)
-    setStoredPortalRole('admin', normalizedEmail)
-    setRole('admin')
+    setStoredPortalRole(authenticated, normalizedEmail)
+    setRole(authenticated === 'admin' ? 'admin' : null)
     setIsAdminSessionActive(true)
     router.navigate({ to: '/portal/admin' })
   }
@@ -112,7 +112,7 @@ function PortalLandingPage() {
           </div>
           <div className="portal-card portal-highlight-card">
             <h2>Τρέχουσα πρόσβαση</h2>
-            <p>{role ? `Συνδεδεμένος ως admin για ${adminEmail}.` : 'Εισέλθε ως διαχειριστής για να συνεχίσεις.'}</p>
+            <p>{isAdminSessionActive ? 'Ενεργή συνεδρία προσωπικού.' : 'Εισέλθε ως διαχειριστής για να συνεχίσεις.'}</p>
             <p className="portal-muted">Η συνεδρία σου αποθηκεύεται τοπικά, ώστε οι επαναλαμβανόμενες επισκέψεις να διατηρούν την κατάσταση του portal.</p>
             <div className="portal-actions" style={{ marginTop: '12px' }}>
               <Link className="button button-primary" to="/portal/admin">Άνοιγμα admin portal</Link>

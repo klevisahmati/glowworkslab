@@ -22,6 +22,7 @@ import { PortalActionButton } from '../../components/portal/PortalActionButton'
 import { PortalEmptyState, PortalSectionCard } from '../../components/portal/PortalSectionCard'
 import { hasValidAdminSession } from '../../lib/portal-auth'
 import { fetchCustomerPortalStateByCode, getPortalState } from '../../lib/portal-session'
+import { getPrivateCustomerPhotoUrls } from '../../lib/customer-gallery-private'
 import { calculateWarrantyMeta } from '../../lib/warranty'
 import type { CustomerProfile, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyRecord } from '../../types/portal'
 
@@ -133,10 +134,50 @@ function CustomerPortalPage() {
   const customer =
     matchedCustomer ?? makeCustomerDraft({ customerCode })
   const customerVehicles = portalState.vehicles.filter((vehicle) => vehicle.customerId === customer.id)
+  // STEP 105G: Vehicle selection is local to this page and never alters Supabase data.
+  const [selectedVehicleId, setSelectedVehicleId] = useState('')
+  const activeVehicle = customerVehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? customerVehicles[0]
   const customerWarranties = portalState.warranties.filter((warranty) => warranty.customerId === customer.id)
   const customerHistory = portalState.serviceHistory.filter((entry) => entry.customerId === customer.id)
   const customerGallery = portalState.gallery.filter((item) => item.customerId === customer.id)
-  const primaryVehicle = customerVehicles[0] ?? {
+  // Signed URLs are short-lived (300s): renew before expiry, never use public URLs.
+  const [privateGalleryUrls, setPrivateGalleryUrls] = useState<Record<string, string>>({})
+  useEffect(() => {
+    let active = true
+    let requestSequence = 0
+    setPrivateGalleryUrls({})
+
+    const refresh = async () => {
+      const sequence = ++requestSequence
+      try {
+        const photos = await getPrivateCustomerPhotoUrls({ data: { customerCode } })
+        if (!active || sequence !== requestSequence) return
+        const urls: Record<string, string> = {}
+        for (const photo of photos) urls[photo.id] = photo.signedUrl
+        setPrivateGalleryUrls(urls)
+      } catch (error) {
+        console.warn('Private customer photos could not be loaded', error)
+        if (active && sequence === requestSequence) setPrivateGalleryUrls({})
+      }
+    }
+
+    void refresh()
+    const interval = window.setInterval(() => { void refresh() }, 240_000)
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      active = false
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [customerCode])
+  const selectedHistory = customerHistory.filter((entry) => {
+    if (!activeVehicle) return false
+    if (entry.vehicleId) return entry.vehicleId === activeVehicle.id
+    // Legacy records without an ID are safe to show on a single-vehicle account only.
+    return customerVehicles.length === 1
+  })
+  const primaryVehicle = activeVehicle ?? {
     id: 'pending',
     customerId: customer.id,
     make: 'Vehicle',
@@ -161,7 +202,7 @@ useEffect(() => {
 }, [])
 
 const warrantyHistory = useMemo(() => {
-  return customerHistory
+  return selectedHistory
     .slice()
     .sort((a, b) => b.completedOn.localeCompare(a.completedOn))
     .map((entry) => ({
@@ -180,7 +221,7 @@ const warrantyHistory = useMemo(() => {
           )
         : null,
     }))
-}, [customerHistory, now, portalState.warranties])
+}, [selectedHistory, now, portalState.warranties])
 
 const memberDiscountCode = (customer.discountCode?.trim() || 'GLOW10').toUpperCase()
 
@@ -219,12 +260,17 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
 
     void fetchCustomerPortalStateByCode(customerCode, getPortalState())
       .then((hydratedState) => {
-        if (isActive) {
+        if (!isActive) return
+        if (hydratedState) {
           setPortalState(hydratedState)
+        } else {
+          // Never expose a cached customer from a previous session/code.
+          setPortalState((current) => ({ ...current, customers: [], gallery: [] }))
         }
       })
       .catch((error) => {
         console.error('Failed to load customer profile', error)
+        if (isActive) setPortalState((current) => ({ ...current, customers: [], gallery: [] }))
       })
       .finally(() => {
         if (isActive) {
@@ -369,7 +415,7 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
     doc.text(`Invoice Number: INV-${customer.customerCode}`, 40, 140)
     doc.text(`Customer: ${customer.name}`, 40, 170)
     doc.text(`Vehicle: ${primaryVehicle.make} ${primaryVehicle.model}`, 40, 200)
-    doc.text(`Service Package: ${customerHistory[0]?.title ?? 'Awaiting installation'}`, 40, 230)
+    doc.text(`Service Package: ${selectedHistory[0]?.title ?? 'Awaiting installation'}`, 40, 230)
     doc.text(`Issued: ${formatDate(new Date().toISOString().slice(0, 10))}`, 40, 260)
     doc.text('Status: Paid / Prepared for delivery', 40, 290)
     doc.text('Thank you for choosing Glowworks Lab.', 40, 340)
@@ -441,13 +487,36 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
             </div>
           </PortalSectionCard>
 
-          <PortalSectionCard eyebrow={tr("Όχημα", "Vehicle")} title={tr("Το αυτοκίνητό σου", "Current vehicle")} icon={<CarFront size={16} />}>
-            <div className="customer-list">
-              <div className="customer-detail"><span>{tr("Μάρκα", "Brand")}</span><strong>{primaryVehicle.make}</strong></div>
-              <div className="customer-detail"><span>{tr("Μοντέλο", "Model")}</span><strong>{primaryVehicle.model}</strong></div>
-              <div className="customer-detail"><span>{tr("Έτος", "Year")}</span><strong>{primaryVehicle.year}</strong></div>
-              <div className="customer-detail"><span>{tr("Πινακίδα", "Plate")}</span><strong>{primaryVehicle.plate}</strong></div>
-            </div>
+          <PortalSectionCard eyebrow={tr("Οχήματα", "Vehicles")} title={tr("Τα αυτοκίνητά σου", "Your vehicles")} icon={<CarFront size={16} />}>
+            {customerVehicles.length > 1 ? (
+              <div style={{ display: 'grid', gap: '8px', marginBottom: '18px' }}>
+                <label htmlFor="customer-active-vehicle" style={{ color: '#4cd3d1', fontSize: '0.82rem', fontWeight: 700 }}>
+                  {tr("Επιλογή οχήματος", "Select vehicle")}
+                </label>
+                <select
+                  id="customer-active-vehicle"
+                  value={primaryVehicle.id}
+                  onChange={(event) => setSelectedVehicleId(event.target.value)}
+                  style={{ width: '100%', maxWidth: '100%', minWidth: 0, minHeight: '48px', padding: '12px', background: '#191923', color: '#fff', border: '1px solid rgba(76,211,209,.35)', borderRadius: '10px', font: 'inherit' }}
+                >
+                  {customerVehicles.map((vehicle) => (
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {[vehicle.make, vehicle.model, vehicle.year || '', vehicle.plate || ''].filter(Boolean).join(' · ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            {customerVehicles.length ? (
+              <div className="customer-list">
+                <div className="customer-detail"><span>{tr("Μάρκα", "Brand")}</span><strong>{primaryVehicle.make}</strong></div>
+                <div className="customer-detail"><span>{tr("Μοντέλο", "Model")}</span><strong>{primaryVehicle.model}</strong></div>
+                <div className="customer-detail"><span>{tr("Έτος", "Year")}</span><strong>{primaryVehicle.year || '—'}</strong></div>
+                <div className="customer-detail"><span>{tr("Πινακίδα", "Plate")}</span><strong>{primaryVehicle.plate || '—'}</strong></div>
+              </div>
+            ) : (
+              <p className="portal-muted">{tr("Δεν έχουν καταχωριστεί ακόμη οχήματα.", "No vehicles registered yet.")}</p>
+            )}
           </PortalSectionCard>
         </section>
         <section className="customer-member-grid">
@@ -575,7 +644,14 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
             <div className="customer-gallery">
               {customerGallery.map((item) => (
                 <figure key={item.id}>
-                  <img src={item.imageUrl} alt={item.title || 'Glowworks project photo'} />
+                  {privateGalleryUrls[item.id] ? (
+  <img
+    src={privateGalleryUrls[item.id]}
+    alt={item.title || 'Glowworks project photo'}
+  />
+) : (
+  <p className="portal-muted">Η φωτογραφία δεν είναι προσωρινά διαθέσιμη.</p>
+)}
                   <figcaption>
                     <strong>{item.title}</strong>
                     {item.description ? <p>{item.description}</p> : null}
@@ -623,9 +699,9 @@ const countdownSeconds = Math.floor((discountRemainingMs / 1000) % 60)
         </PortalSectionCard>
 
         <PortalSectionCard eyebrow={tr("Υπηρεσίες", "Services")} title={tr("Εγκατεστημένες αναβαθμίσεις", "Installed services")} icon={<ShieldCheck size={16} />}>
-          {customerHistory.length ? (
+          {selectedHistory.length ? (
             <div className="customer-list">
-              {customerHistory.slice().sort((a, b) => b.completedOn.localeCompare(a.completedOn)).map((entry) => (
+              {selectedHistory.slice().sort((a, b) => b.completedOn.localeCompare(a.completedOn)).map((entry) => (
                 <div className="customer-detail" key={entry.id} style={{ alignItems: 'flex-start', gap: '10px' }}>
                   <div>
                     <span>{entry.completedOn}</span>

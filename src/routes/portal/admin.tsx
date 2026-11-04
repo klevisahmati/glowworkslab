@@ -2,11 +2,13 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Copy, ExternalLink, Link2, Mail, MapPin, PencilLine, Phone, Search, ShieldCheck, Trash2, UserPlus, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { PortalShell } from '../../components/portal/PortalShell'
+import { ProductManager } from '../../components/portal/ProductManager'
 import { buildCustomerPortalUrl, generateSecureCustomerPortalSlug } from '../../lib/customer-links'
 import { getValidPortalStaffRole, type PortalStaffRole } from '../../lib/portal-auth'
 import {
   deleteCustomerGalleryItem,
   fetchCustomerGallery,
+  fetchPrivateGalleryPreviewUrls,
   saveCustomerGalleryItem,
 } from '../../lib/customer-gallery'
 import {
@@ -26,7 +28,7 @@ import {
   type HomepageImageRecord,
   type HomepageImageSlot,
 } from '../../lib/homepage-images'
-import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, updatePortalVehicle } from '../../lib/portal-session'
+import { addPortalServiceHistoryEntry, getPortalState, createPortalCustomer, deletePortalCustomer, hydratePortalStateFromSupabase, removePortalGalleryItem, removePortalServiceHistoryEntry, updatePortalCustomer, updatePortalGallery, updatePortalServiceHistoryEntry, savePortalVehicle } from '../../lib/portal-session'
 import type { AdminGalleryItem, CustomerProfile, PortalState, ServiceHistoryEntry, VehicleRecord, WarrantyRecord } from '../../types/portal'
 import { createInitialPortalState } from '../../lib/portal-data'
 
@@ -204,6 +206,7 @@ const makeServiceDraft = () => ({
   title: '',
   completedOn: new Date().toISOString().slice(0, 10),
   vehicle: '',
+  vehicleId: '',
   notes: '',
   servicePreset: 'Ambient Lighting',
   warrantyNumber: '',
@@ -437,15 +440,24 @@ function getCustomerBenefitStatus(customer: CustomerProfile, now = new Date()) {
     detail: `${daysRemaining} days remaining Â· expires ${expiresAt.toLocaleDateString('en-GB')}`,
   }
 }
-function AdminPage() {
+export function AdminPage({ customerRouteId }: { customerRouteId?: string } = {}) {
   const [state, setState] = useState<PortalState>(() => createInitialPortalState())
   const [portalHydrated, setPortalHydrated] = useState(false)
   const [search, setSearch] = useState('')
+  const [adminSection, setAdminSection] = useState<
+    'customers' | 'projects' | 'products' | 'site'
+  >('customers')
+  const [customerWorkspace, setCustomerWorkspace] = useState<'list' | 'profile'>(customerRouteId ? 'profile' : 'list')
+  const initializedCustomerRouteId = useRef<string | null>(null)
+  const [customerTab, setCustomerTab] = useState<'details' | 'vehicles' | 'services' | 'photos'>('details')
   const navigate = useNavigate()
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
   const [customerDraft, setCustomerDraft] = useState<CustomerProfile>(makeCustomerDraft)
   const [vehicleDraft, setVehicleDraft] = useState<VehicleRecord>(() => makeVehicleDraft())
+  const [vehicleSaving, setVehicleSaving] = useState(false)
+  const [vehicleError, setVehicleError] = useState('')
+  const [vehicleSuccess, setVehicleSuccess] = useState('')
   const [, setWarrantyDraft] = useState<WarrantyRecord>(() => makeWarrantyDraft())
   const [galleryDraft, setGalleryDraft] = useState<AdminGalleryItem>(() => makeGalleryDraft())
   const [pendingGalleryImages, setPendingGalleryImages] = useState<string[]>([])
@@ -476,6 +488,38 @@ function AdminPage() {
       isActive = false
     }
   }, [navigate])
+  const [privateGalleryPreviewUrls, setPrivateGalleryPreviewUrls] =
+    useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (portalRole !== 'admin' || !portalHydrated) {
+      setPrivateGalleryPreviewUrls({})
+      return
+    }
+
+    let active = true
+
+    const refreshPreviews = async () => {
+      try {
+        const urls = await fetchPrivateGalleryPreviewUrls()
+        if (active) setPrivateGalleryPreviewUrls(urls)
+      } catch (error) {
+        console.warn('Private gallery previews could not be loaded', error)
+        if (active) setPrivateGalleryPreviewUrls({})
+      }
+    }
+
+    void refreshPreviews()
+    const interval = setInterval(() => {
+      void refreshPreviews()
+    }, 240000)
+
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
+  }, [portalRole, portalHydrated, state.gallery])
+
   const [projects, setProjects] = useState<ProjectRecord[]>([])
   const [projectDraft, setProjectDraft] = useState<ProjectDraft>({
     serviceId: 'ambient-lighting',
@@ -491,9 +535,6 @@ function AdminPage() {
   const [selectedManagedProjectId, setSelectedManagedProjectId] = useState('')
   const [projectStatus, setProjectStatus] = useState<string | null>(null)
   const [projectsLoading, setProjectsLoading] = useState(true)
-  const [managerView, setManagerView] = useState<
-    'projects' | 'homepage'
-  >('projects')
   const [homepageImages, setHomepageImages] =
     useState<HomepageImageRecord[]>([])
   const [homepageImageFiles, setHomepageImageFiles] = useState<
@@ -698,7 +739,20 @@ function AdminPage() {
     setVehicleDraft(existingVehicle ?? makeVehicleDraft(customer.id))
     setEditingCustomerId(customer.id)
     setSelectedCustomerId(customer.id)
+    setCustomerWorkspace('profile')
+    setCustomerTab('details')
+    setVehicleError('')
+    setVehicleSuccess('')
   }
+
+  useEffect(() => {
+    if (!customerRouteId || !portalHydrated || portalRole !== 'admin') return
+    if (initializedCustomerRouteId.current === customerRouteId) return
+    const customer = state.customers.find((entry) => entry.id === customerRouteId)
+    if (!customer) return
+    initializedCustomerRouteId.current = customerRouteId
+    startEditingCustomer(customer)
+  }, [customerRouteId, portalHydrated, portalRole, state.customers])
 
   const cancelCustomerEdit = () => {
     setEditingCustomerId(null)
@@ -719,10 +773,13 @@ function AdminPage() {
     const serviceWarranty = state.warranties.find((warranty) => warranty.id === entry.warrantyId)
     setSelectedCustomerId(entry.customerId)
     setEditingServiceEntryId(entry.id)
+    setCustomerWorkspace('profile')
+    setCustomerTab('services')
     setServiceDraft({
       title: entry.title,
       completedOn: entry.completedOn,
       vehicle: entry.vehicle,
+      vehicleId: entry.vehicleId || serviceWarranty?.vehicleId || '',
       notes: entry.notes ?? '',
       servicePreset: entry.title || 'Ambient Lighting',
       warrantyNumber: entry.warrantyNumber || serviceWarranty?.warrantyNumber || '',
@@ -738,6 +795,12 @@ function AdminPage() {
     if (!customerId) {
       return
     }
+    // STEP 105E4 - Require real customer vehicle ID for every service.
+    const chosenVehicle = state.vehicles.find((v) => v.customerId === customerId && v.id === serviceDraft.vehicleId && /^\d+$/.test(v.id))
+    if (!chosenVehicle) {
+      window.alert('Επίλεξε καταχωρισμένο όχημα πριν αποθηκεύσεις την εργασία.')
+      return
+    }
 
     const title = (serviceDraft.title || serviceDraft.servicePreset).trim()
     if (!title) {
@@ -749,13 +812,14 @@ function AdminPage() {
       return
     }
 
-    const vehicleLabel = serviceDraft.vehicle.trim() || [vehicleDraft.make, vehicleDraft.model].filter(Boolean).join(' ').trim() || 'Vehicle'
+    const vehicleLabel = [chosenVehicle.make, chosenVehicle.model, chosenVehicle.plate].filter(Boolean).join(' · ')
     const autoWarrantyNumber = `W-SVC-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
     const serviceEntry = {
       id: editingServiceEntryId ?? `history-${Date.now()}`,
       customerId: selectedCustomer.id,
       title,
       vehicle: vehicleLabel,
+      vehicleId: chosenVehicle.id,
       completedOn: serviceDraft.completedOn,
       notes: serviceDraft.notes.trim(),
       warrantyNumber: serviceDraft.warrantyNumber.trim() || autoWarrantyNumber,
@@ -812,17 +876,11 @@ const saveCustomer = async () => {
       discountCode: customerDraft.discountCode?.trim() ?? '',
     }
 
-    let nextState = editingCustomerId
-  ? updatePortalCustomer({ ...nextCustomer, id: editingCustomerId })
-  : await createPortalCustomer(nextCustomer);
-    if (editingCustomerId) {
-            const customerVehicle = {
-        ...vehicleDraft,
-        customerId: editingCustomerId,
-        id: vehicleDraft.id || `veh-${Math.random().toString(36).slice(2, 8)}`,
-      }
-      nextState = updatePortalVehicle(customerVehicle)
-    }
+    // STEP 105E1 - CUSTOMER SAVE DOES NOT UPSERT VEHICLES
+    // Vehicle creation/editing will use a separate explicit action.
+    const nextState = editingCustomerId
+      ? updatePortalCustomer({ ...nextCustomer, id: editingCustomerId })
+      : await createPortalCustomer(nextCustomer);
 
     setState(nextState)
     resetServiceDraft()
@@ -834,6 +892,7 @@ const saveCustomer = async () => {
       title: '',
       completedOn: new Date().toISOString().slice(0, 10),
       vehicle: '',
+      vehicleId: '',
       notes: '',
       servicePreset: 'Ambient Lighting',
       warrantyNumber: '',
@@ -843,11 +902,39 @@ const saveCustomer = async () => {
       warrantyNotes: '',
     })
     setEditingCustomerId(null)
+    setCustomerWorkspace('list')
+    if (customerRouteId) void navigate({ to: '/portal/admin' })
+  }
+
+  // STEP 105E2 - Separate vehicle actions; never reuse Save customer.
+  const startNewVehicle = () => {
+    if (!editingCustomerId) return
+    setVehicleDraft(makeVehicleDraft(editingCustomerId))
+    setVehicleError('')
+    setVehicleSuccess('')
+  }
+
+  const saveVehicle = async () => {
+    if (!editingCustomerId || vehicleSaving || isReviewer) return
+    setVehicleError('')
+    setVehicleSuccess('')
+    setVehicleSaving(true)
+    try {
+      const saved = await savePortalVehicle({ ...vehicleDraft, customerId: editingCustomerId })
+      setState(getPortalState())
+      setVehicleDraft(saved)
+      setVehicleSuccess('Το όχημα αποθηκεύτηκε επιτυχώς.')
+    } catch (error) {
+      setVehicleError(error instanceof Error ? error.message : 'Η αποθήκευση απέτυχε.')
+    } finally {
+      setVehicleSaving(false)
+    }
   }
 
   const saveGalleryItem = async () => {
+    if (portalRole !== 'admin') return
     const trimmedTitle = galleryDraft.title.trim()
-    const trimmedDescription = galleryDraft.description.trim()
+    // STEP 105E3 - PHOTOS WITHOUT DESCRIPTION
     const selectedImages = pendingGalleryImages.length
       ? pendingGalleryImages
       : galleryDraft.imageUrl.trim()
@@ -877,7 +964,7 @@ const saveCustomer = async () => {
           ...galleryDraft,
           id: `${galleryDraft.id}-${Date.now()}-${index}`,
           title: fallbackTitle,
-          description: trimmedDescription || 'Customer photo',
+          description: '',
           imageUrl,
           category: galleryDraft.category || 'customer',
           featured: galleryDraft.featured ?? false,
@@ -901,6 +988,7 @@ const saveCustomer = async () => {
   }
 
   const removeGalleryItem = async (itemId: string) => {
+    if (portalRole !== 'admin') return
     try {
       await deleteCustomerGalleryItem(itemId)
       setState((current) => removePortalGalleryItem(itemId, current))
@@ -919,6 +1007,7 @@ const saveCustomer = async () => {
   }
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (portalRole !== 'admin') return
     const files = Array.from(event.target.files ?? [])
     if (!files.length) {
       return
@@ -1146,6 +1235,25 @@ const saveCustomer = async () => {
       setProjectsLoading(false)
     }
   }
+  if (customerRouteId && portalRole !== 'admin') {
+    return (
+      <PortalShell active="admin" title="Customer management" subtitle="Checking administrator access...">
+        <div className="portal-card">Administrator access required.</div>
+      </PortalShell>
+    )
+  }
+
+  if (customerRouteId && portalHydrated && !state.customers.some((customer) => customer.id === customerRouteId)) {
+    return (
+      <PortalShell active="admin" title="Customer not found">
+        <div className="portal-card">
+          <p>Ο πελάτης δεν βρέθηκε.</p>
+          <button className="button button-secondary" type="button" onClick={() => void navigate({ to: '/portal/admin' })}>Επιστροφή στο Admin</button>
+        </div>
+      </PortalShell>
+    )
+  }
+
   if (!portalHydrated) {
     return (
       <PortalShell
@@ -1186,73 +1294,58 @@ const saveCustomer = async () => {
           </span>
         </section>
       ) : null}
-      <div className="portal-grid portal-grid-two">
-        <div className="portal-card admin-operations-card">
-          <div className="portal-card-title-row">
-            <h3>Operations overview</h3>
-            <div className="portal-chip"><ShieldCheck size={15} /> Secure</div>
+      <div className="glow-admin-workspace">
+        <aside className="glow-admin-sidebar" aria-label="Admin sections">
+          <div className="glow-admin-sidebar-brand">
+            <strong>GLOWWORKS.LAB</strong>
+            <small>ADMIN CONTROL CENTER</small>
           </div>
-          <div className="portal-stat-row">
-            <div className="portal-stat">
-              <strong>{state.customers.length}</strong>
-              <span>Total Customers</span>
-            </div>
-            <div className="portal-stat">
-              <strong>{state.warranties.filter((item) => item.status === 'Active').length}</strong>
-              <span>Active Warranties</span>
-            </div>
-            <div className="portal-stat">
-              <strong>{state.warranties.filter((item) => item.status === 'Expired').length}</strong>
-              <span>Expired Warranties</span>
-            </div>
-          </div>
-        </div>
+          {([
+            ['customers', 'Πελάτες', '01'],
+            ['projects', 'Project Manager', '02'],
+            ['products', 'Product Manager', '03'],
+            ['site', 'Manage Site', '04'],
+          ] as const)
+            .filter(([key]) => !isReviewer || key !== 'products')
+            .map(([key, label, number]) => (
+              <button
+                key={key}
+                type="button"
+                className={`glow-admin-nav-item ${adminSection === key ? 'is-active' : ''}`}
+                aria-current={adminSection === key ? 'page' : undefined}
+                onClick={() => {
+                  if (customerRouteId) {
+                    void navigate({ to: '/portal/admin' })
+                    return
+                  }
+                  setAdminSection(key)
+                }}
+              >
+                <span>{number}</span>
+                {label}
+              </button>
+            ))}
+        </aside>
+        <div className="glow-admin-content">
+          {adminSection === 'products' && !isReviewer && (
+            <>
+      {!isReviewer && <ProductManager />}
+            </>
+          )}
 
-      </div>
-
+          {(adminSection === 'projects' || adminSection === 'site') && (
+            <>
       <section
         className="portal-card admin-project-manager-card"
         style={{ marginBottom: '20px' }}
       >
         <div className="portal-card-title-row">
           <div>
-            <p className="portal-eyebrow">Public projects</p>
-            <h3>Project Manager</h3>
+            <p className="portal-eyebrow">{adminSection === 'projects' ? 'Public projects' : 'Website images'}</p>
+            <h3>{adminSection === 'projects' ? 'Project Manager' : 'Manage Site'}</h3>
           </div>
-        <div
-          className="portal-actions"
-          style={{
-            marginTop: '16px',
-            marginBottom: '22px',
-            gap: '10px',
-          }}
-        >
-          <button
-            className={`button ${
-              managerView === 'projects'
-                ? 'button-primary'
-                : 'button-secondary'
-            }`}
-            type="button"
-            onClick={() => setManagerView('projects')}
-          >
-            Manage projects
-          </button>
-
-          <button
-            className={`button ${
-              managerView === 'homepage'
-                ? 'button-primary'
-                : 'button-secondary'
-            }`}
-            type="button"
-            onClick={() => setManagerView('homepage')}
-          >
-            Manage site & Projects images
-          </button>
-        </div>
           <div className="portal-chip">
-            {managerView === 'projects'
+            {adminSection === 'projects'
               ? projectsLoading
                 ? 'Loading...'
                 : `${projects.length} projects`
@@ -1262,7 +1355,7 @@ const saveCustomer = async () => {
           </div>
         </div>
 
-        {managerView === 'projects' ? (
+        {adminSection === 'projects' ? (
           <>
         <form onSubmit={saveProject}>
           <div className="form-grid">
@@ -1344,7 +1437,7 @@ const saveCustomer = async () => {
                 onChange={(event) =>
                   setProjectDraft((current) => ({
                     ...current,
-                    title: event.target.value,
+                    title: event.target.value /* STEP 105F5 - INDEPENDENT SERVICE TITLE */,
                   }))
                 }
                 placeholder="Example: Ambient Lighting - Mercedes W205"
@@ -1567,7 +1660,7 @@ const saveCustomer = async () => {
                           onChange={(event) =>
                             setEditingProjectDraft((current) =>
                               current
-                                ? { ...current, title: event.target.value }
+                                ? { ...current, title: event.target.value /* STEP 105F5 - INDEPENDENT SERVICE TITLE */ }
                                 : current,
                             )
                           }
@@ -1863,6 +1956,38 @@ const saveCustomer = async () => {
           </div>
         )}
       </section>
+            </>
+          )}
+
+          {adminSection === 'customers' && (
+            <>
+              <div className="glow-customers-toolbar">
+                <div>
+                  <p className="portal-eyebrow">CUSTOMER RELATIONSHIP MANAGEMENT</p>
+                  <h2>{customerRouteId ? 'Προφίλ πελάτη' : 'Πελάτες'}</h2>
+                  <p className="portal-muted">Επίλεξε πελάτη για τα στοιχεία, τις εργασίες και τις φωτογραφίες του.</p>
+                </div>
+                {customerWorkspace === 'list' && !isReviewer ? (
+                  <button className="button button-primary" type="button" onClick={() => {
+                    cancelCustomerEdit()
+                    setSelectedCustomerId(null)
+                    setCustomerWorkspace('profile')
+                    setCustomerTab('details')
+                  }}>+ Νέος πελάτης</button>
+                ) : null}
+                {customerWorkspace === 'profile' ? (
+                  <button className="button button-secondary" type="button" onClick={() => {
+                    if (customerRouteId) {
+                      void navigate({ to: '/portal/admin' })
+                    } else {
+                      setCustomerWorkspace('list')
+                      cancelCustomerEdit()
+                    }
+                  }}>← Πίσω στους πελάτες</button>
+                ) : null}
+              </div>
+              {customerWorkspace === 'list' && (
+                <>
       <div className="portal-card">
         <div className="portal-card-title-row">
           <h3>Search customers</h3>
@@ -1966,14 +2091,14 @@ const saveCustomer = async () => {
                   Open profile
                 </button>
 
-                <button
+                {!isReviewer ? <button
                   className="button button-primary"
                   type="button"
-                  onClick={() => startEditingCustomer(customer)}
+                  onClick={() => void navigate({ to: '/portal/customer-management/$customerId', params: { customerId: customer.id } })}
                 >
                   <PencilLine size={15} />
-                  Edit
-                </button>
+                  Διαχείριση
+                </button> : null}
               </div>
 
               {customer.address ? (
@@ -2024,13 +2149,114 @@ const saveCustomer = async () => {
           </div>
         ) : null}
       </div>
-
-      <div className="portal-card">
+                </>
+              )}
+              {customerWorkspace === 'profile' && (
+                <>
+      <div className="portal-card glow-customer-editor">
         <div className="portal-card-title-row">
-          <h3>Create / edit customer</h3>
+          <h3>{editingCustomerId ? `Διαχείριση: ${customerDraft.name}` : 'Νέος πελάτης'}</h3>
           <div className="portal-chip"><UserPlus size={15} /> CRM</div>
         </div>
 
+        <div className="glow-customer-tabs" role="tablist" aria-label="Customer management">
+          {([
+            ['details', 'Στοιχεία'],
+            ['vehicles', 'Οχήματα'],
+            ['services', 'Εργασίες & εγγυήσεις'],
+            ['photos', 'Φωτογραφίες'],
+          ] as const).map(([key, label]) => (
+            <button key={key} type="button" role="tab" aria-selected={customerTab === key}
+              className={customerTab === key ? 'is-active' : ''}
+              onClick={() => setCustomerTab(key)}
+              disabled={!editingCustomerId && key !== 'details'}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {/* STEP 105D1 - CUSTOMER VEHICLES */}
+        {customerTab === 'vehicles' && editingCustomerId && (
+          <div className="portal-card" style={{ marginBottom: '20px', padding: '20px', border: '1px solid rgba(76,211,209,.2)' }}>
+            <div className="portal-card-title-row">
+              <h3>Οχήματα πελάτη</h3>
+              <button type="button" className="button button-secondary" disabled={isReviewer || vehicleSaving} onClick={startNewVehicle}>+ Προσθήκη οχήματος</button>
+              <div className="portal-chip">
+                {state.vehicles.filter(v => v.customerId === editingCustomerId).length} οχήματα
+              </div>
+            </div>
+            {state.vehicles.filter(v => v.customerId === editingCustomerId).length === 0 ? (
+              <p className="portal-muted">Δεν υπάρχουν καταχωρισμένα οχήματα.</p>
+            ) : (
+              <div className="portal-list">
+                {state.vehicles
+                  .filter(v => v.customerId === editingCustomerId)
+                  .map(v => (
+                    <div className="portal-row" key={v.id}>
+                      <div>
+                        <strong>{[v.make, v.model].filter(Boolean).join(' ') || 'Όχημα'}</strong>
+                        <p>
+                          {[v.year || '', v.plate || ''].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      <button type="button" className="button button-secondary" disabled={vehicleSaving} onClick={() => {
+                        setVehicleDraft(v)
+                        setVehicleError('')
+                        setVehicleSuccess('')
+                      }}>{v.id === vehicleDraft.id ? 'Επιλεγμένο' : 'Επεξεργασία'}</button>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+        {customerTab === 'vehicles' && editingCustomerId && (
+          <div className="portal-card" style={{padding:'20px', marginBottom:'20px'}}>
+            <h3>{/^\d+$/.test(vehicleDraft.id) ? 'Επεξεργασία οχήματος' : 'Νέο όχημα'}</h3>
+          <div>
+            <div className="form-grid">
+              <label>
+                <span>Vehicle make</span>
+                <SearchableSelect
+                  value={vehicleDraft.make}
+                  onSelect={(brand) => setVehicleDraft((current) => ({ ...current, make: brand, model: '' }))}
+                  options={VEHICLE_BRAND_OPTIONS}
+                  placeholder="Mercedes-Benz"
+                  emptyText="No matching brand"
+                />
+              </label>
+              <label>
+                <span>Vehicle model</span>
+                <SearchableSelect
+                  value={vehicleDraft.model}
+                  onSelect={(model) => setVehicleDraft((current) => ({ ...current, model }))}
+                  options={selectedVehicleModels}
+                  placeholder="A-Class"
+                  emptyText="No matching model for this brand"
+                />
+              </label>
+              <label>
+                <span>Year</span>
+                <input type="number" value={vehicleDraft.year} onChange={(event) => setVehicleDraft((current) => ({ ...current, year: Number(event.target.value) }))} />
+              </label>
+              <label>
+                <span>Plate (optional)</span>
+                <input value={vehicleDraft.plate} onChange={(event) => setVehicleDraft((current) => ({ ...current, plate: event.target.value }))} placeholder="RO-4821" />
+              </label>
+              <label>
+                <span>VIN (optional)</span>
+                <input value={vehicleDraft.vin} onChange={(event) => setVehicleDraft((current) => ({ ...current, vin: event.target.value }))} placeholder="WDB123..." />
+              </label>
+            </div>
+            {vehicleError ? <p role="alert" style={{color:'#ff899a'}}>{vehicleError}</p> : null}
+              {vehicleSuccess ? <p role="status" style={{color:'#4cd3d1'}}>{vehicleSuccess}</p> : null}
+              <div className="portal-actions" style={{ marginTop: '16px' }}>
+                <button type="button" className="button button-primary" disabled={vehicleSaving || isReviewer || !editingCustomerId} onClick={saveVehicle}>{vehicleSaving ? 'Αποθήκευση...' : 'Αποθήκευση οχήματος'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {customerTab === 'details' && (
+          <>
         <div className="portal-grid portal-grid-two">
           <div>
             <form className="form-grid">
@@ -2072,48 +2298,12 @@ const saveCustomer = async () => {
             </form>
           </div>
 
-          <div>
-            <div className="form-grid">
-              <label>
-                <span>Vehicle make</span>
-                <SearchableSelect
-                  value={vehicleDraft.make}
-                  onSelect={(brand) => setVehicleDraft((current) => ({ ...current, make: brand, model: '' }))}
-                  options={VEHICLE_BRAND_OPTIONS}
-                  placeholder="Mercedes-Benz"
-                  emptyText="No matching brand"
-                />
-              </label>
-              <label>
-                <span>Vehicle model</span>
-                <SearchableSelect
-                  value={vehicleDraft.model}
-                  onSelect={(model) => setVehicleDraft((current) => ({ ...current, model }))}
-                  options={selectedVehicleModels}
-                  placeholder="A-Class"
-                  emptyText="No matching model for this brand"
-                />
-              </label>
-              <label>
-                <span>Year</span>
-                <input type="number" value={vehicleDraft.year} onChange={(event) => setVehicleDraft((current) => ({ ...current, year: Number(event.target.value) }))} />
-              </label>
-              <label>
-                <span>Plate (optional)</span>
-                <input value={vehicleDraft.plate} onChange={(event) => setVehicleDraft((current) => ({ ...current, plate: event.target.value }))} placeholder="RO-4821" />
-              </label>
-              <label>
-                <span>VIN (optional)</span>
-                <input value={vehicleDraft.vin} onChange={(event) => setVehicleDraft((current) => ({ ...current, vin: event.target.value }))} placeholder="WDB123..." />
-              </label>
-              <label>
-                <span>Purchase date</span>
-                <input type="date" value={vehicleDraft.purchaseDate} onChange={(event) => setVehicleDraft((current) => ({ ...current, purchaseDate: event.target.value }))} />
-              </label>
-            </div>
-          </div>
         </div>
 
+          </>
+        )}
+        {customerTab === 'services' && (
+          <>
         <div className="portal-card" style={{ marginTop: '16px', border: '1px solid rgba(76, 211, 209, 0.18)', padding: '16px' }}>
           <div className="portal-card-title-row">
             <h3>Add service entry</h3>
@@ -2141,11 +2331,24 @@ const saveCustomer = async () => {
             </label>
             <label className="full">
               <span>Service title</span>
-              <input value={serviceDraft.title} onChange={(event) => setServiceDraft((current) => ({ ...current, title: event.target.value, servicePreset: 'Custom' }))} placeholder="Ambient lighting or custom title" />
+              <input value={serviceDraft.title} onChange={(event) => setServiceDraft((current) => ({ ...current, title: event.target.value /* STEP 105F5 - INDEPENDENT SERVICE TITLE */ }))} placeholder="Ambient lighting or custom title" />
             </label>
             <label className="full">
-              <span>Vehicle</span>
-              <input value={serviceDraft.vehicle} onChange={(event) => setServiceDraft((current) => ({ ...current, vehicle: event.target.value }))} placeholder="Mercedes A-Class" />
+              <span>Όχημα εργασίας *</span>
+              <select
+                value={serviceDraft.vehicleId}
+                onChange={(event) => setServiceDraft((current) => ({ ...current, vehicleId: event.target.value }))}
+                required
+              >
+                <option value="">Επίλεξε όχημα...</option>
+                {state.vehicles
+                  .filter((v) => v.customerId === (selectedCustomerId ?? editingCustomerId) && /^\d+$/.test(v.id))
+                  .map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {[v.make, v.model, v.year, v.plate].filter(Boolean).join(' · ')} (ID {v.id})
+                    </option>
+                  ))}
+              </select>
             </label>
             <label className="full">
               <span>Notes</span>
@@ -2164,7 +2367,7 @@ const saveCustomer = async () => {
               <textarea value={serviceDraft.warrantyNotes} onChange={(event) => setServiceDraft((current) => ({ ...current, warrantyNotes: event.target.value }))} placeholder="Warranty details for this service" />
             </label>
             <div className="portal-actions" style={{ justifyContent: 'flex-start' }}>
-              <button className="button button-primary" type="button" onClick={handleSaveServiceHistory} disabled={!(selectedCustomerId || editingCustomerId)}>
+              <button className="button button-primary" type="button" onClick={handleSaveServiceHistory} disabled={!(selectedCustomerId || editingCustomerId) || !serviceDraft.vehicleId || isReviewer}>
                 {editingServiceEntryId ? 'Save service changes' : 'Add service to profile'}
               </button>
               {editingServiceEntryId ? (
@@ -2217,10 +2420,14 @@ const saveCustomer = async () => {
           ) : null}
         </div>
 
+          </>
+        )}
+        {customerTab === 'photos' && (
+          <>
         <div className="form-grid" style={{ marginTop: '16px' }}>
           <label className="full">
             <span>Profile photos</span>
-            <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} />
+            <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} disabled={portalRole !== 'admin'} />
             <p className="portal-muted" style={{ marginTop: '6px' }}>You can select several images at once and save them as separate gallery items.</p>
           </label>
           {pendingGalleryImages.length ? (
@@ -2236,13 +2443,9 @@ const saveCustomer = async () => {
           ) : null}
           <label className="full">
             <span>Photo title</span>
-            <input value={galleryDraft.title} onChange={(event) => setGalleryDraft((current) => ({ ...current, title: event.target.value }))} placeholder="Ambient lighting install" />
+            <input value={galleryDraft.title} onChange={(event) => setGalleryDraft((current) => ({ ...current, title: event.target.value /* STEP 105F5 - INDEPENDENT SERVICE TITLE */ }))} placeholder="Ambient lighting install" />
           </label>
-          <label className="full">
-            <span>Photo description</span>
-            <textarea value={galleryDraft.description} onChange={(event) => setGalleryDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Customer photo and installation detail" />
-          </label>
-          <button className="button button-secondary" type="button" onClick={saveGalleryItem}>Save customer photo</button>
+          <button className="button button-secondary" type="button" onClick={saveGalleryItem} disabled={portalRole !== 'admin'}>Save customer photo</button>
         </div>
 
         <div className="portal-card" style={{ marginTop: '16px', border: '1px solid rgba(76, 211, 209, 0.18)', padding: '16px' }}>
@@ -2255,15 +2458,15 @@ const saveCustomer = async () => {
               {state.gallery.filter((item) => item.customerId === (editingCustomerId ?? selectedCustomerId ?? undefined)).map((item) => (
                 <div className="portal-row portal-row-with-actions" key={item.id}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.title || 'Customer photo'} style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '10px', border: '1px solid rgba(76, 211, 209, 0.25)' }} />
+                    {privateGalleryPreviewUrls[item.id] ? (
+                      <img src={privateGalleryPreviewUrls[item.id]} alt={item.title || 'Customer photo'} style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '10px', border: '1px solid rgba(76, 211, 209, 0.25)' }} />
                     ) : null}
                     <div>
                       <strong>{item.title}</strong>
-                      <p>{item.description || 'Customer photo'}</p>
+
                     </div>
                   </div>
-                  <button className="portal-ghost-button" type="button" onClick={() => removeGalleryItem(item.id)}>
+                  <button className="portal-ghost-button" type="button" onClick={() => removeGalleryItem(item.id)} disabled={portalRole !== 'admin'}>
                     <Trash2 size={14} /> Delete
                   </button>
                 </div>
@@ -2274,6 +2477,14 @@ const saveCustomer = async () => {
           )}
         </div>
 
+          </>
+        )}
+      </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
     </PortalShell>

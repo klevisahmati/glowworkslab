@@ -92,6 +92,7 @@ export interface ServiceHistoryEntry {
   customerId: string
   title: string
   vehicle: string
+  vehicleId?: string
   completedOn: string
   notes?: string
   warrantyId?: string

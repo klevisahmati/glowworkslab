@@ -175,8 +175,9 @@ async function syncServiceHistoryToSupabase(
       return false
     }
 
+    // STEP 105E4 - Persist the exact vehicle chosen in Admin.
     const vehicle = state.vehicles.find(
-      (item) => item.customerId === entry.customerId,
+      (item) => item.customerId === entry.customerId && item.id === entry.vehicleId,
     )
 
     const vehicleId = Number(vehicle?.id)
@@ -347,7 +348,7 @@ const { data: serviceData, error: serviceError } = await supabase
   const { data: galleryData, error: galleryError } = await supabase
     .from('customer_gallery')
     .select(
-      'id, customer_id, title, description, image_url, category, featured, created_at',
+      'id, customer_id, title, description, category, featured, created_at',
     )
     .order('created_at', { ascending: false })
 
@@ -361,7 +362,7 @@ const { data: serviceData, error: serviceError } = await supabase
       customerId: String(row.customer_id),
       title: String(row.title ?? ''),
       description: String(row.description ?? ''),
-      imageUrl: String(row.image_url ?? ''),
+      imageUrl: '',
       category: String(row.category ?? 'customer'),
       featured: Boolean(row.featured),
     }),
@@ -387,6 +388,7 @@ const { data: serviceData, error: serviceError } = await supabase
         vehicle: vehicle
           ? `${vehicle.make} ${vehicle.model}`.trim()
           : '',
+        vehicleId: vehicle?.id ?? '',
         completedOn: String(row.service_date ?? ''),
         notes: String(row.note ?? row.description ?? ''),
         warrantyId: warranty ? String(warranty.id) : undefined,
@@ -513,6 +515,7 @@ export async function fetchCustomerPortalStateByCode(
         vehicle: vehicle
           ? `${vehicle.make} ${vehicle.model}`.trim()
           : '',
+        vehicleId: vehicle?.id ?? String(row.vehicle_id ?? ''),
         completedOn: String(row.service_date ?? ''),
         notes: String(row.note ?? row.description ?? ''),
         warrantyId: warranty
@@ -559,14 +562,12 @@ export async function fetchCustomerPortalStateByCode(
       }
     })
 
+  // STEP 110J1: Query a code-scoped RPC, not the publicly selectable gallery table.
+  // The database function validates the NFC customer code server-side.
   const { data: customerGalleryData, error: customerGalleryError } =
-    await supabase
-      .from('customer_gallery')
-      .select(
-        'id, customer_id, title, description, image_url, category, featured, created_at',
-      )
-      .eq('customer_id', customer.id)
-      .order('created_at', { ascending: false })
+    await supabase.rpc('get_customer_gallery_by_code', {
+      p_customer_code: customerCode.trim(),
+    })
 
   if (customerGalleryError) {
     throw customerGalleryError
@@ -578,7 +579,7 @@ export async function fetchCustomerPortalStateByCode(
       customerId: String(row.customer_id),
       title: String(row.title ?? ''),
       description: String(row.description ?? ''),
-      imageUrl: String(row.image_url ?? ''),
+      imageUrl: '',
       category: String(row.category ?? 'customer'),
       featured: Boolean(row.featured),
     }))
@@ -705,7 +706,7 @@ function readStoredState(): PortalState | null {
       serviceHistory: parsed.serviceHistory ?? baseState.serviceHistory,
       nfcTags: parsed.nfcTags ?? baseState.nfcTags,
       services: parsed.services ?? baseState.services,
-      gallery: parsed.gallery ?? baseState.gallery,
+      gallery: (parsed.gallery ?? baseState.gallery).map((item) => ({ ...item, imageUrl: '' })),
       discounts: parsed.discounts ?? baseState.discounts,
       appointments: parsed.appointments ?? baseState.appointments,
       uploads: parsed.uploads ?? baseState.uploads,
@@ -790,6 +791,7 @@ export function savePortalState(state: PortalState) {
   const normalizedState: PortalState = {
     ...state,
     session: state.session ?? null,
+    gallery: state.gallery.map((item) => ({ ...item, imageUrl: '' })),
   }
 
   window.localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(normalizedState))
@@ -864,6 +866,56 @@ export function updatePortalCustomer(
   void syncPortalStateToSupabase(nextState)
 
   return nextState
+}
+
+// STEP 105E2 - Explicit vehicle persistence with real Supabase IDs.
+// Do not update local state unless the database confirms the operation.
+export async function savePortalVehicle(vehicle: VehicleRecord): Promise<VehicleRecord> {
+  if (!hasSupabaseConfig()) throw new Error('Supabase connection is required to save vehicles')
+  const supabase = await getSupabaseClient()
+  if (!supabase) throw new Error('Supabase client unavailable')
+  const customerId = Number(vehicle.customerId)
+  if (!Number.isSafeInteger(customerId) || customerId <= 0) throw new Error('Invalid customer ID')
+  if (!vehicle.make.trim() || !vehicle.model.trim()) throw new Error('Vehicle make and model are required')
+  const existingId = /^\d+$/.test(vehicle.id) ? Number(vehicle.id) : null
+  if (existingId !== null) {
+    const { data: existing, error: lookupError } = await supabase.from('vehicles')
+      .select('id,costumer_id').eq('id', existingId).single()
+    if (lookupError || !existing || Number(existing.costumer_id) !== customerId) {
+      throw new Error('Vehicle does not belong to this customer')
+    }
+  } else {
+    // Catch accidental duplicate vehicle creation without blocking legitimately different vehicles.
+    const plate = vehicle.plate.trim()
+    if (plate) {
+      const { data: matches, error: duplicateError } = await supabase.from('vehicles')
+        .select('id,registration').eq('costumer_id', customerId)
+      if (duplicateError) throw duplicateError
+      if ((matches ?? []).some(row => String(row.registration ?? '').replace(/\s/g, '').toUpperCase() === plate.replace(/\s/g, '').toUpperCase())) {
+        throw new Error('A vehicle with this registration already exists for the customer')
+      }
+    }
+  }
+  const payload = {
+    costumer_id: customerId,
+    make: vehicle.make.trim(),
+    model: vehicle.model.trim(),
+    year: vehicle.year || null,
+    registration: vehicle.plate.trim() || null,
+    vin: vehicle.vin.trim() || null,
+  }
+  const query = existingId !== null
+    ? supabase.from('vehicles').update(payload).eq('id', existingId).eq('costumer_id', customerId)
+    : supabase.from('vehicles').insert(payload)
+  const { data, error } = await query.select('*').single()
+  if (error || !data) throw error ?? new Error('Vehicle save did not return a record')
+  const saved = mapRemoteVehicleRow(data as Record<string, unknown>)
+  const state = getPortalState()
+  savePortalState({
+    ...state,
+    vehicles: [saved, ...state.vehicles.filter(row => row.id !== saved.id && row.id !== vehicle.id)],
+  })
+  return saved
 }
 
 export function updatePortalVehicle(vehicle: VehicleRecord) {
@@ -988,7 +1040,7 @@ function addYears(value: string, years: number) {
 }
 
 function createServiceWarrantyRecord(entry: ServiceHistoryEntry, baseState: PortalState) {
-  const customerVehicle = baseState.vehicles.find((vehicle) => vehicle.customerId === entry.customerId)
+  const customerVehicle = baseState.vehicles.find((vehicle) => vehicle.customerId === entry.customerId && vehicle.id === entry.vehicleId)
   const warrantyNumber = entry.warrantyNumber || `W-SVC-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
   const startsOn = entry.warrantyStartsOn || entry.completedOn
   const endsOn = entry.warrantyEndsOn || addYears(entry.completedOn, 2)
@@ -1061,7 +1113,7 @@ export function updatePortalServiceHistoryEntry(entry: ServiceHistoryEntry, base
     ? {
         ...existingWarranty,
         customerId: nextEntry.customerId,
-        vehicleId: existingWarranty.vehicleId || baseState.vehicles.find((vehicle) => vehicle.customerId === nextEntry.customerId)?.id || '',
+        vehicleId: nextEntry.vehicleId || existingWarranty.vehicleId || '',
         product: nextEntry.title,
         status: existingWarranty.status,
         startsOn: nextEntry.warrantyStartsOn || existingWarranty.startsOn || nextEntry.completedOn,
