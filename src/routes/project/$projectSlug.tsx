@@ -1,3 +1,4 @@
+import { PublicSiteNav } from '../../components/PublicSiteNav'
 import { createFileRoute } from '@tanstack/react-router'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { useLanguage } from '../../lib/language'
@@ -194,14 +195,7 @@ function IndividualProjectPage() {
   if (!project) {
     return (
       <main className="project-detail-page">
-        <nav className="project-detail-nav">
-          <a href={getAssetPath('/')}>
-            <img
-              src={getAssetPath('/images/glowworks-logo.webp')}
-              alt="Glowworks.lab"
-            />
-          </a>
-        </nav>
+        <PublicSiteNav />
 
         <section className="project-not-found">
           <p className="eyebrow"><span /> Glowworks archive</p>
@@ -219,30 +213,7 @@ function IndividualProjectPage() {
 
   return (
     <main className="project-detail-page">
-      <nav className="project-detail-nav">
-        <a
-          className="project-detail-brand"
-          href={getAssetPath('/')}
-          aria-label={language === 'en' ? 'Glowworks.lab homepage' : 'Αρχική σελίδα Glowworks.lab'}
-        >
-          <img
-            src={getAssetPath('/images/glowworks-logo.webp')}
-            alt="Glowworks.lab"
-          />
-        </a>
-
-        <div className="project-detail-nav-actions"><LanguageSwitcher />
-          <a href={getAssetPath('/projects')}>
-            <ArrowLeft size={16} /> Projects
-          </a>
-          <a
-            className="project-detail-book"
-            href={bookingUrl}
-          >
-            {language === 'en' ? 'Book an appointment' : 'Κλείσε ραντεβού'} <ArrowUpRight size={16} />
-          </a>
-        </div>
-      </nav>
+      <PublicSiteNav />
 
       <header className="project-detail-hero">
         {cover ? (

@@ -1,3 +1,4 @@
+import { PublicSiteNav } from '../components/PublicSiteNav'
 import { createFileRoute } from '@tanstack/react-router'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLanguage } from '../lib/language'
@@ -252,6 +253,8 @@ function ProjectsPage() {
   const [activeModel, setActiveModel] = useState<string | null>(null)
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<ProjectGalleryItem | null>(null)
   const [galleryItems, setGalleryItems] = useState<ProjectGalleryItem[]>([])
+  // GLOWWORKS_DESIGN_REFRESH_V2: show the user an accurate loading/error state.
+  const [galleryStatus, setGalleryStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [serviceCardImages, setServiceCardImages] = useState<
     Partial<Record<HomepageImageSlot, string>>
   >({})
@@ -314,10 +317,12 @@ function ProjectsPage() {
 
         if (isActive) {
           setGalleryItems(remoteItems)
+          setGalleryStatus('ready')
         }
       })
       .catch((error) => {
         console.warn('Failed to load Supabase projects', error)
+        if (isActive) setGalleryStatus('error')
       })
 
     return () => {
@@ -379,6 +384,19 @@ function ProjectsPage() {
 
     return galleryItems.filter((item) => matchesServiceCategory(item.serviceId, selectedServiceKey) && normalizeBrandValue(item.brand) === selectedBrandKey && normalizeValue(item.model) === selectedModelKey)  }, [activeServiceId, activeBrand, activeModel, galleryItems])
 
+  // GLOWWORKS_PORTFOLIO_REFRESH_V1
+  // Keep the former service -> brand -> model interface below for future reuse.
+  const USE_LEGACY_PROJECT_NAVIGATION = false
+  const portfolioProjects = useMemo(() => {
+    const seen = new Set<string>()
+    return galleryItems
+      .filter((item) => !activeServiceId || matchesServiceCategory(item.serviceId, activeServiceId))
+      .filter((item) => {
+        if (!item.slug || seen.has(item.slug)) return false
+        seen.add(item.slug)
+        return true
+      })
+  }, [galleryItems, activeServiceId])
   const showAdjacentGalleryImage = (direction: -1 | 1) => {
     setSelectedGalleryImage((currentImage) => {
       if (!currentImage || visibleProjects.length < 2) {
@@ -421,17 +439,7 @@ function ProjectsPage() {
   }, [selectedGalleryImage, visibleProjects])
   return (
     <main className="projects-page" id="top">
-      <nav className="site-nav project-nav is-scrolled">
-        <div className="nav-shell">
-          <a className="brand" href={getAssetPath('/')} aria-label="Glowworks.lab αρχική">
-            <img src={getAssetPath('/images/glowworks-logo.webp')} alt="Glowworks.lab" />
-          </a>
-          <div className="project-nav-links"><LanguageSwitcher />
-            <a href={getAssetPath('/')}><ArrowLeft size={16} /> {language === 'en' ? 'Home' : 'Αρχική'}</a>
-            <a className="nav-book" href={getAssetPath('/#booking')}>{language === 'en' ? 'Book an appointment' : 'Κλείσε ραντεβού'} <ArrowUpRight size={15} /></a>
-          </div>
-        </div>
-      </nav>
+      <PublicSiteNav />
 
       <header className="projects-hero">
         <div className="projects-hero-orbit" aria-hidden="true" />
@@ -440,7 +448,7 @@ function ProjectsPage() {
             <p className="eyebrow"><span /> Glowworks archive</p>
             <h1>{language === 'en' ? 'Project' : 'Project'}<br /><em>garage.</em></h1>
             <p>
-              {language === 'en' ? 'Choose a car brand and explore the custom transformations we have created for each model.' : 'Επίλεξε μάρκα και ανακάλυψε τις μεταμορφώσεις εσωτερικού που δημιουργήσαμε για κάθε μοντέλο.'}
+              {language === 'en' ? 'Discover our automotive transformations and explore each finished project.' : 'Ανακάλυψε τις αναβαθμίσεις που έχουμε δημιουργήσει και δες κάθε ολοκληρωμένο project.'}
             </p>
           </div>
           <div className="projects-counter reveal reveal-delay">
@@ -464,9 +472,9 @@ function ProjectsPage() {
           <div className="projects-toolbar">
             <div>
               <p className="section-index">01 / Project gallery</p>
-              <h2 id="projects-title">{language === 'en' ? 'Choose your upgrade.' : 'Επίλεξε την αναβάθμισή σου.'}</h2>
+              <h2 id="projects-title">{language === 'en' ? 'Our projects.' : 'Τα έργα μας.'}</h2>
             </div>
-            {activeServiceId && activeBrand && activeModel ? (
+            {USE_LEGACY_PROJECT_NAVIGATION && activeServiceId && activeBrand && activeModel ? (
               <p className="projects-result-count">
                 {String(visibleProjects.length).padStart(2, '0')} {language === 'en' ? 'gallery items' : 'φωτογραφίες'}
               </p>
@@ -474,7 +482,8 @@ function ProjectsPage() {
           </div>
 
 
-          <div className="project-step-intro">
+          {USE_LEGACY_PROJECT_NAVIGATION ? (
+            <>          <div className="project-step-intro">
             {selectedService ? (
               <>
                 <p className="eyebrow"><span /> {selectedService.title}</p>
@@ -667,6 +676,52 @@ function ProjectsPage() {
                   </article>
                 ))}
               </div>
+            </div>
+          )}
+            </>
+          ) : (
+            <div className="gw-portfolio" aria-label={language === 'en' ? 'Automotive project portfolio' : 'Portfolio έργων'}>
+              <div className="gw-portfolio-heading">
+                <div>
+                  <p className="gw-portfolio-eyebrow">{language === 'en' ? 'REAL WORK • REAL CARS' : 'ΠΡΑΓΜΑΤΙΚΑ ΕΡΓΑ • ΠΡΑΓΜΑΤΙΚΑ ΑΥΤΟΚΙΝΗΤΑ'}</p>
+                  <p>{language === 'en' ? 'Explore our work. Filter by upgrade only if you want to.' : 'Δες όλα τα έργα μας ή επίλεξε την αναβάθμιση που σε ενδιαφέρει.'}</p>
+                </div>
+                <span className="gw-portfolio-count">{galleryStatus === 'ready' ? portfolioProjects.length : '—'} {language === 'en' ? 'projects' : 'έργα'}</span>
+              </div>
+              <div className="gw-portfolio-filters" role="group" aria-label={language === 'en' ? 'Filter by service' : 'Φίλτρο υπηρεσίας'}>
+                <button type="button" className={!activeServiceId ? 'is-active' : ''} aria-pressed={!activeServiceId} onClick={() => setActiveServiceId(null)}>{language === 'en' ? 'All projects' : 'Όλα τα έργα'}</button>
+                {serviceCategories.filter((service) => galleryItems.some((item) => matchesServiceCategory(item.serviceId, service.id))).map((service) => (
+                  <button key={service.id} type="button" className={activeServiceId === service.id ? 'is-active' : ''} aria-pressed={activeServiceId === service.id} onClick={() => setActiveServiceId(service.id)}>{service.title}</button>
+                ))}
+              </div>
+              {galleryStatus === 'loading' ? (
+                <p className="gw-portfolio-empty" role="status">{language === 'en' ? 'Loading projects...' : 'Φόρτωση των έργων...'}</p>
+              ) : galleryStatus === 'error' ? (
+                <div className="gw-portfolio-empty" role="alert">
+                  <p>{language === 'en' ? 'Projects could not be loaded. Please try again.' : 'Δεν ήταν δυνατή η φόρτωση των έργων. Δοκίμασε ξανά.'}</p>
+                  <button type="button" className="gw-projects-retry" onClick={() => window.location.reload()}>{language === 'en' ? 'Retry' : 'Επανάληψη'}</button>
+                </div>
+              ) : galleryItems.length === 0 ? (
+                <p className="gw-portfolio-empty">{language === 'en' ? 'No projects have been published yet.' : 'Δεν έχουν δημοσιευτεί έργα ακόμη.'}</p>
+              ) : portfolioProjects.length === 0 ? (
+                <p className="gw-portfolio-empty">{language === 'en' ? 'No projects in this category yet.' : 'Δεν υπάρχουν ακόμη έργα σε αυτή την κατηγορία.'}</p>
+              ) : (
+                <div className="gw-portfolio-grid">
+                  {portfolioProjects.map((project) => (
+                    <a className="gw-portfolio-card" key={project.slug} href={getAssetPath(`/project/${project.slug}`)}>
+                      <div className="gw-portfolio-cover">
+                        <img src={getAssetPath(project.image)} alt={language === 'en' ? project.titleEn?.trim() || project.title : project.title} loading="lazy" decoding="async" />
+                        <span className="gw-portfolio-cover-action" aria-hidden="true"><ArrowUpRight size={20} /></span>
+                      </div>
+                      <div className="gw-portfolio-card-copy">
+                        <span>{getBrandDisplayName(project.brand)} / {project.model}</span>
+                        <h3>{language === 'en' ? project.titleEn?.trim() || project.title : project.title}</h3>
+                        <p>{language === 'en' ? 'View complete project' : 'Δες ολόκληρο το project'} <ArrowUpRight size={14} /></p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
