@@ -1,3 +1,4 @@
+import { installPublicNavActive } from '../lib/public-nav-active'
 import { createFileRoute } from '@tanstack/react-router'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLanguage } from '../lib/language'
@@ -7,6 +8,7 @@ import {
   CalendarDays,
   CarFront,
   Check,
+  ChevronLeft,
   ChevronRight,
   CircleGauge,
   Clock3,
@@ -21,7 +23,9 @@ import {
   X,
   MapPin,
 } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { fetchProjects } from '../lib/projects'
+import type { ProjectRecord } from '../types/projects'
 import {
   fetchHomepageImages,
   type HomepageImageRecord,
@@ -218,8 +222,59 @@ function getAssetPath(path: string) {
 }
 
 function GlowworksPage() {
+  useEffect(() => installPublicNavActive(), [])
   const { language } = useLanguage()
   const [menuOpen, setMenuOpen] = useState(false)
+  // GLOWWORKS_DESIGN_REFRESH_V2: featured work comes from the existing live projects table.
+  const [featuredProjects, setFeaturedProjects] = useState<ProjectRecord[]>([])
+  // GLOWWORKS_PREMIUM_V3_20261106: low-motion, touch-enabled continuous showcase.
+  const featuredTrackRef = useRef<HTMLDivElement | null>(null)
+  const [featuredPaused, setFeaturedPaused] = useState(false)
+  const [featuredReducedMotion, setFeaturedReducedMotion] = useState(false)
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const refresh = () => setFeaturedReducedMotion(preference.matches)
+    refresh()
+    preference.addEventListener?.('change', refresh)
+    return () => preference.removeEventListener?.('change', refresh)
+  }, [])
+
+  const shiftFeatured = (direction: -1 | 1) => {
+    const track = featuredTrackRef.current
+    const first = track?.querySelector<HTMLElement>('.gw-featured-card')
+    if (!track || !first || featuredProjects.length <= 4) return
+    const step = first.getBoundingClientRect().width + (parseFloat(getComputedStyle(track).columnGap) || 0)
+    if (direction > 0 && track.scrollLeft >= step * featuredProjects.length - step * 0.5) {
+      track.scrollLeft = 0
+    } else if (direction < 0 && track.scrollLeft < step * 0.5) {
+      track.scrollLeft = step * featuredProjects.length
+    }
+    track.scrollBy({ left: step * direction, behavior: featuredReducedMotion ? 'auto' : 'smooth' })
+  }
+
+  useEffect(() => {
+    if (featuredProjects.length <= 4 || featuredPaused || featuredReducedMotion) return
+    const timer = window.setInterval(() => {
+      if (document.hidden) return
+      const track = featuredTrackRef.current
+      const first = track?.querySelector<HTMLElement>('.gw-featured-card')
+      if (!track || !first) return
+      const step = first.getBoundingClientRect().width + (parseFloat(getComputedStyle(track).columnGap) || 0)
+      if (track.scrollLeft >= step * featuredProjects.length - step * 0.5) track.scrollLeft = 0
+      track.scrollBy({ left: step, behavior: 'smooth' })
+    }, 4400)
+    return () => window.clearInterval(timer)
+  }, [featuredProjects.length, featuredPaused, featuredReducedMotion])
+
+  useEffect(() => {
+    let active = true
+    fetchProjects()
+      .then((projects) => {
+        if (active) setFeaturedProjects(projects.filter((project) => project.media.some((item) => item.mediaType === 'image')))
+      })
+      .catch((error) => console.warn('Featured projects unavailable', error))
+    return () => { active = false }
+  }, [])
   const [scrolled, setScrolled] = useState(false)
   const [formStatus, setFormStatus] = useState<FormStatus>('idle')
   const [selectedVehicleBrand, setSelectedVehicleBrand] = useState('')
@@ -498,6 +553,8 @@ useEffect(() => {
             </a>
           </div>
 
+          <div className="gw-mobile-nav-actions">
+            <LanguageSwitcher />
           <button
             className="menu-button"
             type="button"
@@ -507,6 +564,7 @@ useEffect(() => {
           >
             {menuOpen ? <X /> : <Menu />}
           </button>
+          </div>
         </div>
       </nav>
 
@@ -544,6 +602,15 @@ useEffect(() => {
           </a>
         </div>
       </header>
+
+            {/* GLOWWORKS_DESIGN_REFRESH_V2: concise credibility signals without unverifiable statistics. */}
+      <section className="gw-trust" aria-label={language === 'en' ? 'Glowworks values' : 'Οι αξίες της Glowworks'}>
+        <div className="shell gw-trust-inner">
+          <div><ShieldCheck size={21} /><span>{language === 'en' ? 'OEM-style finish' : 'Εργοστασιακή αισθητική'}</span></div>
+          <div><Sparkles size={21} /><span>{language === 'en' ? 'Tailored upgrades' : 'Εξατομικευμένες αναβαθμίσεις'}</span></div>
+          <div><MapPin size={21} /><span>{language === 'en' ? 'Crafted in Rhodes' : 'Δημιουργία στη Ρόδο'}</span></div>
+        </div>
+      </section>
 
       <section className="home-3d-section" aria-labelledby="home-3d-title">
   <div className="home-3d-inner">
@@ -618,6 +685,60 @@ useEffect(() => {
           </div>
         </div>
       </section>
+
+      {/* GLOWWORKS_PREMIUM_V3_20261106: real published work, four cards across on desktop. */}
+      {featuredProjects.length > 0 ? (
+        <section className="gw-featured gw-featured-v3" aria-labelledby="gw-featured-title">
+          <div className="shell">
+            <div className="gw-featured-head">
+              <div>
+                <p className="gw-featured-kicker">{language === 'en' ? 'REAL WORK / GLOWWORKS.LAB' : 'ΠΡΑΓΜΑΤΙΚΑ ΕΡΓΑ / GLOWWORKS.LAB'}</p>
+                <h2 id="gw-featured-title">{language === 'en' ? 'Crafted to stand out.' : 'Έργα που ξεχωρίζουν.'}</h2>
+              </div>
+              <div className="gw-featured-actions">
+                {featuredProjects.length > 4 ? (
+                  <div className="gw-featured-controls" aria-label={language === 'en' ? 'Project carousel controls' : 'Χειριστήρια έργων'}>
+                    <button type="button" onClick={() => shiftFeatured(-1)} aria-label={language === 'en' ? 'Previous project' : 'Προηγούμενο έργο'}><ChevronLeft size={20}/></button>
+                    <button type="button" onClick={() => shiftFeatured(1)} aria-label={language === 'en' ? 'Next project' : 'Επόμενο έργο'}><ChevronRight size={20}/></button>
+                  </div>
+                ) : null}
+                <a className="gw-featured-all" href={getAssetPath('/projects')}>{language === 'en' ? 'Explore all projects' : 'Όλα τα έργα'} <ArrowUpRight size={18} /></a>
+              </div>
+            </div>
+            <div className="gw-featured-track"
+              ref={featuredTrackRef}
+              aria-label={language === 'en' ? 'Published automotive projects' : 'Δημοσιευμένα έργα αυτοκινήτων'}
+              onMouseEnter={() => setFeaturedPaused(true)}
+              onMouseLeave={() => setFeaturedPaused(false)}
+              onFocusCapture={() => setFeaturedPaused(true)}
+              onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFeaturedPaused(false) }}
+              onTouchStart={() => setFeaturedPaused(true)}
+              onTouchEnd={() => setFeaturedPaused(false)}>
+              {(featuredProjects.length > 4 ? [...featuredProjects, ...featuredProjects] : featuredProjects).map((project, index) => {
+                const cover = project.media.find((item) => item.mediaType === 'image')
+                if (!cover) return null
+                const cloned = index >= featuredProjects.length
+                return (
+                  <a className="gw-featured-card" key={project.id + '-' + index}
+                    href={getAssetPath('/project/' + project.slug)}
+                    aria-hidden={cloned ? true : undefined}
+                    tabIndex={cloned ? -1 : undefined}>
+                    <div className="gw-featured-image">
+                      <img src={cover.publicUrl} alt={language === 'en' ? project.titleEn?.trim() || project.title : project.title} loading="lazy" decoding="async" />
+                      <span className="gw-featured-open" aria-hidden="true"><ArrowUpRight size={19} /></span>
+                    </div>
+                    <div className="gw-featured-copy">
+                      <p>{project.brand} / {project.model}</p>
+                      <h3>{language === 'en' ? project.titleEn?.trim() || project.title : project.title}</h3>
+                    </div>
+                  </a>
+                )
+              })}
+            </div>
+            {featuredProjects.length > 4 ? <p className="gw-featured-hint">{language === 'en' ? 'Swipe to explore more projects' : 'Σύρε για περισσότερα έργα'}</p> : null}
+          </div>
+        </section>
+      ) : null}
 
       <section className="process-section shell" id="process">
         <div className="section-index">{language === 'en' ? '03 / Our Process' : '03 / Διαδικασία'}</div>

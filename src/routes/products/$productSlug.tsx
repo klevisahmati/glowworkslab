@@ -1,3 +1,4 @@
+import { PublicSiteNav } from '../../components/PublicSiteNav'
 import { SiteFooter } from '../../components/SiteFooter'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft, ArrowRight, ArrowUpRight, Image as ImageIcon, MessageCircle, Package } from 'lucide-react'
@@ -82,24 +83,7 @@ function ProductDetailPage() {
 
   return (
     <div id="top" className="product-detail-page min-h-screen bg-[#09090d] text-white">
-      <nav className="site-nav project-nav is-scrolled" aria-label={en ? 'Main navigation' : 'Κύρια πλοήγηση'}>
-        <div className="nav-shell">
-          <Link to="/" className="brand" aria-label="Glowworks.lab">
-            <img src="/images/glowworks-logo.webp" alt="Glowworks.lab" />
-          </Link>
-          <div className="project-nav-links">
-            <LanguageSwitcher />
-            <Link to="/products">
-              <ArrowLeft size={16} />
-              {en ? 'Products' : 'Προϊόντα'}
-            </Link>
-            <a className="nav-book" href="/#booking">
-              {en ? 'Book an appointment' : 'Κλείσε ραντεβού'}
-              <ArrowUpRight size={15} />
-            </a>
-          </div>
-        </div>
-      </nav>
+      <PublicSiteNav />
 
       <div className="mx-auto max-w-7xl px-5 pb-24 pt-[100px] sm:px-8 sm:pt-[112px]">
 
